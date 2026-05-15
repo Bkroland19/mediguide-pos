@@ -8,6 +8,9 @@ def get_embedding_provider() -> EmbeddingProvider:
     provider = settings.embedding_provider.lower()
     if provider == "hash":
         return HashEmbeddingProvider(settings.embedding_dim)
+    if provider == "ollama":
+        from app.embeddings.ollama_provider import OllamaEmbeddingProvider
+        return OllamaEmbeddingProvider()
     if provider == "sentence_transformers":
         from app.embeddings.sentence_transformers_provider import SentenceTransformersProvider
         return SentenceTransformersProvider()

@@ -26,6 +26,7 @@ This project is designed to plug into the Go backend scaffold generated earlier.
 - pgvector-compatible embeddings
 - Optional providers:
   - deterministic local hash embeddings for development
+  - Ollama embeddings
   - SentenceTransformers embeddings
   - OpenAI embeddings
   - Ollama generation
@@ -43,6 +44,12 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8090
+```
+
+If you use the default Ollama embeddings, pull the model before running ingestion or RAG:
+
+```bash
+ollama pull mxbai-embed-large:latest
 ```
 
 If you switch `EMBEDDING_PROVIDER=sentence_transformers`, install the optional model stack separately:
@@ -100,8 +107,9 @@ For each job, it:
 For clinical safety, start with:
 
 ```env
-EMBEDDING_PROVIDER=sentence_transformers
-EMBEDDING_MODEL=BAAI/bge-m3
+EMBEDDING_PROVIDER=ollama
+OLLAMA_EMBEDDING_MODEL=mxbai-embed-large:latest
+EMBEDDING_DIM=1024
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=qwen2.5:7b-instruct
 ```
@@ -110,6 +118,7 @@ For lightweight development without model downloads:
 
 ```env
 EMBEDDING_PROVIDER=hash
+EMBEDDING_DIM=1024
 LLM_PROVIDER=extractive
 ```
 

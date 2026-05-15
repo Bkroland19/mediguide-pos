@@ -15,6 +15,7 @@ make seed
 ```bash
 cd ../ai-worker
 cp .env.example .env
+ollama pull mxbai-embed-large:latest
 uvicorn app.main:app --reload --port 8090
 ```
 
@@ -42,4 +43,4 @@ curl -X POST http://localhost:8090/api/v1/rag/ask \
 
 ## Production note
 
-The initial Go backend schema uses `vector(1536)`. Keep `EMBEDDING_DIM=1536` unless you migrate the schema to another embedding dimension.
+The backend and AI worker now default to Ollama `mxbai-embed-large:latest` with `EMBEDDING_DIM=1024`. If you change embedding models, migrate the `guideline_chunks.embedding` column to the new vector size before ingesting documents.

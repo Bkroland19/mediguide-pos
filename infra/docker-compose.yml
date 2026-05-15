@@ -90,12 +90,12 @@ services:
       S3_SECRET_KEY: mediguide123
       S3_BUCKET: mediguide
       S3_USE_SSL: "false"
-      EMBEDDING_PROVIDER: hash
-      EMBEDDING_MODEL: local-hash-1536
-      EMBEDDING_DIM: 1536
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_DIM: 1024
       LLM_PROVIDER: extractive
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
+      OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
     ports:
       - "8090:8090"
     depends_on:
@@ -105,6 +105,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
 
   ai-worker-loop:
     build:
@@ -121,12 +123,12 @@ services:
       S3_SECRET_KEY: mediguide123
       S3_BUCKET: mediguide
       S3_USE_SSL: "false"
-      EMBEDDING_PROVIDER: hash
-      EMBEDDING_MODEL: local-hash-1536
-      EMBEDDING_DIM: 1536
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_DIM: 1024
       LLM_PROVIDER: extractive
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
+      OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,10 +136,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
 
   ollama:
     image: ollama/ollama:latest
-    profiles: ["llm"]
     ports:
       - "11434:11434"
     volumes:

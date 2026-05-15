@@ -47,15 +47,23 @@ class Settings(BaseSettings):
     chunk_overlap: int = 160
     min_chunk_chars: int = 120
 
-    embedding_provider: str = "hash"  # hash, sentence_transformers, openai
-    embedding_model: str = "local-hash-1536"
-    embedding_dim: int = 1536
+    embedding_provider: str = "ollama"  # hash, sentence_transformers, openai, ollama
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+    embedding_dim: int = 1024
     openai_api_key: str | None = None
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias=AliasChoices("OPENAI_EMBEDDING_MODEL"),
+    )
 
     llm_provider: str = "extractive"  # extractive, ollama, openai
     openai_chat_model: str = "gpt-4o-mini"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b-instruct"
+    ollama_embedding_model: str = Field(
+        default="mxbai-embed-large:latest",
+        validation_alias=AliasChoices("OLLAMA_EMBEDDING_MODEL"),
+    )
 
     rag_top_k: int = 6
     rag_min_similarity: float = 0.15

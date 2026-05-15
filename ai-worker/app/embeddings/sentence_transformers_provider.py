@@ -13,6 +13,12 @@ class SentenceTransformersProvider(EmbeddingProvider):
         settings = get_settings()
         self.model = SentenceTransformer(settings.embedding_model)
         self.dim = self.model.get_sentence_embedding_dimension()
+        if self.dim != settings.embedding_dim:
+            raise RuntimeError(
+                "Configured EMBEDDING_DIM does not match the SentenceTransformers model "
+                f"dimension: EMBEDDING_DIM={settings.embedding_dim}, model_dim={self.dim}, "
+                f"EMBEDDING_MODEL={settings.embedding_model}"
+            )
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         embeddings = self.model.encode(texts, normalize_embeddings=True, show_progress_bar=False)

@@ -102,7 +102,7 @@ CREATE TABLE guideline_chunks (
   source_version text,
   review_status text DEFAULT 'draft',
   embedding_text text,
-  embedding vector(1536),
+  embedding vector(1024),
   search_vector tsvector GENERATED ALWAYS AS (to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(content,''))) STORED,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),

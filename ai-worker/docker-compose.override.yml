@@ -9,6 +9,7 @@ services:
       - postgres
       - minio
       - redis
+      - ollama
     ports:
       - "8090:8090"
 
@@ -23,8 +24,10 @@ services:
       - postgres
       - minio
       - redis
+      - ollama
 
-  # Optional local LLM runtime. Pull a model manually after startup:
+  # Local Ollama runtime. Pull the embedding and generation models manually after startup:
+  # docker exec -it <ollama-container> ollama pull mxbai-embed-large:latest
   # docker exec -it <ollama-container> ollama pull qwen2.5:7b-instruct
   ollama:
     image: ollama/ollama:latest

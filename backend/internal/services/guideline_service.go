@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"path/filepath"
@@ -132,7 +133,7 @@ func ensureDraftProtocol(tx *gorm.DB, document *models.GuidelineDocument, versio
 	if err == nil {
 		return nil
 	}
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
