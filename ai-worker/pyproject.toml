@@ -1,0 +1,35 @@
+[project]
+name = "mediguide-ai-worker"
+version = "0.1.0"
+description = "AI/document-processing worker for MediGuide"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "fastapi>=0.136.1",
+    "httpx>=0.28.1",
+    "markdownify>=1.2.2",
+    "minio>=7.2.20",
+    "numpy>=2.4.4",
+    "openai>=2.36.0",
+    "pandas>=3.0.3",
+    "pdfplumber>=0.11.9",
+    "psycopg[binary,pool]>=3.3.4",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+    "pymupdf>=1.27.2.3",
+    "pytest>=9.0.3",
+    "python-multipart>=0.0.28",
+    "python-slugify>=8.0.4",
+    "pyyaml>=6.0.3",
+    "sentence-transformers>=5.5.0",
+    "structlog>=25.5.0",
+    "tenacity>=9.1.4",
+    "uvicorn[standard]>=0.46.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

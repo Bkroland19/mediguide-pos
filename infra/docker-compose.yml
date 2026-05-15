@@ -1,0 +1,149 @@
+name: mediguide
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: mediguide
+      POSTGRES_USER: mediguide
+      POSTGRES_PASSWORD: mediguide
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediguide -d mediguide"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: mediguide
+      MINIO_ROOT_PASSWORD: mediguide123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: mediguide-backend
+      APP_ENV: development
+      HTTP_PORT: 8080
+      DATABASE_URL: postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable
+      JWT_SECRET: change-this-secret
+      JWT_ACCESS_TTL_MINUTES: 60
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: mediguide
+      S3_SECRET_KEY: mediguide123
+      S3_BUCKET: mediguide
+      S3_USE_SSL: "false"
+      AI_RAG_PROVIDER: worker
+      AI_WORKER_URL: http://ai-worker:8090
+      DEFAULT_ADMIN_EMAIL: admin@mediguide.local
+      DEFAULT_ADMIN_PASSWORD: Admin123!
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-worker:
+    build:
+      context: ../ai-worker
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: mediguide-ai-worker
+      APP_ENV: development
+      HTTP_PORT: 8090
+      DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: mediguide
+      S3_SECRET_KEY: mediguide123
+      S3_BUCKET: mediguide
+      S3_USE_SSL: "false"
+      EMBEDDING_PROVIDER: hash
+      EMBEDDING_MODEL: local-hash-1536
+      EMBEDDING_DIM: 1536
+      LLM_PROVIDER: extractive
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:7b-instruct
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-worker-loop:
+    build:
+      context: ../ai-worker
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.worker"]
+    environment:
+      APP_NAME: mediguide-ai-worker
+      APP_ENV: development
+      DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: mediguide
+      S3_SECRET_KEY: mediguide123
+      S3_BUCKET: mediguide
+      S3_USE_SSL: "false"
+      EMBEDDING_PROVIDER: hash
+      EMBEDDING_MODEL: local-hash-1536
+      EMBEDDING_DIM: 1536
+      LLM_PROVIDER: extractive
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:7b-instruct
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  postgres_data:
+  minio_data:
+  ollama_data:

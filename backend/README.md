@@ -1,0 +1,102 @@
+# MediGuide Backend
+
+Offline-first clinical guideline backend for frontline health workers.
+
+This service provides:
+
+- Auth + JWT + RBAC
+- Guideline document/version/section/chunk management
+- PDF upload and ingestion job creation
+- Search endpoints using PostgreSQL full-text search
+- pgvector-ready schema for semantic search
+- RAG chatbot endpoint with citation-first response structure
+- Clinical protocol engine using YAML/JSON definitions
+- Offline sync package metadata and download APIs
+- Audit logs
+- MinIO/S3-compatible object storage support
+- Docker Compose for local development
+
+## Stack
+
+- Go
+- Gin
+- GORM
+- PostgreSQL + pgvector
+- MinIO
+- Goose migrations
+- JWT auth
+
+## Quick start
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+API health:
+
+```bash
+curl http://localhost:8080/api/healthz
+```
+
+Run migrations manually:
+
+```bash
+make migrate-up
+```
+
+Seed admin:
+
+```bash
+make seed
+```
+
+Default seeded admin:
+
+```text
+email: admin@mediguide.local
+password: Admin123!
+```
+
+## Main endpoints
+
+```text
+POST   /api/v1/auth/login
+POST   /api/v1/auth/register
+GET    /api/v1/me
+
+POST   /api/v1/guidelines
+GET    /api/v1/guidelines
+GET    /api/v1/guidelines/:id
+POST   /api/v1/guidelines/:id/versions
+POST   /api/v1/guideline-versions/:id/upload
+POST   /api/v1/guideline-versions/:id/publish
+GET    /api/v1/guideline-versions/:id/sections
+GET    /api/v1/guideline-versions/:id/chunks
+
+GET    /api/v1/search?q=malaria
+POST   /api/v1/chat/ask
+
+POST   /api/v1/protocols
+GET    /api/v1/protocols
+GET    /api/v1/protocols/:id
+POST   /api/v1/protocols/:id/run
+
+GET    /api/v1/sync/manifest
+POST   /api/v1/sync/packages
+GET    /api/v1/sync/packages/:id/download
+```
+
+## Development notes
+
+The PDF-to-HTML/vector process is represented as ingestion jobs. In production, connect the job runner to a Python worker that:
+
+1. Downloads original PDF from object storage.
+2. Extracts structured Markdown/HTML.
+3. Extracts tables and figures.
+4. Creates chunks.
+5. Generates embeddings.
+6. Saves sections/chunks/embeddings into PostgreSQL.
+7. Marks the ingestion job as completed.
+
+The Go backend already has the tables and APIs needed for that workflow.

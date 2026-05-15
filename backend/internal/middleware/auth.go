@@ -1,0 +1,51 @@
+package middleware
+
+import (
+	"net/http"
+	"strings"
+
+	"mediguide/internal/config"
+	"mediguide/internal/httpx"
+	"mediguide/internal/security"
+
+	"github.com/gin-gonic/gin"
+)
+
+const ClaimsKey = "claims"
+
+func AuthRequired(cfg config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		if header == "" || !strings.HasPrefix(header, "Bearer ") {
+			httpx.Error(c, http.StatusUnauthorized, "missing bearer token")
+			c.Abort()
+			return
+		}
+		claims, err := security.ParseJWT(cfg.JWTSecret, strings.TrimPrefix(header, "Bearer "))
+		if err != nil {
+			httpx.Error(c, http.StatusUnauthorized, "invalid token")
+			c.Abort()
+			return
+		}
+		c.Set(ClaimsKey, claims)
+		c.Next()
+	}
+}
+
+func RequirePermission(permission string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		v, exists := c.Get(ClaimsKey)
+		if !exists {
+			httpx.Error(c, http.StatusUnauthorized, "not authenticated")
+			c.Abort()
+			return
+		}
+		claims := v.(*security.Claims)
+		if !security.HasPerm(claims, permission) {
+			httpx.Error(c, http.StatusForbidden, "forbidden")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

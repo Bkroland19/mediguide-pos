@@ -1,0 +1,41 @@
+-include .env
+export
+
+.PHONY: run build test tidy migrate-up migrate-down migrate-status seed docker-up docker-down swagger
+
+run:
+	go run ./cmd/api
+
+worker:
+	go run ./cmd/worker
+
+build:
+	go build -o bin/api ./cmd/api
+	go build -o bin/worker ./cmd/worker
+
+test:
+	go test ./...
+
+tidy:
+	go mod tidy
+
+migrate-up:
+	go run ./cmd/migrate up
+
+migrate-down:
+	go run ./cmd/migrate down
+
+migrate-status:
+	go run ./cmd/migrate status
+
+seed:
+	go run ./cmd/seed
+
+swagger:
+	swag init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes json,yaml --generatedTime=false --parseInternal
+
+docker-up:
+	docker compose up --build
+
+docker-down:
+	docker compose down -v
