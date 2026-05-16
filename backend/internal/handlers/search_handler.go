@@ -28,7 +28,7 @@ func (h SearchHandler) Search(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	rows, err := h.Service.Search(c.Query("q"), c.Query("program_area"), limit)
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.OK(c, rows)

@@ -4,12 +4,19 @@ services:
     environment:
       DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
       S3_ENDPOINT: minio:9000
-      OLLAMA_BASE_URL: http://ollama:11434
+      CHUNK_SIZE: ${CHUNK_SIZE:-320}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-60}
+      MIN_CHUNK_CHARS: ${MIN_CHUNK_CHARS:-120}
+      # Temporary default: use Ollama running on the host machine.
+      # To switch back to the Docker Ollama service later, set:
+      # OLLAMA_BASE_URL=http://ollama:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     depends_on:
       - postgres
       - minio
       - redis
-      - ollama
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8090:8090"
 
@@ -19,17 +26,22 @@ services:
     environment:
       DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
       S3_ENDPOINT: minio:9000
-      OLLAMA_BASE_URL: http://ollama:11434
+      CHUNK_SIZE: ${CHUNK_SIZE:-320}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-60}
+      MIN_CHUNK_CHARS: ${MIN_CHUNK_CHARS:-120}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     depends_on:
       - postgres
       - minio
       - redis
-      - ollama
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  # Local Ollama runtime. Pull the embedding and generation models manually after startup:
-  # docker exec -it <ollama-container> ollama pull mxbai-embed-large:latest
-  # docker exec -it <ollama-container> ollama pull qwen2.5:7b-instruct
+  # Optional Docker Ollama runtime for later use.
+  # Enable it with: docker compose --profile docker-ollama up
+  # and set OLLAMA_BASE_URL=http://ollama:11434
   ollama:
+    profiles: ["docker-ollama"]
     image: ollama/ollama:latest
     ports:
       - "11434:11434"

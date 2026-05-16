@@ -12,9 +12,26 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8090, validation_alias=AliasChoices("API_PORT", "HTTP_PORT"))
 
+    # Comma-separated list of allowed CORS origins. Use "*" only for local dev.
+    allowed_origins: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("ALLOWED_ORIGINS", "CORS_ORIGINS"),
+    )
+
+    # Shared secret for internal worker API endpoints (set the same value in backend AI_WORKER_SECRET).
+    worker_api_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices("WORKER_API_SECRET"),
+    )
+
     database_url: str = Field(
         default="postgresql://mediguide:mediguide@localhost:5432/mediguide",
         validation_alias=AliasChoices("DATABASE_URL"),
+    )
+    # PostgreSQL statement timeout in milliseconds (0 = disabled).
+    db_statement_timeout_ms: int = Field(
+        default=30000,
+        validation_alias=AliasChoices("DB_STATEMENT_TIMEOUT_MS"),
     )
     redis_url: str = Field(default="redis://localhost:6379", validation_alias=AliasChoices("REDIS_URL"))
 
@@ -42,9 +59,21 @@ class Settings(BaseSettings):
     worker_enabled: bool = True
     worker_poll_interval_seconds: int = 5
     worker_batch_size: int = 2
+    # Maximum ingestion attempts before a job is permanently marked failed.
+    worker_max_attempts: int = Field(default=3, validation_alias=AliasChoices("WORKER_MAX_ATTEMPTS"))
+    # Back-off multiplier (seconds) between attempts: attempt * worker_retry_backoff_seconds.
+    worker_retry_backoff_seconds: int = Field(default=30, validation_alias=AliasChoices("WORKER_RETRY_BACKOFF_SECONDS"))
 
-    chunk_size: int = 900
-    chunk_overlap: int = 160
+    # Maximum PDF upload size in bytes for the preview endpoint (default 50 MB).
+    max_upload_bytes: int = Field(
+        default=50 * 1024 * 1024,
+        validation_alias=AliasChoices("MAX_UPLOAD_BYTES", "MAX_UPLOAD_MB"),
+    )
+
+    # These chunk values are in words, not characters. Keep them conservative
+    # so local Ollama embedding endpoints do not receive oversized prompts.
+    chunk_size: int = 320
+    chunk_overlap: int = 60
     min_chunk_chars: int = 120
 
     embedding_provider: str = "ollama"  # hash, sentence_transformers, openai, ollama
@@ -68,6 +97,10 @@ class Settings(BaseSettings):
     rag_top_k: int = 6
     rag_min_similarity: float = 0.15
     rag_national_first: bool = True
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
 
 @lru_cache

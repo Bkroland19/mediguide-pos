@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"mediguide/internal/config"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -67,6 +69,8 @@ func (s RAGService) askWithConfiguredProvider(req AskRequest) (*AskResponse, err
 	if provider == "worker" || provider == "ai-worker" {
 		if res, err := s.askWorker(req); err == nil {
 			return res, nil
+		} else {
+			log.Warn().Err(err).Msg("ai-worker RAG failed, falling back to local search")
 		}
 	}
 	return s.askLocal(req)
@@ -101,6 +105,9 @@ func (s RAGService) askWorker(req AskRequest) (*AskResponse, error) {
 		return nil, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if secret := strings.TrimSpace(s.Cfg.AIWorkerSecret); secret != "" {
+		httpReq.Header.Set("X-Worker-Secret", secret)
+	}
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -175,9 +182,12 @@ func (s RAGService) getOrCreateSession(userID *uuid.UUID, req AskRequest) (*mode
 	return &session, nil
 }
 
+// truncate shortens s to at most n Unicode code points (runes), not bytes,
+// so it is safe for multilingual content (Luganda, Swahili, etc.).
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if utf8.RuneCountInString(s) <= n {
 		return s
 	}
-	return s[:n]
+	runes := []rune(s)
+	return string(runes[:n])
 }

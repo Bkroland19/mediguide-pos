@@ -113,13 +113,13 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 		return tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error
 	})
 }
-func (s GuidelineService) Sections(versionID uuid.UUID) ([]models.GuidelineSection, error) {
+func (s GuidelineService) Sections(versionID uuid.UUID, limit, offset int) ([]models.GuidelineSection, error) {
 	var rows []models.GuidelineSection
-	return rows, s.DB.Where("version_id = ?", versionID).Order("sort_order asc").Find(&rows).Error
+	return rows, s.DB.Where("version_id = ?", versionID).Order("sort_order asc").Limit(limit).Offset(offset).Find(&rows).Error
 }
-func (s GuidelineService) Chunks(versionID uuid.UUID) ([]models.GuidelineChunk, error) {
+func (s GuidelineService) Chunks(versionID uuid.UUID, limit, offset int) ([]models.GuidelineChunk, error) {
 	var rows []models.GuidelineChunk
-	return rows, s.DB.Where("version_id = ?", versionID).Order("created_at asc").Find(&rows).Error
+	return rows, s.DB.Where("version_id = ?", versionID).Order("created_at asc").Limit(limit).Offset(offset).Find(&rows).Error
 }
 
 func (s GuidelineService) loadVersionDocument(tx *gorm.DB, versionID uuid.UUID) (*models.GuidelineVersion, *models.GuidelineDocument, error) {

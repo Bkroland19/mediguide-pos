@@ -40,8 +40,29 @@ class Citation(BaseModel):
     similarity: float | None = None
 
 
+class RetrievedChunk(BaseModel):
+    """Safe projection of a retrieved guideline chunk for API consumers.
+    Intentionally excludes internal fields such as embedding_text."""
+    id: str
+    title: str | None = None
+    content: str | None = None
+    page_start: int | None = None
+    page_end: int | None = None
+    language: str | None = None
+    program_area: str | None = None
+    source_name: str | None = None
+    source_version: str | None = None
+    similarity: float | None = None
+
+
+class ReadinessResponse(BaseModel):
+    status: str  # "ok" or "degraded"
+    checks: dict[str, str]
+
+
 class RagAskResponse(BaseModel):
     answer: str
     citations: list[Citation]
-    retrieved: list[dict[str, Any]] = []
+    retrieved: list[RetrievedChunk] = []
     safety: dict[str, Any] = {}
+

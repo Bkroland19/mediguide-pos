@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"mediguide/internal/httpx"
 	"mediguide/internal/services"
 
@@ -23,7 +25,7 @@ type SyncHandler struct{ Service services.SyncService }
 func (h SyncHandler) Manifest(c *gin.Context) {
 	m, err := h.Service.Manifest()
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.OK(c, m)
@@ -67,7 +69,11 @@ func (h SyncHandler) CreatePackage(c *gin.Context) {
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /api/v2/sync/packages/{id}/download [get]
 func (h SyncHandler) Download(c *gin.Context) {
-	id, _ := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
 	u, err := h.Service.DownloadURL(c.Request.Context(), id)
 	if err != nil {
 		httpx.Error(c, 404, err.Error())

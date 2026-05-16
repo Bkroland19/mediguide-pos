@@ -36,11 +36,17 @@ class SearchRepository:
             return cur.fetchall()
 
     def keyword_search(self, query: str, top_k: int, program_area: str | None = None) -> list[dict[str, Any]]:
-        filters = ["deleted_at IS NULL", "review_status = 'approved'", "search_vector @@ plainto_tsquery('simple', %s)"]
-        params: list[Any] = [query]
+        # Base filter params: first %s in plainto_tsquery (WHERE clause)
+        filter_params: list[Any] = [query]
+        filters = [
+            "deleted_at IS NULL",
+            "review_status = 'approved'",
+            "search_vector @@ plainto_tsquery('simple', %s)",
+        ]
         if program_area:
             filters.append("lower(program_area) = lower(%s)")
-            params.append(program_area)
+            filter_params.append(program_area)
+
         sql = f"""
             SELECT id, title, content, page_start, page_end, language, program_area, source_name, source_version,
                    ts_rank(search_vector, plainto_tsquery('simple', %s)) AS similarity
@@ -49,7 +55,9 @@ class SearchRepository:
             ORDER BY similarity DESC
             LIMIT %s
         """
-        exec_params = [query] + params + [top_k]
+        # ts_rank needs query again (%s before WHERE), then filter_params, then top_k
+        exec_params = [query] + filter_params + [top_k]
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql, tuple(exec_params))
             return cur.fetchall()
+

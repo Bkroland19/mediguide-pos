@@ -32,6 +32,11 @@ import (
 // @description Bearer access token. Example: Bearer <token>
 func main() {
 	cfg := config.Load()
+
+	if len(cfg.JWTSecret) < 32 {
+		log.Fatal().Msg("JWT_SECRET must be at least 32 characters long to ensure token security")
+	}
+
 	application, err := app.New(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize app")

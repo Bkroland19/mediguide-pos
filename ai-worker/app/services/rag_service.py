@@ -1,8 +1,8 @@
 from __future__ import annotations
-import json
 import httpx
 from app.core.config import get_settings
 from app.embeddings.factory import get_embedding_provider
+from app.models.schemas import RetrievedChunk
 from app.repositories.search_repo import SearchRepository
 
 
@@ -51,25 +51,48 @@ class RagService:
             }
             for h in hits
         ]
+        # Project hits to the safe RetrievedChunk schema before returning.
+        retrieved = [
+            RetrievedChunk(
+                id=str(h["id"]),
+                title=h.get("title"),
+                content=h.get("content"),
+                page_start=h.get("page_start"),
+                page_end=h.get("page_end"),
+                language=h.get("language"),
+                program_area=h.get("program_area"),
+                source_name=h.get("source_name"),
+                source_version=h.get("source_version"),
+                similarity=float(h.get("similarity") or 0),
+            )
+            for h in hits
+        ]
         return {
             "answer": answer,
             "citations": citations,
-            "retrieved": hits,
+            "retrieved": retrieved,
             "safety": {"grounded": True, "provider": self.settings.llm_provider},
         }
 
     def _merge_hits(self, vector_hits: list[dict], keyword_hits: list[dict], top_k: int) -> list[dict]:
-        seen = set()
-        merged = []
-        for hit in sorted(vector_hits + keyword_hits, key=lambda h: float(h.get("similarity") or 0), reverse=True):
+        """Reciprocal Rank Fusion (RRF) — merges ranked lists without relying on
+        incomparable similarity scores from different retrieval methods."""
+        rrf_k = 60  # standard RRF constant
+        scores: dict[str, float] = {}
+        index: dict[str, dict] = {}
+
+        for rank, hit in enumerate(vector_hits, start=1):
             key = str(hit["id"])
-            if key in seen:
-                continue
-            seen.add(key)
-            merged.append(hit)
-            if len(merged) >= top_k:
-                break
-        return merged
+            scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank)
+            index[key] = hit
+
+        for rank, hit in enumerate(keyword_hits, start=1):
+            key = str(hit["id"])
+            scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank)
+            index[key] = hit
+
+        sorted_keys = sorted(scores, key=lambda k: scores[k], reverse=True)[:top_k]
+        return [index[k] for k in sorted_keys]
 
     def _format_context(self, hits: list[dict]) -> str:
         blocks = []
@@ -133,3 +156,4 @@ class RagService:
             temperature=0.1,
         )
         return response.choices[0].message.content or ""
+

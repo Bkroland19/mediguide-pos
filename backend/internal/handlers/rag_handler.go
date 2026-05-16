@@ -40,7 +40,7 @@ func (h RAGHandler) Ask(c *gin.Context) {
 	}
 	res, err := h.Service.Ask(uid, req)
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.OK(c, res)

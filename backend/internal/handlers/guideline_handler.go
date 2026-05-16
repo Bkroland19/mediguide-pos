@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
@@ -58,7 +59,7 @@ func (h GuidelineHandler) Create(c *gin.Context) {
 func (h GuidelineHandler) List(c *gin.Context) {
 	rows, err := h.Service.ListDocuments(c.Query("program_area"))
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.OK(c, rows)
@@ -76,7 +77,11 @@ func (h GuidelineHandler) List(c *gin.Context) {
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /api/v2/guidelines/{id} [get]
 func (h GuidelineHandler) Get(c *gin.Context) {
-	id, _ := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
 	d, err := h.Service.GetDocument(id)
 	if err != nil {
 		httpx.Error(c, 404, "not found")
@@ -99,7 +104,11 @@ func (h GuidelineHandler) Get(c *gin.Context) {
 // @Failure 403 {object} handlers.ErrorResponse
 // @Router /api/v2/guidelines/{id}/versions [post]
 func (h GuidelineHandler) CreateVersion(c *gin.Context) {
-	docID, _ := uuid.Parse(c.Param("id"))
+	docID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
 	var in services.CreateVersionInput
 	if err := c.ShouldBindJSON(&in); err != nil {
 		httpx.Error(c, 400, err.Error())
@@ -128,7 +137,11 @@ func (h GuidelineHandler) CreateVersion(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/upload [post]
 func (h GuidelineHandler) UploadPDF(c *gin.Context) {
-	versionID, _ := uuid.Parse(c.Param("id"))
+	versionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
 	if err := c.Request.ParseMultipartForm(h.MaxUploadMB << 20); err != nil {
 		httpx.Error(c, 400, err.Error())
 		return
@@ -141,7 +154,7 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 	defer file.Close()
 	job, err := h.Service.UploadPDF(c.Request.Context(), versionID, file, header)
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.Created(c, job)
@@ -160,7 +173,11 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 // @Failure 403 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/publish [post]
 func (h GuidelineHandler) Publish(c *gin.Context) {
-	versionID, _ := uuid.Parse(c.Param("id"))
+	versionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
 	if err := h.Service.PublishVersion(versionID, claims.UserID); err != nil {
 		if errors.Is(err, services.ErrGuidelineIngestionIncomplete) || errors.Is(err, services.ErrGuidelineIngestionFailed) {
@@ -179,16 +196,25 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
+// @Param limit query int false "Maximum results" minimum(1) maximum(500)
+// @Param offset query int false "Offset" minimum(0)
 // @Success 200 {object} handlers.GuidelineSectionsEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/sections [get]
 func (h GuidelineHandler) Sections(c *gin.Context) {
-	id, _ := uuid.Parse(c.Param("id"))
-	rows, err := h.Service.Sections(id)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	rows, err := h.Service.Sections(id, limit, offset)
+	if err != nil {
+		httpx.Error(c, 500, "failed to load sections")
 		return
 	}
 	httpx.OK(c, rows)
@@ -200,16 +226,25 @@ func (h GuidelineHandler) Sections(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
+// @Param limit query int false "Maximum results" minimum(1) maximum(500)
+// @Param offset query int false "Offset" minimum(0)
 // @Success 200 {object} handlers.GuidelineChunksEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/chunks [get]
 func (h GuidelineHandler) Chunks(c *gin.Context) {
-	id, _ := uuid.Parse(c.Param("id"))
-	rows, err := h.Service.Chunks(id)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		httpx.Error(c, 500, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	rows, err := h.Service.Chunks(id, limit, offset)
+	if err != nil {
+		httpx.Error(c, 500, "failed to load chunks")
 		return
 	}
 	httpx.OK(c, rows)

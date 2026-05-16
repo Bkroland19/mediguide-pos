@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -60,6 +62,12 @@ var (
 	messageID               = uuid.MustParse("11111111-1111-1111-1111-111111111153")
 	guidelineDocumentID     = uuid.MustParse("11111111-1111-1111-1111-111111111154")
 	guidelineVersionID      = uuid.MustParse("11111111-1111-1111-1111-111111111155")
+	guidelineSectionIntroID = uuid.MustParse("11111111-1111-1111-1111-111111111164")
+	guidelineSectionMgmtID  = uuid.MustParse("11111111-1111-1111-1111-111111111165")
+	guidelineChunkIntroID   = uuid.MustParse("11111111-1111-1111-1111-111111111166")
+	guidelineChunkTreatID   = uuid.MustParse("11111111-1111-1111-1111-111111111167")
+	guidelineTableID        = uuid.MustParse("11111111-1111-1111-1111-111111111168")
+	guidelineIngestionJobID = uuid.MustParse("11111111-1111-1111-1111-111111111169")
 	readingProgressID       = uuid.MustParse("11111111-1111-1111-1111-111111111156")
 	calculatorUsageLogID    = uuid.MustParse("11111111-1111-1111-1111-111111111157")
 	guidelineUsageLogID     = uuid.MustParse("11111111-1111-1111-1111-111111111158")
@@ -705,13 +713,73 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 		{
 			table: "guideline_versions",
 			row: map[string]any{
-				"id":               guidelineVersionID,
-				"document_id":      guidelineDocumentID,
-				"version":          "2026.1",
-				"publication_date": "2026-05-16",
-				"review_date":      "2026-11-16",
-				"status":           "published",
-				"checksum":         "seed-malaria-guideline-2026",
+				"id":                guidelineVersionID,
+				"document_id":       guidelineDocumentID,
+				"version":           "2026.1",
+				"publication_date":  "2026-05-16",
+				"review_date":       "2026-11-16",
+				"status":            "published",
+				"original_file_key": "guidelines/11111111-1111-1111-1111-111111111155/original/seed_malaria_guideline.pdf",
+				"html_file_key":     "guidelines/11111111-1111-1111-1111-111111111155/extracted/seed_malaria_guideline.html",
+				"markdown_file_key": "guidelines/11111111-1111-1111-1111-111111111155/extracted/seed_malaria_guideline.md",
+				"checksum":          "seed-malaria-guideline-2026",
+				"approved_by":       admin.ID,
+				"approved_at":       "2026-05-16T09:00:00Z",
+			},
+		},
+		{
+			table: "guideline_sections",
+			row: map[string]any{
+				"id":         guidelineSectionIntroID,
+				"version_id": guidelineVersionID,
+				"title":      "Initial assessment",
+				"slug":       "initial-assessment",
+				"level":      1,
+				"html":       "<h1 id=\"initial-assessment\">Initial assessment</h1><p>Assess airway, breathing, circulation, glucose and neurologic status immediately.</p>",
+				"text":       "Assess airway, breathing, circulation, glucose and neurologic status immediately.",
+				"page_start": 1,
+				"page_end":   1,
+				"sort_order": 0,
+			},
+		},
+		{
+			table: "guideline_sections",
+			row: map[string]any{
+				"id":         guidelineSectionMgmtID,
+				"version_id": guidelineVersionID,
+				"title":      "Severe malaria treatment",
+				"slug":       "severe-malaria-treatment",
+				"level":      1,
+				"html":       "<h1 id=\"severe-malaria-treatment\">Severe malaria treatment</h1><p>Start intravenous artesunate, treat hypoglycemia, and refer to hospital-level care if advanced support is required.</p>",
+				"text":       "Start intravenous artesunate, treat hypoglycemia, and refer to hospital-level care if advanced support is required.",
+				"page_start": 2,
+				"page_end":   3,
+				"sort_order": 1,
+			},
+		},
+		{
+			table: "guideline_tables",
+			row: map[string]any{
+				"id":         guidelineTableID,
+				"version_id": guidelineVersionID,
+				"section_id": guidelineSectionMgmtID,
+				"title":      "First-line severe malaria dosing",
+				"html":       "<table><tr><td>Population</td><td>Dose</td></tr><tr><td>Adult</td><td>2.4 mg/kg IV artesunate</td></tr><tr><td>Child</td><td>2.4 mg/kg IV artesunate</td></tr></table>",
+				"data_json":  mustJSON(`[["Population","Dose"],["Adult","2.4 mg/kg IV artesunate"],["Child","2.4 mg/kg IV artesunate"]]`),
+				"page":       2,
+			},
+		},
+		{
+			table: "ingestion_jobs",
+			row: map[string]any{
+				"id":           guidelineIngestionJobID,
+				"version_id":   guidelineVersionID,
+				"job_type":     "pdf_ingestion",
+				"status":       "completed",
+				"error":        "",
+				"payload_json": mustJSON(`{"file_key":"guidelines/11111111-1111-1111-1111-111111111155/original/seed_malaria_guideline.pdf"}`),
+				"started_at":   "2026-05-16T08:45:00Z",
+				"completed_at": "2026-05-16T08:47:00Z",
 			},
 		},
 		{
@@ -880,6 +948,46 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 		}
 	}
 
+	if err := upsertGuidelineChunk(
+		database,
+		guidelineChunkIntroID,
+		guidelineVersionID,
+		guidelineSectionIntroID,
+		"Initial assessment",
+		"Assess airway, breathing, circulation, glucose and neurologic status immediately in every patient with suspected severe malaria.",
+		"<p>Assess airway, breathing, circulation, glucose and neurologic status immediately in every patient with suspected severe malaria.</p>",
+		1,
+		1,
+		"en",
+		"Malaria",
+		"Ministry of Health",
+		"2026.1",
+		"approved",
+		0,
+	); err != nil {
+		return err
+	}
+
+	if err := upsertGuidelineChunk(
+		database,
+		guidelineChunkTreatID,
+		guidelineVersionID,
+		guidelineSectionMgmtID,
+		"Severe malaria treatment",
+		"Start intravenous artesunate promptly, manage hypoglycemia, monitor urine output, and refer for advanced supportive care when indicated.",
+		"<p>Start intravenous artesunate promptly, manage hypoglycemia, monitor urine output, and refer for advanced supportive care when indicated.</p>",
+		2,
+		3,
+		"en",
+		"Malaria",
+		"Ministry of Health",
+		"2026.1",
+		"approved",
+		1,
+	); err != nil {
+		return err
+	}
+
 	return database.Table("guideline_documents").
 		Where("id = ?", guidelineDocumentID).
 		Update("current_version_id", guidelineVersionID).Error
@@ -903,4 +1011,80 @@ func upsertByID(database *gorm.DB, table string, row map[string]any) error {
 
 func mustJSON(raw string) json.RawMessage {
 	return json.RawMessage(raw)
+}
+
+func upsertGuidelineChunk(
+	database *gorm.DB,
+	id uuid.UUID,
+	versionID uuid.UUID,
+	sectionID uuid.UUID,
+	title string,
+	content string,
+	html string,
+	pageStart int,
+	pageEnd int,
+	language string,
+	programArea string,
+	sourceName string,
+	sourceVersion string,
+	reviewStatus string,
+	vectorSeed int,
+) error {
+	return database.Exec(
+		`
+		INSERT INTO guideline_chunks (
+			id, version_id, section_id, title, content, html, page_start, page_end,
+			language, program_area, source_name, source_version, review_status,
+			embedding_text, embedding
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::vector)
+		ON CONFLICT (id) DO UPDATE SET
+			version_id = EXCLUDED.version_id,
+			section_id = EXCLUDED.section_id,
+			title = EXCLUDED.title,
+			content = EXCLUDED.content,
+			html = EXCLUDED.html,
+			page_start = EXCLUDED.page_start,
+			page_end = EXCLUDED.page_end,
+			language = EXCLUDED.language,
+			program_area = EXCLUDED.program_area,
+			source_name = EXCLUDED.source_name,
+			source_version = EXCLUDED.source_version,
+			review_status = EXCLUDED.review_status,
+			embedding_text = EXCLUDED.embedding_text,
+			embedding = EXCLUDED.embedding
+		`,
+		id,
+		versionID,
+		sectionID,
+		title,
+		content,
+		html,
+		pageStart,
+		pageEnd,
+		language,
+		programArea,
+		sourceName,
+		sourceVersion,
+		reviewStatus,
+		content,
+		seedVector(vectorSeed),
+	).Error
+}
+
+func seedVector(seed int) string {
+	values := make([]string, 1024)
+	for i := range values {
+		value := "0"
+		switch {
+		case i == seed:
+			value = "1"
+		case i == seed+1:
+			value = "0.25"
+		case i == seed+2:
+			value = "0.1"
+		}
+		values[i] = value
+	}
+	return fmt.Sprintf("[%s]", strings.Join(values, ","))
 }

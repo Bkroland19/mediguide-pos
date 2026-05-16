@@ -22,9 +22,11 @@ def _guess_heading(line: str) -> int:
         return 0
     if re.match(r"^(chapter|section)\s+\d+", s, re.I):
         return 1
-    if re.match(r"^\d+(\.\d+){0,3}\s+[A-ZA-Za-z]", s):
+    # Numbered section headings: require ≤ 12 words to avoid misclassifying
+    # body text like "1 tablet twice daily" as a heading.
+    if re.match(r"^\d{1,3}(\.\d{1,3}){0,3}\s+[A-Za-z]", s) and len(s.split()) <= 12:
         return min(1 + s.split()[0].count("."), 4)
-    if s.isupper() and len(s.split()) <= 10:
+    if s.isupper() and 1 < len(s.split()) <= 10:
         return 2
     return 0
 

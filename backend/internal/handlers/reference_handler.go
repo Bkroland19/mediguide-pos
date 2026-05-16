@@ -34,7 +34,7 @@ func (h ReferenceHandler) ListSettings(c *gin.Context) {
 	}
 	rows, err := h.Service.ListSettings(c.Query("category"), publicOnly)
 	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		httpx.Error(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	httpx.OK(c, rows)
@@ -84,7 +84,7 @@ func (h ReferenceHandler) ListLanguages(c *gin.Context) {
 	}
 	rows, err := h.Service.ListLanguages(activeOnly)
 	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		httpx.Error(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	httpx.OK(c, rows)

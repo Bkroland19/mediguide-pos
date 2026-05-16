@@ -25,6 +25,10 @@ type Config struct {
 	MaxUploadMB      int64
 	AIRAGProvider    string
 	AIWorkerWebhook  string
+	// Shared secret sent as X-Worker-Secret to the ai-worker API.
+	AIWorkerSecret string
+	// Comma-separated list of allowed CORS origins (use "*" for local dev only).
+	AllowedOrigins string
 }
 
 func Load() Config {
@@ -34,7 +38,7 @@ func Load() Config {
 		AppEnv:           get("APP_ENV", "development"),
 		Port:             getAny([]string{"PORT", "HTTP_PORT"}, "8080"),
 		DatabaseURL:      get("DATABASE_URL", "postgres://mediguide:mediguide@localhost:5432/mediguide?sslmode=disable"),
-		JWTSecret:        get("JWT_SECRET", "change-me"),
+		JWTSecret:        get("JWT_SECRET", "change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u"),
 		JWTIssuer:        get("JWT_ISSUER", "mediguide"),
 		JWTTTLMinutes:    getIntAny([]string{"JWT_TTL_MINUTES", "JWT_ACCESS_TTL_MINUTES"}, 1440),
 		StorageDriver:    get("STORAGE_DRIVER", "minio"),
@@ -47,6 +51,8 @@ func Load() Config {
 		MaxUploadMB:      int64(getInt("MAX_UPLOAD_MB", 100)),
 		AIRAGProvider:    get("AI_RAG_PROVIDER", "local"),
 		AIWorkerWebhook:  getAny([]string{"AI_WORKER_WEBHOOK_URL", "AI_WORKER_URL"}, ""),
+		AIWorkerSecret:   get("AI_WORKER_SECRET", ""),
+		AllowedOrigins:   get("ALLOWED_ORIGINS", "http://localhost:3000"),
 	}
 }
 

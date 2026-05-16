@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+import structlog
 from app.core.config import get_settings
 from app.document_processing.types import ExtractedSection
+
+log = structlog.get_logger()
 
 
 @dataclass
@@ -38,6 +41,13 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
             pieces = [section.title]
         for idx, piece in enumerate(pieces):
             if len(piece) < settings.min_chunk_chars and len(pieces) > 1:
+                log.warning(
+                    "chunk_discarded_too_short",
+                    section_title=section.title,
+                    chunk_index=idx,
+                    chunk_length=len(piece),
+                    min_required=settings.min_chunk_chars,
+                )
                 continue
             html = f"<h{min(max(section.level, 1), 4)}>{section.title}</h{min(max(section.level, 1), 4)}><p>{piece}</p>"
             chunks.append(
@@ -52,3 +62,4 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
                 )
             )
     return chunks
+

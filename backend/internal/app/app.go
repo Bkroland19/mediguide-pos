@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"strings"
 
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -35,7 +36,19 @@ func New(cfg config.Config) (*App, error) {
 
 	r := gin.New()
 	r.Use(gin.Recovery(), middleware.RequestLogger())
-	r.Use(cors.New(cors.Config{AllowOrigins: []string{"*"}, AllowHeaders: []string{"Authorization", "Content-Type"}, AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}}))
+
+	// Build CORS allow-list from config (comma-separated).
+	allowedOrigins := []string{}
+	for _, o := range strings.Split(cfg.AllowedOrigins, ",") {
+		if trimmed := strings.TrimSpace(o); trimmed != "" {
+			allowedOrigins = append(allowedOrigins, trimmed)
+		}
+	}
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: allowedOrigins,
+		AllowHeaders: []string{"Authorization", "Content-Type"},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+	}))
 
 	r.GET("/swagger", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(swaggerChooserHTML))
@@ -46,10 +59,20 @@ func New(cfg config.Config) (*App, error) {
 
 	r.GET("/api/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName}) })
 
+	// Readiness probe: verify DB connectivity.
+	r.GET("/api/readyz", func(c *gin.Context) {
+		sqlDB, err := database.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "reason": "db_unavailable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName})
+	})
+
 	authSvc := services.AuthService{DB: database, Cfg: cfg}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store}
 	searchSvc := services.SearchService{DB: database}
-	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
+	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg, HTTPClient: nil}
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}

@@ -24,6 +24,7 @@ class IngestionService:
         job = self.jobs.get_job(job_id)
         if not job:
             raise ValueError(f"Ingestion job not found: {job_id}")
+        # For API-triggered runs the job may not be in 'running' state yet.
         self.jobs.mark_running(job_id)
         try:
             self._process(job)
