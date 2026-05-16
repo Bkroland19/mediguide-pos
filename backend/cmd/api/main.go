@@ -1,3 +1,21 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	_ "mediguide/docs"
+	"mediguide/internal/app"
+	"mediguide/internal/config"
+
+	"github.com/rs/zerolog/log"
+)
+
 // @title MediGuide Backend API
 // @version 1.0
 // @description Offline-first clinical guideline backend API for MediGuide.
@@ -11,23 +29,6 @@
 // @in header
 // @name Authorization
 // @description Bearer access token. Example: Bearer <token>
-package main
-
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	"mediguide/internal/app"
-	"mediguide/internal/config"
-
-	"github.com/rs/zerolog/log"
-)
-
 func main() {
 	cfg := config.Load()
 	application, err := app.New(cfg)

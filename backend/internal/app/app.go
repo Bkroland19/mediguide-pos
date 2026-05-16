@@ -9,11 +9,13 @@ import (
 	"mediguide/internal/middleware"
 	"mediguide/internal/services"
 	"mediguide/internal/storage"
-	"mediguide/internal/swaggerui"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type App struct {
@@ -35,8 +37,9 @@ func New(cfg config.Config) (*App, error) {
 	r.Use(gin.Recovery(), middleware.RequestLogger())
 	r.Use(cors.New(cors.Config{AllowOrigins: []string{"*"}, AllowHeaders: []string{"Authorization", "Content-Type"}, AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}}))
 
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/api/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName}) })
-	swaggerui.Register(r)
 
 	authSvc := services.AuthService{DB: database, Cfg: cfg}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store}

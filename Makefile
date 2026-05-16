@@ -36,7 +36,7 @@ up:
 
 .PHONY: down
 down:
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) down -v --remove-orphans
 
 .PHONY: build
 build:
@@ -75,7 +75,7 @@ backend-worker:
 
 .PHONY: swagger
 swagger:
-	$(MAKE) -C $(BACKEND_DIR) swagger
+	cd $(BACKEND_DIR) && swag init -g cmd/api/main.go -o docs
 
 .PHONY: migrate-up
 migrate-up:
