@@ -75,7 +75,7 @@ backend-worker:
 
 .PHONY: swagger
 swagger:
-	cd $(BACKEND_DIR) && swag init -g cmd/api/main.go -o docs
+	$(MAKE) -C $(BACKEND_DIR) swagger
 
 .PHONY: migrate-up
 migrate-up:

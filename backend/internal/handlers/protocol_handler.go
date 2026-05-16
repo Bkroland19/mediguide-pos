@@ -23,7 +23,7 @@ type ProtocolHandler struct{ Service services.ProtocolService }
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/protocols [post]
+// @Router /api/v2/protocols [post]
 func (h ProtocolHandler) Create(c *gin.Context) {
 	var in services.CreateProtocolInput
 	if err := c.ShouldBindJSON(&in); err != nil {
@@ -47,7 +47,7 @@ func (h ProtocolHandler) Create(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/protocols [get]
+// @Router /api/v2/protocols [get]
 func (h ProtocolHandler) List(c *gin.Context) {
 	rows, err := h.Service.List()
 	if err != nil {
@@ -67,7 +67,7 @@ func (h ProtocolHandler) List(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
-// @Router /api/v1/protocols/{id} [get]
+// @Router /api/v2/protocols/{id} [get]
 func (h ProtocolHandler) Get(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	p, err := h.Service.Get(id)
@@ -90,7 +90,7 @@ func (h ProtocolHandler) Get(c *gin.Context) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/protocols/{id}/run [post]
+// @Router /api/v2/protocols/{id}/run [post]
 func (h ProtocolHandler) Run(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	var input JSONMap

@@ -23,7 +23,7 @@ type SearchHandler struct{ Service services.SearchService }
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/search [get]
+// @Router /api/v2/search [get]
 func (h SearchHandler) Search(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	rows, err := h.Service.Search(c.Query("q"), c.Query("program_area"), limit)

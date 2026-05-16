@@ -28,7 +28,7 @@ type GuidelineHandler struct {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/guidelines [post]
+// @Router /api/v2/guidelines [post]
 func (h GuidelineHandler) Create(c *gin.Context) {
 	var in services.CreateGuidelineInput
 	if err := c.ShouldBindJSON(&in); err != nil {
@@ -53,7 +53,7 @@ func (h GuidelineHandler) Create(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/guidelines [get]
+// @Router /api/v2/guidelines [get]
 func (h GuidelineHandler) List(c *gin.Context) {
 	rows, err := h.Service.ListDocuments(c.Query("program_area"))
 	if err != nil {
@@ -73,7 +73,7 @@ func (h GuidelineHandler) List(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
-// @Router /api/v1/guidelines/{id} [get]
+// @Router /api/v2/guidelines/{id} [get]
 func (h GuidelineHandler) Get(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	d, err := h.Service.GetDocument(id)
@@ -96,7 +96,7 @@ func (h GuidelineHandler) Get(c *gin.Context) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/guidelines/{id}/versions [post]
+// @Router /api/v2/guidelines/{id}/versions [post]
 func (h GuidelineHandler) CreateVersion(c *gin.Context) {
 	docID, _ := uuid.Parse(c.Param("id"))
 	var in services.CreateVersionInput
@@ -125,7 +125,7 @@ func (h GuidelineHandler) CreateVersion(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/guideline-versions/{id}/upload [post]
+// @Router /api/v2/guideline-versions/{id}/upload [post]
 func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 	versionID, _ := uuid.Parse(c.Param("id"))
 	if err := c.Request.ParseMultipartForm(h.MaxUploadMB << 20); err != nil {
@@ -156,7 +156,7 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/guideline-versions/{id}/publish [post]
+// @Router /api/v2/guideline-versions/{id}/publish [post]
 func (h GuidelineHandler) Publish(c *gin.Context) {
 	versionID, _ := uuid.Parse(c.Param("id"))
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
@@ -177,7 +177,7 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/guideline-versions/{id}/sections [get]
+// @Router /api/v2/guideline-versions/{id}/sections [get]
 func (h GuidelineHandler) Sections(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	rows, err := h.Service.Sections(id)
@@ -198,7 +198,7 @@ func (h GuidelineHandler) Sections(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/guideline-versions/{id}/chunks [get]
+// @Router /api/v2/guideline-versions/{id}/chunks [get]
 func (h GuidelineHandler) Chunks(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	rows, err := h.Service.Chunks(id)

@@ -26,7 +26,7 @@ type RAGHandler struct{ Service services.RAGService }
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/chat/ask [post]
+// @Router /api/v2/chat/ask [post]
 func (h RAGHandler) Ask(c *gin.Context) {
 	var req services.AskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

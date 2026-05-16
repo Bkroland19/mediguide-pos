@@ -106,6 +106,24 @@ definitions:
   handlers.JSONMap:
     additionalProperties: {}
     type: object
+  handlers.LanguageEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Language'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.LanguagesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Language'
+        type: array
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.LoginEnvelope:
     properties:
       data:
@@ -155,14 +173,62 @@ definitions:
     type: object
   handlers.RegisterRequest:
     properties:
+      address:
+        example: Plot 12 Kampala Road
+        type: string
+      alternative_phone:
+        example: "+256700000002"
+        type: string
+      avatar:
+        example: https://example.com/avatar.png
+        type: string
+      city:
+        example: Kampala
+        type: string
+      country:
+        example: Uganda
+        type: string
+      department:
+        example: Emergency
+        type: string
       email:
         example: admin@mediguide.local
+        type: string
+      facility_id:
+        example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        type: string
+      job_title:
+        example: Medical Officer
+        type: string
+      license_number:
+        example: MD-12345
         type: string
       name:
         example: Admin User
         type: string
+      notes:
+        example: Night shift clinician
+        type: string
+      organization:
+        example: Mulago Hospital
+        type: string
       password:
         example: Admin123!
+        type: string
+      phone:
+        example: "+256700000001"
+        type: string
+      postal_code:
+        example: "256"
+        type: string
+      preferred_language:
+        example: en
+        type: string
+      specialization:
+        example: Internal Medicine
+        type: string
+      timezone:
+        example: Africa/Kampala
         type: string
     type: object
   handlers.SearchResultsEnvelope:
@@ -170,6 +236,24 @@ definitions:
       data:
         items:
           $ref: '#/definitions/services.SearchResult'
+        type: array
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.SettingEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Setting'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.SettingsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Setting'
         type: array
       success:
         example: true
@@ -361,6 +445,37 @@ definitions:
       version_id:
         type: string
     type: object
+  models.Language:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      enabled_for_users:
+        type: boolean
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      name:
+        type: string
+      native_name:
+        type: string
+      progress:
+        type: number
+      status:
+        type: string
+      translations_json:
+        type: object
+      translations_url:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: number
+    type: object
   models.Permission:
     properties:
       code:
@@ -382,14 +497,39 @@ definitions:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
       name:
         type: string
       permissions:
         items:
           $ref: '#/definitions/models.Permission'
         type: array
+      permissions_json:
+        type: object
+      role_key:
+        type: string
       updated_at:
         type: string
+    type: object
+  models.Setting:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_public:
+        type: boolean
+      key:
+        type: string
+      updated_at:
+        type: string
+      value_json:
+        type: object
     type: object
   models.SyncPackage:
     properties:
@@ -416,7 +556,19 @@ definitions:
     type: object
   models.User:
     properties:
+      address:
+        type: string
+      alternative_phone:
+        type: string
+      avatar:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
       created_at:
+        type: string
+      department:
         type: string
       email:
         type: string
@@ -426,16 +578,36 @@ definitions:
         type: string
       is_active:
         type: boolean
+      job_title:
+        type: string
+      license_number:
+        type: string
       name:
         type: string
+      notes:
+        type: string
+      organization:
+        type: string
       phone:
+        type: string
+      postal_code:
+        type: string
+      preferred_language:
         type: string
       roles:
         items:
           $ref: '#/definitions/models.Role'
         type: array
+      specialization:
+        type: string
+      status:
+        type: string
+      timezone:
+        type: string
       updated_at:
         type: string
+      verified:
+        type: boolean
     type: object
   services.AskRequest:
     properties:
@@ -489,6 +661,31 @@ definitions:
       title:
         type: string
     type: object
+  services.CreateLanguageInput:
+    properties:
+      code:
+        type: string
+      enabled_for_users:
+        type: boolean
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      name:
+        type: string
+      native_name:
+        type: string
+      progress:
+        type: number
+      status:
+        type: string
+      translations_json:
+        type: object
+      translations_url:
+        type: string
+      version:
+        type: number
+    type: object
   services.CreateProtocolInput:
     properties:
       code:
@@ -503,6 +700,19 @@ definitions:
         type: string
       version:
         type: string
+    type: object
+  services.CreateSettingInput:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      is_public:
+        type: boolean
+      key:
+        type: string
+      value_json:
+        type: object
     type: object
   services.CreateSyncPackageInput:
     properties:
@@ -600,7 +810,7 @@ info:
   title: MediGuide Backend API
   version: "1.0"
 paths:
-  /api/v1/auth/login:
+  /api/v2/auth/login:
     post:
       consumes:
       - application/json
@@ -630,7 +840,7 @@ paths:
       summary: Log in a user
       tags:
       - auth
-  /api/v1/auth/register:
+  /api/v2/auth/register:
     post:
       consumes:
       - application/json
@@ -656,7 +866,7 @@ paths:
       summary: Register a user
       tags:
       - auth
-  /api/v1/chat/ask:
+  /api/v2/chat/ask:
     post:
       consumes:
       - application/json
@@ -695,7 +905,7 @@ paths:
       summary: Ask the guideline assistant
       tags:
       - chat
-  /api/v1/guideline-versions/{id}/chunks:
+  /api/v2/guideline-versions/{id}/chunks:
     get:
       parameters:
       - description: Guideline version ID
@@ -728,7 +938,7 @@ paths:
       summary: List chunks for a guideline version
       tags:
       - guidelines
-  /api/v1/guideline-versions/{id}/publish:
+  /api/v2/guideline-versions/{id}/publish:
     post:
       parameters:
       - description: Guideline version ID
@@ -761,7 +971,7 @@ paths:
       summary: Publish a guideline version
       tags:
       - guidelines
-  /api/v1/guideline-versions/{id}/sections:
+  /api/v2/guideline-versions/{id}/sections:
     get:
       parameters:
       - description: Guideline version ID
@@ -794,7 +1004,7 @@ paths:
       summary: List sections for a guideline version
       tags:
       - guidelines
-  /api/v1/guideline-versions/{id}/upload:
+  /api/v2/guideline-versions/{id}/upload:
     post:
       consumes:
       - multipart/form-data
@@ -838,7 +1048,7 @@ paths:
       summary: Upload a guideline PDF
       tags:
       - guidelines
-  /api/v1/guidelines:
+  /api/v2/guidelines:
     get:
       parameters:
       - description: Program area filter
@@ -903,7 +1113,7 @@ paths:
       summary: Create a guideline document
       tags:
       - guidelines
-  /api/v1/guidelines/{id}:
+  /api/v2/guidelines/{id}:
     get:
       parameters:
       - description: Document ID
@@ -936,7 +1146,7 @@ paths:
       summary: Get a guideline document
       tags:
       - guidelines
-  /api/v1/guidelines/{id}/versions:
+  /api/v2/guidelines/{id}/versions:
     post:
       consumes:
       - application/json
@@ -977,7 +1187,68 @@ paths:
       summary: Create a guideline version
       tags:
       - guidelines
-  /api/v1/me:
+  /api/v2/languages:
+    get:
+      parameters:
+      - description: Active languages filter
+        in: query
+        name: is_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LanguagesEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List languages
+      tags:
+      - reference
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Language payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateLanguageInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.LanguageEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a language
+      tags:
+      - reference
+  /api/v2/me:
     get:
       description: Return the currently authenticated user.
       produces:
@@ -1000,7 +1271,7 @@ paths:
       summary: Get current user
       tags:
       - auth
-  /api/v1/protocols:
+  /api/v2/protocols:
     get:
       produces:
       - application/json
@@ -1060,7 +1331,7 @@ paths:
       summary: Create a clinical protocol
       tags:
       - protocols
-  /api/v1/protocols/{id}:
+  /api/v2/protocols/{id}:
     get:
       parameters:
       - description: Protocol ID
@@ -1093,7 +1364,7 @@ paths:
       summary: Get a clinical protocol
       tags:
       - protocols
-  /api/v1/protocols/{id}/run:
+  /api/v2/protocols/{id}/run:
     post:
       consumes:
       - application/json
@@ -1134,7 +1405,7 @@ paths:
       summary: Run a clinical protocol
       tags:
       - protocols
-  /api/v1/search:
+  /api/v2/search:
     get:
       parameters:
       - description: Search query
@@ -1175,7 +1446,76 @@ paths:
       summary: Search approved guideline chunks
       tags:
       - search
-  /api/v1/sync/manifest:
+  /api/v2/settings:
+    get:
+      parameters:
+      - description: Settings category filter
+        in: query
+        name: category
+        type: string
+      - description: Public settings filter
+        in: query
+        name: is_public
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SettingsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List settings
+      tags:
+      - reference
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Setting payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateSettingInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.SettingEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a setting
+      tags:
+      - reference
+  /api/v2/sync/manifest:
     get:
       produces:
       - application/json
@@ -1201,7 +1541,7 @@ paths:
       summary: Get published sync package manifest
       tags:
       - sync
-  /api/v1/sync/packages:
+  /api/v2/sync/packages:
     post:
       consumes:
       - application/json
@@ -1236,7 +1576,7 @@ paths:
       summary: Create a sync package record
       tags:
       - sync
-  /api/v1/sync/packages/{id}/download:
+  /api/v2/sync/packages/{id}/download:
     get:
       parameters:
       - description: Sync package ID

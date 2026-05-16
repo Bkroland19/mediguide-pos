@@ -22,7 +22,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/auth/login": {
+        "/api/v2/auth/login": {
             "post": {
                 "description": "Authenticate a user and return a JWT bearer token.",
                 "consumes": [
@@ -68,7 +68,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/auth/register": {
+        "/api/v2/auth/register": {
             "post": {
                 "description": "Create a new backend user account.",
                 "consumes": [
@@ -108,7 +108,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/chat/ask": {
+        "/api/v2/chat/ask": {
             "post": {
                 "security": [
                     {
@@ -170,7 +170,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guideline-versions/{id}/chunks": {
+        "/api/v2/guideline-versions/{id}/chunks": {
             "get": {
                 "security": [
                     {
@@ -222,7 +222,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guideline-versions/{id}/publish": {
+        "/api/v2/guideline-versions/{id}/publish": {
             "post": {
                 "security": [
                     {
@@ -274,7 +274,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guideline-versions/{id}/sections": {
+        "/api/v2/guideline-versions/{id}/sections": {
             "get": {
                 "security": [
                     {
@@ -326,7 +326,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guideline-versions/{id}/upload": {
+        "/api/v2/guideline-versions/{id}/upload": {
             "post": {
                 "security": [
                     {
@@ -394,7 +394,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guidelines": {
+        "/api/v2/guidelines": {
             "get": {
                 "security": [
                     {
@@ -498,7 +498,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guidelines/{id}": {
+        "/api/v2/guidelines/{id}": {
             "get": {
                 "security": [
                     {
@@ -550,7 +550,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/guidelines/{id}/versions": {
+        "/api/v2/guidelines/{id}/versions": {
             "post": {
                 "security": [
                     {
@@ -614,7 +614,105 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/me": {
+        "/api/v2/languages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reference"
+                ],
+                "summary": "List languages",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Active languages filter",
+                        "name": "is_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LanguagesEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reference"
+                ],
+                "summary": "Create a language",
+                "parameters": [
+                    {
+                        "description": "Language payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateLanguageInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LanguageEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/me": {
             "get": {
                 "security": [
                     {
@@ -651,7 +749,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/protocols": {
+        "/api/v2/protocols": {
             "get": {
                 "security": [
                     {
@@ -747,7 +845,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/protocols/{id}": {
+        "/api/v2/protocols/{id}": {
             "get": {
                 "security": [
                     {
@@ -799,7 +897,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/protocols/{id}/run": {
+        "/api/v2/protocols/{id}/run": {
             "post": {
                 "security": [
                     {
@@ -863,7 +961,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/search": {
+        "/api/v2/search": {
             "get": {
                 "security": [
                     {
@@ -927,7 +1025,117 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/sync/manifest": {
+        "/api/v2/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reference"
+                ],
+                "summary": "List settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Settings category filter",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Public settings filter",
+                        "name": "is_public",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SettingsEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reference"
+                ],
+                "summary": "Create a setting",
+                "parameters": [
+                    {
+                        "description": "Setting payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateSettingInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SettingEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/sync/manifest": {
             "get": {
                 "security": [
                     {
@@ -969,7 +1177,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/sync/packages": {
+        "/api/v2/sync/packages": {
             "post": {
                 "security": [
                     {
@@ -1025,7 +1233,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/sync/packages/{id}/download": {
+        "/api/v2/sync/packages/{id}/download": {
             "get": {
                 "security": [
                     {
@@ -1237,6 +1445,33 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": {}
         },
+        "handlers.LanguageEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Language"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.LanguagesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Language"
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.LoginEnvelope": {
             "type": "object",
             "properties": {
@@ -1310,17 +1545,81 @@ const docTemplate = `{
         "handlers.RegisterRequest": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "Plot 12 Kampala Road"
+                },
+                "alternative_phone": {
+                    "type": "string",
+                    "example": "+256700000002"
+                },
+                "avatar": {
+                    "type": "string",
+                    "example": "https://example.com/avatar.png"
+                },
+                "city": {
+                    "type": "string",
+                    "example": "Kampala"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "Uganda"
+                },
+                "department": {
+                    "type": "string",
+                    "example": "Emergency"
+                },
                 "email": {
                     "type": "string",
                     "example": "admin@mediguide.local"
+                },
+                "facility_id": {
+                    "type": "string",
+                    "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                },
+                "job_title": {
+                    "type": "string",
+                    "example": "Medical Officer"
+                },
+                "license_number": {
+                    "type": "string",
+                    "example": "MD-12345"
                 },
                 "name": {
                     "type": "string",
                     "example": "Admin User"
                 },
+                "notes": {
+                    "type": "string",
+                    "example": "Night shift clinician"
+                },
+                "organization": {
+                    "type": "string",
+                    "example": "Mulago Hospital"
+                },
                 "password": {
                     "type": "string",
                     "example": "Admin123!"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+256700000001"
+                },
+                "postal_code": {
+                    "type": "string",
+                    "example": "256"
+                },
+                "preferred_language": {
+                    "type": "string",
+                    "example": "en"
+                },
+                "specialization": {
+                    "type": "string",
+                    "example": "Internal Medicine"
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "Africa/Kampala"
                 }
             }
         },
@@ -1331,6 +1630,33 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.SearchResult"
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.SettingEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Setting"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.SettingsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Setting"
                     }
                 },
                 "success": {
@@ -1620,6 +1946,53 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Language": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "enabled_for_users": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "native_name": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "translations_json": {
+                    "type": "object"
+                },
+                "translations_url": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "number"
+                }
+            }
+        },
         "models.Permission": {
             "type": "object",
             "properties": {
@@ -1652,6 +2025,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -1661,8 +2037,43 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Permission"
                     }
                 },
+                "permissions_json": {
+                    "type": "object"
+                },
+                "role_key": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "models.Setting": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "value_json": {
+                    "type": "object"
                 }
             }
         },
@@ -1704,7 +2115,25 @@ const docTemplate = `{
         "models.User": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "alternative_phone": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "department": {
                     "type": "string"
                 },
                 "email": {
@@ -1719,10 +2148,28 @@ const docTemplate = `{
                 "is_active": {
                     "type": "boolean"
                 },
+                "job_title": {
+                    "type": "string"
+                },
+                "license_number": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
+                "notes": {
+                    "type": "string"
+                },
+                "organization": {
+                    "type": "string"
+                },
                 "phone": {
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "preferred_language": {
                     "type": "string"
                 },
                 "roles": {
@@ -1731,8 +2178,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Role"
                     }
                 },
+                "specialization": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
                 }
             }
         },
@@ -1816,6 +2275,44 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CreateLanguageInput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "enabled_for_users": {
+                    "type": "boolean"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "native_name": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "translations_json": {
+                    "type": "object"
+                },
+                "translations_url": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "number"
+                }
+            }
+        },
         "services.CreateProtocolInput": {
             "type": "object",
             "properties": {
@@ -1836,6 +2333,26 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string"
+                }
+            }
+        },
+        "services.CreateSettingInput": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "value_json": {
+                    "type": "object"
                 }
             }
         },

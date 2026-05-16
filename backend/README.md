@@ -61,30 +61,36 @@ password: Admin123!
 ## Main endpoints
 
 ```text
-POST   /api/v1/auth/login
-POST   /api/v1/auth/register
-GET    /api/v1/me
+GET    /api/v1/stats
+GET    /api/v1/consultants/tree
+GET    /api/v1/health-facilities/tree
+GET    /api/v1/ministry-directory/tree
+GET    /api/v1/overview
 
-POST   /api/v1/guidelines
-GET    /api/v1/guidelines
-GET    /api/v1/guidelines/:id
-POST   /api/v1/guidelines/:id/versions
-POST   /api/v1/guideline-versions/:id/upload
-POST   /api/v1/guideline-versions/:id/publish
-GET    /api/v1/guideline-versions/:id/sections
-GET    /api/v1/guideline-versions/:id/chunks
+POST   /api/v2/auth/login
+POST   /api/v2/auth/register
+GET    /api/v2/me
 
-GET    /api/v1/search?q=malaria
-POST   /api/v1/chat/ask
+POST   /api/v2/guidelines
+GET    /api/v2/guidelines
+GET    /api/v2/guidelines/:id
+POST   /api/v2/guidelines/:id/versions
+POST   /api/v2/guideline-versions/:id/upload
+POST   /api/v2/guideline-versions/:id/publish
+GET    /api/v2/guideline-versions/:id/sections
+GET    /api/v2/guideline-versions/:id/chunks
 
-POST   /api/v1/protocols
-GET    /api/v1/protocols
-GET    /api/v1/protocols/:id
-POST   /api/v1/protocols/:id/run
+GET    /api/v2/search?q=malaria
+POST   /api/v2/chat/ask
 
-GET    /api/v1/sync/manifest
-POST   /api/v1/sync/packages
-GET    /api/v1/sync/packages/:id/download
+POST   /api/v2/protocols
+GET    /api/v2/protocols
+GET    /api/v2/protocols/:id
+POST   /api/v2/protocols/:id/run
+
+GET    /api/v2/sync/manifest
+POST   /api/v2/sync/packages
+GET    /api/v2/sync/packages/:id/download
 ```
 
 ## Development notes

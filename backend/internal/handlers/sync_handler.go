@@ -19,7 +19,7 @@ type SyncHandler struct{ Service services.SyncService }
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/sync/manifest [get]
+// @Router /api/v2/sync/manifest [get]
 func (h SyncHandler) Manifest(c *gin.Context) {
 	m, err := h.Service.Manifest()
 	if err != nil {
@@ -40,7 +40,7 @@ func (h SyncHandler) Manifest(c *gin.Context) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v1/sync/packages [post]
+// @Router /api/v2/sync/packages [post]
 func (h SyncHandler) CreatePackage(c *gin.Context) {
 	var in services.CreateSyncPackageInput
 	if err := c.ShouldBindJSON(&in); err != nil {
@@ -65,7 +65,7 @@ func (h SyncHandler) CreatePackage(c *gin.Context) {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
-// @Router /api/v1/sync/packages/{id}/download [get]
+// @Router /api/v2/sync/packages/{id}/download [get]
 func (h SyncHandler) Download(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
 	u, err := h.Service.DownloadURL(c.Request.Context(), id)

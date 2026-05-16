@@ -32,7 +32,7 @@ seed:
 	go run ./cmd/seed
 
 swagger:
-	swag init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes json,yaml --generatedTime=false --parseInternal
+	swag init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes go,json,yaml --generatedTime=false --parseInternal
 
 docker-up:
 	docker compose up --build

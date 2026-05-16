@@ -47,6 +47,8 @@ func New(cfg config.Config) (*App, error) {
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
+	referenceSvc := services.ReferenceService{DB: database}
+	legacyAPISvc := services.LegacyAPIService{DB: database}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -54,12 +56,23 @@ func New(cfg config.Config) (*App, error) {
 	ragH := handlers.RAGHandler{Service: ragSvc}
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
 	syncH := handlers.SyncHandler{Service: syncSvc}
+	referenceH := handlers.ReferenceHandler{Service: referenceSvc}
+	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 
-	v1 := r.Group("/api/v1")
+	legacyV1 := r.Group("/api/v1")
+	legacyV1.GET("/stats", legacyAPIH.Stats)
+	legacyProtected := legacyV1.Group("")
+	legacyProtected.Use(middleware.AuthRequired(cfg))
+	legacyProtected.GET("/consultants/tree", legacyAPIH.ConsultantsTree)
+	legacyProtected.GET("/health-facilities/tree", legacyAPIH.HealthFacilitiesTree)
+	legacyProtected.GET("/ministry-directory/tree", legacyAPIH.MinistryDirectoryTree)
+	legacyProtected.GET("/overview", legacyAPIH.Overview)
+
+	v2 := r.Group("/api/v2")
 	{
-		v1.POST("/auth/register", authH.Register)
-		v1.POST("/auth/login", authH.Login)
-		protected := v1.Group("")
+		v2.POST("/auth/register", authH.Register)
+		v2.POST("/auth/login", authH.Login)
+		protected := v2.Group("")
 		protected.Use(middleware.AuthRequired(cfg))
 		protected.GET("/me", authH.Me)
 
@@ -79,6 +92,11 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/protocols", middleware.RequirePermission("protocol.read"), protocolH.List)
 		protected.GET("/protocols/:id", middleware.RequirePermission("protocol.read"), protocolH.Get)
 		protected.POST("/protocols/:id/run", middleware.RequirePermission("protocol.read"), protocolH.Run)
+
+		protected.GET("/settings", middleware.RequirePermission("admin.all"), referenceH.ListSettings)
+		protected.POST("/settings", middleware.RequirePermission("admin.all"), referenceH.CreateSetting)
+		protected.GET("/languages", referenceH.ListLanguages)
+		protected.POST("/languages", middleware.RequirePermission("admin.all"), referenceH.CreateLanguage)
 
 		protected.GET("/sync/manifest", middleware.RequirePermission("sync.read"), syncH.Manifest)
 		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), syncH.CreatePackage)
