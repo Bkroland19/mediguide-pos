@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"mediguide/internal/httpx"
@@ -154,6 +155,7 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 // @Param id path string true "Guideline version ID" format(uuid)
 // @Success 200 {object} handlers.PublishEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
+// @Failure 409 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/publish [post]
@@ -161,6 +163,10 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 	versionID, _ := uuid.Parse(c.Param("id"))
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
 	if err := h.Service.PublishVersion(versionID, claims.UserID); err != nil {
+		if errors.Is(err, services.ErrGuidelineIngestionIncomplete) || errors.Is(err, services.ErrGuidelineIngestionFailed) {
+			httpx.Error(c, http.StatusConflict, err.Error())
+			return
+		}
 		httpx.Error(c, 400, err.Error())
 		return
 	}

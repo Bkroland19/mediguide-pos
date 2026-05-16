@@ -10,6 +10,7 @@ import (
 	"time"
 
 	_ "mediguide/docs"
+	_ "mediguide/docs/versioned"
 	"mediguide/internal/app"
 	"mediguide/internal/config"
 

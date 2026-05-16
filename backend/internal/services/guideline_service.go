@@ -39,6 +39,11 @@ type CreateVersionInput struct {
 	ReviewDate      string `json:"review_date"`
 }
 
+var (
+	ErrGuidelineIngestionIncomplete = errors.New("guideline ingestion is not complete")
+	ErrGuidelineIngestionFailed     = errors.New("guideline ingestion failed")
+)
+
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
 	d := models.GuidelineDocument{Title: in.Title, Country: in.Country, SourceOrg: in.SourceOrg, ProgramArea: in.ProgramArea, Language: in.Language, Description: in.Description}
 	if d.Language == "" {
@@ -94,6 +99,9 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 	return s.DB.Transaction(func(tx *gorm.DB) error {
 		var v models.GuidelineVersion
 		if err := tx.First(&v, "id = ?", versionID).Error; err != nil {
+			return err
+		}
+		if err := ensureVersionReadyForPublish(tx, &v); err != nil {
 			return err
 		}
 		if err := tx.Model(&v).Updates(map[string]any{"status": "published", "approved_by": userID, "approved_at": now}).Error; err != nil {
@@ -157,6 +165,51 @@ func ensureDraftProtocol(tx *gorm.DB, document *models.GuidelineDocument, versio
 		DefinitionJSON: string(definitionJSONBytes),
 	}
 	return tx.Create(&protocol).Error
+}
+
+func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion) error {
+	if strings.TrimSpace(version.OriginalFileKey) == "" {
+		return fmt.Errorf("%w: no PDF has been uploaded for this version", ErrGuidelineIngestionIncomplete)
+	}
+	if strings.TrimSpace(version.HTMLFileKey) == "" || strings.TrimSpace(version.MarkdownFileKey) == "" {
+		return fmt.Errorf("%w: extracted HTML/Markdown assets are missing", ErrGuidelineIngestionIncomplete)
+	}
+
+	var latestJob models.IngestionJob
+	jobErr := tx.Where("version_id = ? AND deleted_at IS NULL", version.ID).Order("created_at desc").First(&latestJob).Error
+	if jobErr == nil {
+		switch strings.ToLower(strings.TrimSpace(latestJob.Status)) {
+		case "completed":
+		case "failed":
+			msg := strings.TrimSpace(latestJob.Error)
+			if msg == "" {
+				msg = "the ingestion worker reported a failure"
+			}
+			return fmt.Errorf("%w: %s", ErrGuidelineIngestionFailed, msg)
+		default:
+			return fmt.Errorf("%w: latest ingestion job status is %s", ErrGuidelineIngestionIncomplete, latestJob.Status)
+		}
+	} else if !errors.Is(jobErr, gorm.ErrRecordNotFound) {
+		return jobErr
+	}
+
+	var sectionCount int64
+	if err := tx.Model(&models.GuidelineSection{}).Where("version_id = ?", version.ID).Count(&sectionCount).Error; err != nil {
+		return err
+	}
+	if sectionCount == 0 {
+		return fmt.Errorf("%w: no extracted sections were generated from the uploaded PDF", ErrGuidelineIngestionIncomplete)
+	}
+
+	var chunkCount int64
+	if err := tx.Model(&models.GuidelineChunk{}).Where("version_id = ?", version.ID).Count(&chunkCount).Error; err != nil {
+		return err
+	}
+	if chunkCount == 0 {
+		return fmt.Errorf("%w: no vectorized chunks were generated from the uploaded PDF", ErrGuidelineIngestionIncomplete)
+	}
+
+	return nil
 }
 
 func protocolCode(document *models.GuidelineDocument, version *models.GuidelineVersion) string {
