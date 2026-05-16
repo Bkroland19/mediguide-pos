@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import uuid
 import structlog
+from app.core.config import get_settings
 from app.core.storage import ObjectStorage
 from app.document_processing.pdf_extractor import extract_pdf
 from app.document_processing.chunker import chunk_sections
@@ -15,6 +16,7 @@ log = structlog.get_logger()
 
 class IngestionService:
     def __init__(self):
+        self.settings = get_settings()
         self.jobs = IngestionRepository()
         self.guidelines = GuidelineRepository()
         self.storage = ObjectStorage()
@@ -66,7 +68,7 @@ class IngestionService:
 
             texts = [c.content for c in chunks]
             embeddings = []
-            batch_size = 32
+            batch_size = max(1, self.settings.embedding_request_batch_size)
             for i in range(0, len(texts), batch_size):
                 embeddings.extend(self.embedder.embed(texts[i:i + batch_size]))
 

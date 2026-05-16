@@ -72,9 +72,13 @@ class Settings(BaseSettings):
 
     # These chunk values are in words, not characters. Keep them conservative
     # so local Ollama embedding endpoints do not receive oversized prompts.
-    chunk_size: int = 320
-    chunk_overlap: int = 60
-    min_chunk_chars: int = 120
+    chunk_size: int = Field(default=320, validation_alias=AliasChoices("CHUNK_SIZE"))
+    chunk_overlap: int = Field(default=60, validation_alias=AliasChoices("CHUNK_OVERLAP"))
+    min_chunk_chars: int = Field(default=120, validation_alias=AliasChoices("MIN_CHUNK_CHARS"))
+    embedding_request_batch_size: int = Field(
+        default=8,
+        validation_alias=AliasChoices("EMBEDDING_REQUEST_BATCH_SIZE"),
+    )
 
     embedding_provider: str = "ollama"  # hash, sentence_transformers, openai, ollama
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"

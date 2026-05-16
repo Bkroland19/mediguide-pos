@@ -13,7 +13,16 @@ def main() -> None:
     settings = get_settings()
     repo = IngestionRepository()
     service = IngestionService()
-    log.info("worker_started", poll_interval=settings.worker_poll_interval_seconds)
+    log.info(
+        "worker_started",
+        poll_interval=settings.worker_poll_interval_seconds,
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+        min_chunk_chars=settings.min_chunk_chars,
+        embedding_request_batch_size=settings.embedding_request_batch_size,
+        ollama_base_url=settings.ollama_base_url,
+        ollama_embedding_model=settings.ollama_embedding_model,
+    )
 
     while settings.worker_enabled:
         # 1. Pick up new queued jobs.
@@ -47,4 +56,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

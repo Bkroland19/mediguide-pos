@@ -95,6 +95,7 @@ services:
       CHUNK_SIZE: 320
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
+      EMBEDDING_REQUEST_BATCH_SIZE: 8
       LLM_PROVIDER: extractive
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: qwen2.5:7b-instruct
@@ -131,6 +132,7 @@ services:
       CHUNK_SIZE: 320
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
+      EMBEDDING_REQUEST_BATCH_SIZE: 8
       LLM_PROVIDER: extractive
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: qwen2.5:7b-instruct
