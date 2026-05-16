@@ -22,6 +22,589 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate a user and return a JWT bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in a user",
+                "parameters": [
+                    {
+                        "description": "Login payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Create a new backend user account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a user",
+                "parameters": [
+                    {
+                        "description": "Registration payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/consultants/tree": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get consultants tree",
+                "parameters": [
+                    {
+                        "maximum": 2,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Tree level",
+                        "name": "level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "JSON encoded filters",
+                        "name": "filters",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional JSON context",
+                        "name": "context",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyTreeResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/health-facilities/tree": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 endpoint that groups facilities by region, district, then facility level.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get health facilities tree",
+                "parameters": [
+                    {
+                        "maximum": 2,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Tree level",
+                        "name": "level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "JSON encoded filters",
+                        "name": "filters",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional JSON context",
+                        "name": "context",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyTreeResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return the currently authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ministry-directory/tree": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 endpoint that groups ministry directory contacts by region, district, then ministry.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get ministry directory tree",
+                "parameters": [
+                    {
+                        "maximum": 2,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Tree level",
+                        "name": "level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "JSON encoded filters",
+                        "name": "filters",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional JSON context",
+                        "name": "context",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyTreeResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Dashboard-oriented legacy v1 overview endpoint with metrics, pipeline, engagement, support and coverage totals.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get legacy overview metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyOverviewResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/stats": {
+            "get": {
+                "description": "Legacy v1 stats endpoint used by the mobile home screen. Authentication is optional, but user-specific message counts are only returned when a valid bearer token is provided.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get legacy mobile stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyStatsResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/{collection}": {
+            "get": {
+                "description": "Legacy v1 collection listing endpoint. Some collections are public while others require authentication depending on the collection name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "List legacy collection records",
+                "parameters": [
+                    {
+                        "enum": [
+                            "medical_guidelines",
+                            "drugs",
+                            "calculators",
+                            "abbreviations",
+                            "emergency_protocols",
+                            "faqs",
+                            "documentation",
+                            "generic_pages",
+                            "guideline_categories",
+                            "guideline_tags",
+                            "drug_categories",
+                            "drug_tags",
+                            "drug_classes",
+                            "therapeutic_categories",
+                            "consultants",
+                            "health_facilities",
+                            "regions",
+                            "districts",
+                            "counties",
+                            "subcounties",
+                            "parishes",
+                            "facility_levels",
+                            "ownership_types",
+                            "authorities",
+                            "ministry_directory",
+                            "languages",
+                            "notifications",
+                            "notification_templates",
+                            "notification_campaigns",
+                            "support_tickets",
+                            "support_ticket_replies",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs",
+                            "guideline_usage_logs",
+                            "drug_usage_logs",
+                            "abbreviation_usage_logs",
+                            "consultant_usage_logs",
+                            "facility_usage_logs",
+                            "ai_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term alias",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionListResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/{collection}/{id}": {
+            "get": {
+                "description": "Legacy v1 collection detail endpoint. Some collections are public while others require authentication depending on the collection name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get legacy collection record",
+                "parameters": [
+                    {
+                        "enum": [
+                            "medical_guidelines",
+                            "drugs",
+                            "calculators",
+                            "abbreviations",
+                            "emergency_protocols",
+                            "faqs",
+                            "documentation",
+                            "generic_pages",
+                            "guideline_categories",
+                            "guideline_tags",
+                            "drug_categories",
+                            "drug_tags",
+                            "drug_classes",
+                            "therapeutic_categories",
+                            "consultants",
+                            "health_facilities",
+                            "regions",
+                            "districts",
+                            "counties",
+                            "subcounties",
+                            "parishes",
+                            "facility_levels",
+                            "ownership_types",
+                            "authorities",
+                            "ministry_directory",
+                            "languages",
+                            "notifications",
+                            "notification_templates",
+                            "notification_campaigns",
+                            "support_tickets",
+                            "support_ticket_replies",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs",
+                            "guideline_usage_logs",
+                            "drug_usage_logs",
+                            "abbreviation_usage_logs",
+                            "consultant_usage_logs",
+                            "facility_usage_logs",
+                            "ai_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/auth/login": {
             "post": {
                 "description": "Authenticate a user and return a JWT bearer token.",
@@ -1472,6 +2055,178 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.LegacyCollectionItemResult": {
+            "type": "object",
+            "properties": {
+                "collection": {
+                    "type": "string",
+                    "example": "medical_guidelines"
+                },
+                "item": {
+                    "$ref": "#/definitions/handlers.JSONMap"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.LegacyCollectionListResult": {
+            "type": "object",
+            "properties": {
+                "collection": {
+                    "type": "string",
+                    "example": "medical_guidelines"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.JSONMap"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "per_page": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.LegacyOverviewResult": {
+            "type": "object",
+            "properties": {
+                "cached_at": {
+                    "type": "string"
+                },
+                "contentHealth": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "coverage": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "engagement": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "metrics": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "pipeline": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "series": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "support": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "taxonomy": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            }
+        },
+        "handlers.LegacyStatsResult": {
+            "type": "object",
+            "properties": {
+                "abbreviations": {
+                    "type": "integer"
+                },
+                "cached_at": {
+                    "type": "string"
+                },
+                "calculators": {
+                    "type": "integer"
+                },
+                "consultants": {
+                    "type": "integer"
+                },
+                "drugs": {
+                    "type": "integer"
+                },
+                "faqs": {
+                    "type": "integer"
+                },
+                "health_facilities": {
+                    "type": "integer"
+                },
+                "medical_guidelines": {
+                    "type": "integer"
+                },
+                "ministry_directory": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_users": {
+                    "type": "integer"
+                },
+                "unread_messages_count": {
+                    "type": "integer"
+                },
+                "user_conversations_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.LegacyTreeResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.TreeNode"
+                    }
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.LoginEnvelope": {
             "type": "object",
             "properties": {
@@ -2479,6 +3234,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "source_version": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.TreeNode": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "filters": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "hasChildren": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "subtitle": {
                     "type": "string"
                 },
                 "title": {

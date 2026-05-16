@@ -1,0 +1,939 @@
+package services
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"gorm.io/gorm"
+)
+
+var (
+	ErrLegacyCollectionNotFound   = errors.New("legacy collection not found")
+	ErrLegacyCollectionAuthNeeded = errors.New("legacy collection requires authentication")
+)
+
+type LegacyCollectionService struct {
+	DB *gorm.DB
+}
+
+type LegacyListInput struct {
+	Page    int
+	PerPage int
+	Search  string
+	Filters map[string]string
+}
+
+type LegacyListResult struct {
+	Success    bool             `json:"success"`
+	Collection string           `json:"collection"`
+	Page       int              `json:"page"`
+	PerPage    int              `json:"per_page"`
+	TotalItems int64            `json:"total_items"`
+	Items      []map[string]any `json:"items"`
+}
+
+type LegacyItemResult struct {
+	Success    bool           `json:"success"`
+	Collection string         `json:"collection"`
+	Item       map[string]any `json:"item"`
+}
+
+type legacyAccessMode string
+
+const (
+	legacyAccessPublic legacyAccessMode = "public"
+	legacyAccessAuth   legacyAccessMode = "auth"
+	legacyAccessUser   legacyAccessMode = "user"
+)
+
+type legacyCollectionSpec struct {
+	Table         string
+	IDColumn      string
+	Select        string
+	DefaultOrder  string
+	SearchColumns []string
+	FilterColumns map[string]string
+	Access        legacyAccessMode
+	Joins         []string
+	ApplyScopes   func(*gorm.DB) *gorm.DB
+	ApplyUser     func(*gorm.DB, string) *gorm.DB
+}
+
+func (s LegacyCollectionService) List(collection string, in LegacyListInput, userID string) (*LegacyListResult, error) {
+	spec, ok := legacyCollectionSpecs()[collection]
+	if !ok {
+		return nil, ErrLegacyCollectionNotFound
+	}
+	if err := validateLegacyAccess(spec, userID); err != nil {
+		return nil, err
+	}
+
+	page := in.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := in.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	query := s.buildQuery(spec, userID)
+	query = applyLegacySearch(query, spec.SearchColumns, in.Search)
+	query = applyLegacyFilters(query, spec.FilterColumns, in.Filters)
+
+	var total int64
+	if err := query.Distinct(spec.IDColumn).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	items := []map[string]any{}
+	if err := query.
+		Select(spec.Select).
+		Order(spec.DefaultOrder).
+		Limit(perPage).
+		Offset((page - 1) * perPage).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &LegacyListResult{
+		Success:    true,
+		Collection: collection,
+		Page:       page,
+		PerPage:    perPage,
+		TotalItems: total,
+		Items:      items,
+	}, nil
+}
+
+func (s LegacyCollectionService) Get(collection, id, userID string) (*LegacyItemResult, error) {
+	spec, ok := legacyCollectionSpecs()[collection]
+	if !ok {
+		return nil, ErrLegacyCollectionNotFound
+	}
+	if err := validateLegacyAccess(spec, userID); err != nil {
+		return nil, err
+	}
+
+	item := map[string]any{}
+	query := s.buildQuery(spec, userID).
+		Select(spec.Select).
+		Where(spec.IDColumn+" = ?", id)
+	if err := query.Take(&item).Error; err != nil {
+		return nil, err
+	}
+
+	return &LegacyItemResult{
+		Success:    true,
+		Collection: collection,
+		Item:       item,
+	}, nil
+}
+
+func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID string) *gorm.DB {
+	query := s.DB.Table(spec.Table)
+	for _, join := range spec.Joins {
+		query = query.Joins(join)
+	}
+	if spec.ApplyScopes != nil {
+		query = spec.ApplyScopes(query)
+	}
+	if spec.ApplyUser != nil && strings.TrimSpace(userID) != "" {
+		query = spec.ApplyUser(query, userID)
+	}
+	return query
+}
+
+func validateLegacyAccess(spec legacyCollectionSpec, userID string) error {
+	if (spec.Access == legacyAccessAuth || spec.Access == legacyAccessUser) && strings.TrimSpace(userID) == "" {
+		return ErrLegacyCollectionAuthNeeded
+	}
+	return nil
+}
+
+func applyLegacySearch(query *gorm.DB, columns []string, raw string) *gorm.DB {
+	term := strings.TrimSpace(raw)
+	if term == "" || len(columns) == 0 {
+		return query
+	}
+
+	parts := make([]string, 0, len(columns))
+	args := make([]any, 0, len(columns))
+	like := "%" + term + "%"
+	for _, column := range columns {
+		parts = append(parts, column+" ILIKE ?")
+		args = append(args, like)
+	}
+	return query.Where("("+strings.Join(parts, " OR ")+")", args...)
+}
+
+func applyLegacyFilters(query *gorm.DB, columns map[string]string, filters map[string]string) *gorm.DB {
+	if len(columns) == 0 || len(filters) == 0 {
+		return query
+	}
+	for key, value := range filters {
+		column, ok := columns[key]
+		if !ok {
+			continue
+		}
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if strings.EqualFold(trimmed, "null") {
+			query = query.Where(column + " IS NULL")
+			continue
+		}
+		query = query.Where(column+" = ?", trimmed)
+	}
+	return query
+}
+
+func legacyCollectionSpecs() map[string]legacyCollectionSpec {
+	return map[string]legacyCollectionSpec{
+		"medical_guidelines": {
+			Table:        "medical_guidelines mg",
+			IDColumn:     "mg.id",
+			Select:       "mg.*, gi.title AS index_item_title",
+			DefaultOrder: "mg.updated_at DESC",
+			SearchColumns: []string{
+				"mg.condition_name", "coalesce(mg.icd10_code, '')", "coalesce(mg.target_population, '')",
+			},
+			FilterColumns: map[string]string{
+				"priority": "mg.priority",
+				"status":   "mg.status",
+			},
+			Access: legacyAccessPublic,
+			Joins:  []string{"LEFT JOIN guideline_index gi ON gi.id = mg.index_item_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("mg.deleted_at IS NULL").Where("(mg.is_published = ? OR mg.status = ?)", true, "published")
+			},
+		},
+		"drugs": {
+			Table:        "drugs d",
+			IDColumn:     "d.id",
+			Select:       "d.*, dc.name AS drug_class_name, tc.name AS therapeutic_category_name",
+			DefaultOrder: "d.name ASC",
+			SearchColumns: []string{
+				"d.name", "coalesce(d.brand_names, '')", "coalesce(d.description, '')", "coalesce(d.indications, '')", "coalesce(d.search_keywords, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":                  "d.status",
+				"review_status":           "d.review_status",
+				"drug_class_id":           "d.drug_class_id::text",
+				"therapeutic_category_id": "d.therapeutic_category_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins: []string{
+				"LEFT JOIN drug_classes dc ON dc.id = d.drug_class_id",
+				"LEFT JOIN therapeutic_categories tc ON tc.id = d.therapeutic_category_id",
+			},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("d.deleted_at IS NULL").Where("d.status = ?", "active")
+			},
+		},
+		"calculators": {
+			Table:        "calculators c",
+			IDColumn:     "c.id",
+			Select:       "c.*",
+			DefaultOrder: "c.name ASC",
+			SearchColumns: []string{
+				"c.name", "coalesce(c.description, '')", "coalesce(c.type, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":   "c.status",
+				"type":     "c.type",
+				"featured": "c.featured::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("c.deleted_at IS NULL").Where("coalesce(c.status, '') = ?", "active")
+			},
+		},
+		"abbreviations": {
+			Table:        "abbreviations a",
+			IDColumn:     "a.id",
+			Select:       "a.*",
+			DefaultOrder: "a.abbreviation ASC",
+			SearchColumns: []string{
+				"a.abbreviation", "a.meaning", "coalesce(a.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"common_usage": "a.common_usage::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("a.deleted_at IS NULL")
+			},
+		},
+		"emergency_protocols": {
+			Table:        "emergency_protocols ep",
+			IDColumn:     "ep.id",
+			Select:       "ep.*",
+			DefaultOrder: "ep.priority ASC, ep.title ASC",
+			SearchColumns: []string{
+				"ep.title", "coalesce(ep.description, '')", "ep.category",
+			},
+			FilterColumns: map[string]string{
+				"status":   "ep.status",
+				"category": "ep.category",
+				"priority": "ep.priority",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("ep.deleted_at IS NULL").Where("ep.status = ?", "active")
+			},
+		},
+		"faqs": {
+			Table:        "faqs f",
+			IDColumn:     "f.id",
+			Select:       "f.*",
+			DefaultOrder: "coalesce(f.sort_order, 999999), f.created_at DESC",
+			SearchColumns: []string{
+				"f.question", "f.answer", "coalesce(f.keywords, '')", "coalesce(f.target_audience, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":          "f.status",
+				"priority":        "f.priority",
+				"target_audience": "f.target_audience",
+				"is_featured":     "f.is_featured::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("f.deleted_at IS NULL").Where("f.status = ?", "published")
+			},
+		},
+		"documentation": {
+			Table:        "documentation doc",
+			IDColumn:     "doc.id",
+			Select:       "doc.*",
+			DefaultOrder: "doc.title ASC",
+			SearchColumns: []string{
+				"doc.title", "coalesce(doc.description, '')", "doc.content", "coalesce(doc.category, '')", "coalesce(doc.tags, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":   "doc.status",
+				"category": "doc.category",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("doc.deleted_at IS NULL").Where("doc.status = ?", "published")
+			},
+		},
+		"generic_pages": {
+			Table:        "generic_pages gp",
+			IDColumn:     "gp.id",
+			Select:       "gp.*",
+			DefaultOrder: "gp.title ASC",
+			SearchColumns: []string{
+				"gp.title", "coalesce(gp.description, '')", "gp.key",
+			},
+			FilterColumns: map[string]string{
+				"key": "gp.key",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("gp.deleted_at IS NULL")
+			},
+		},
+		"guideline_categories": {
+			Table:        "guideline_categories gc",
+			IDColumn:     "gc.id",
+			Select:       "gc.*",
+			DefaultOrder: "coalesce(gc.sort_order, 999999), gc.name ASC",
+			SearchColumns: []string{
+				"gc.name", "coalesce(gc.slug, '')", "coalesce(gc.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":             "gc.status",
+				"parent_category_id": "gc.parent_category_id::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("gc.deleted_at IS NULL").Where("gc.status = ?", "active")
+			},
+		},
+		"guideline_tags": {
+			Table:        "guideline_tags gt",
+			IDColumn:     "gt.id",
+			Select:       "gt.*",
+			DefaultOrder: "gt.name ASC",
+			SearchColumns: []string{
+				"gt.name", "coalesce(gt.description, '')",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("gt.deleted_at IS NULL")
+			},
+		},
+		"drug_categories": {
+			Table:        "drug_categories dc",
+			IDColumn:     "dc.id",
+			Select:       "dc.*",
+			DefaultOrder: "coalesce(dc.sort_order, 999999), dc.name ASC",
+			SearchColumns: []string{
+				"dc.name", "coalesce(dc.slug, '')", "coalesce(dc.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":             "dc.status",
+				"parent_category_id": "dc.parent_category_id::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("dc.deleted_at IS NULL").Where("dc.status = ?", "active")
+			},
+		},
+		"drug_tags": {
+			Table:        "drug_tags dt",
+			IDColumn:     "dt.id",
+			Select:       "dt.*",
+			DefaultOrder: "dt.name ASC",
+			SearchColumns: []string{
+				"dt.name", "coalesce(dt.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"status": "dt.status",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("dt.deleted_at IS NULL").Where("dt.status = ?", "active")
+			},
+		},
+		"drug_classes": {
+			Table:        "drug_classes dc",
+			IDColumn:     "dc.id",
+			Select:       "dc.*",
+			DefaultOrder: "dc.name ASC",
+			SearchColumns: []string{
+				"dc.name", "coalesce(dc.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"status": "dc.status",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("dc.deleted_at IS NULL").Where("dc.status = ?", "active")
+			},
+		},
+		"therapeutic_categories": {
+			Table:        "therapeutic_categories tc",
+			IDColumn:     "tc.id",
+			Select:       "tc.*",
+			DefaultOrder: "tc.name ASC",
+			SearchColumns: []string{
+				"tc.name", "coalesce(tc.description, '')",
+			},
+			FilterColumns: map[string]string{
+				"status": "tc.status",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("tc.deleted_at IS NULL").Where("tc.status = ?", "active")
+			},
+		},
+		"consultants": {
+			Table:        "consultants c",
+			IDColumn:     "c.id",
+			Select:       "c.*",
+			DefaultOrder: "c.name ASC",
+			SearchColumns: []string{
+				"c.name", "c.email", "c.phone", "c.specialty", "coalesce(c.organization, '')", "coalesce(c.region, '')", "coalesce(c.city, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":      "c.status",
+				"specialty":   "c.specialty",
+				"region":      "c.region",
+				"city":        "c.city",
+				"is_verified": "c.is_verified::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("c.deleted_at IS NULL").Where("c.status = ?", "active")
+			},
+		},
+		"health_facilities": {
+			Table:        "health_facilities hf",
+			IDColumn:     "hf.id",
+			Select:       "hf.*, fl.name AS facility_level_name, a.name AS authority_name, ot.name AS ownership_type_name, d.name AS district_name, r.name AS region_name",
+			DefaultOrder: "hf.name ASC",
+			SearchColumns: []string{
+				"hf.name", "hf.nhpi_code", "hf.hsdt_code", "coalesce(d.name, '')", "coalesce(r.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"region_id":         "hf.region_id::text",
+				"district_id":       "hf.district_id::text",
+				"facility_level_id": "hf.facility_level_id::text",
+				"authority_id":      "hf.authority_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins: []string{
+				"LEFT JOIN facility_levels fl ON fl.id = hf.facility_level_id",
+				"LEFT JOIN authorities a ON a.id = hf.authority_id",
+				"LEFT JOIN ownership_types ot ON ot.id = hf.ownership_type_id",
+				"LEFT JOIN districts d ON d.id = hf.district_id",
+				"LEFT JOIN regions r ON r.id = hf.region_id",
+			},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("hf.deleted_at IS NULL")
+			},
+		},
+		"regions": {
+			Table:        "regions r",
+			IDColumn:     "r.id",
+			Select:       "r.*",
+			DefaultOrder: "r.name ASC",
+			SearchColumns: []string{
+				"r.name", "r.nhpi_code", "r.hsdt_code",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("r.deleted_at IS NULL")
+			},
+		},
+		"districts": {
+			Table:        "districts d",
+			IDColumn:     "d.id",
+			Select:       "d.*, r.name AS region_name",
+			DefaultOrder: "d.name ASC",
+			SearchColumns: []string{
+				"d.name", "d.nhpi_code", "d.hsdt_code", "coalesce(r.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"region_id": "d.region_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins:  []string{"LEFT JOIN regions r ON r.id = d.region_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("d.deleted_at IS NULL")
+			},
+		},
+		"counties": {
+			Table:        "counties c",
+			IDColumn:     "c.id",
+			Select:       "c.*, d.name AS district_name",
+			DefaultOrder: "c.name ASC",
+			SearchColumns: []string{
+				"c.name", "c.nhpi_code", "c.hsdt_code", "coalesce(d.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"district_id": "c.district_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins:  []string{"LEFT JOIN districts d ON d.id = c.district_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("c.deleted_at IS NULL")
+			},
+		},
+		"subcounties": {
+			Table:        "subcounties s",
+			IDColumn:     "s.id",
+			Select:       "s.*, d.name AS district_name, c.name AS county_name",
+			DefaultOrder: "s.name ASC",
+			SearchColumns: []string{
+				"s.name", "s.nhpi_code", "s.hsdt_code", "coalesce(d.name, '')", "coalesce(c.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"district_id": "s.district_id::text",
+				"county_id":   "s.county_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins: []string{
+				"LEFT JOIN districts d ON d.id = s.district_id",
+				"LEFT JOIN counties c ON c.id = s.county_id",
+			},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("s.deleted_at IS NULL")
+			},
+		},
+		"parishes": {
+			Table:        "parishes p",
+			IDColumn:     "p.id",
+			Select:       "p.*, s.name AS subcounty_name",
+			DefaultOrder: "p.name ASC",
+			SearchColumns: []string{
+				"p.name", "p.nhpi_code", "p.hsdt_code", "coalesce(s.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"subcounty_id": "p.subcounty_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins:  []string{"LEFT JOIN subcounties s ON s.id = p.subcounty_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("p.deleted_at IS NULL")
+			},
+		},
+		"facility_levels": {
+			Table:        "facility_levels fl",
+			IDColumn:     "fl.id",
+			Select:       "fl.*",
+			DefaultOrder: "fl.name ASC",
+			SearchColumns: []string{
+				"fl.code", "fl.name",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("fl.deleted_at IS NULL")
+			},
+		},
+		"ownership_types": {
+			Table:        "ownership_types ot",
+			IDColumn:     "ot.id",
+			Select:       "ot.*",
+			DefaultOrder: "ot.name ASC",
+			SearchColumns: []string{
+				"ot.code", "ot.name",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("ot.deleted_at IS NULL")
+			},
+		},
+		"authorities": {
+			Table:        "authorities a",
+			IDColumn:     "a.id",
+			Select:       "a.*, ot.name AS ownership_type_name",
+			DefaultOrder: "a.name ASC",
+			SearchColumns: []string{
+				"a.name", "coalesce(a.code, '')", "coalesce(ot.name, '')",
+			},
+			FilterColumns: map[string]string{
+				"ownership_type_id": "a.ownership_type_id::text",
+			},
+			Access: legacyAccessPublic,
+			Joins:  []string{"LEFT JOIN ownership_types ot ON ot.id = a.ownership_type_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("a.deleted_at IS NULL")
+			},
+		},
+		"ministry_directory": {
+			Table:        "ministry_directory md",
+			IDColumn:     "md.id",
+			Select:       "md.*, d.name AS district_name, r.name AS region_name",
+			DefaultOrder: "md.priority_level ASC, md.name ASC",
+			SearchColumns: []string{
+				"md.name", "md.title", "md.ministry", "coalesce(md.department, '')", "md.phone", "coalesce(md.email, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":      "md.status",
+				"district_id": "md.district_id::text",
+				"region_id":   "md.region_id::text",
+				"ministry":    "md.ministry",
+				"department":  "md.department",
+			},
+			Access: legacyAccessPublic,
+			Joins: []string{
+				"LEFT JOIN districts d ON d.id = md.district_id",
+				"LEFT JOIN regions r ON r.id = md.region_id",
+			},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("md.deleted_at IS NULL").Where("md.status = ?", "active")
+			},
+		},
+		"languages": {
+			Table:        "languages l",
+			IDColumn:     "l.id",
+			Select:       "l.*",
+			DefaultOrder: "l.name ASC",
+			SearchColumns: []string{
+				"l.code", "l.name", "l.native_name",
+			},
+			FilterColumns: map[string]string{
+				"status":     "l.status",
+				"is_active":  "l.is_active::text",
+				"is_default": "l.is_default::text",
+			},
+			Access: legacyAccessPublic,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("l.deleted_at IS NULL").Where("l.is_active = ?", true)
+			},
+		},
+		"notifications": {
+			Table:        "notifications n",
+			IDColumn:     "n.id",
+			Select:       "n.*",
+			DefaultOrder: "n.created_at DESC",
+			SearchColumns: []string{
+				"n.title", "n.message", "n.type", "n.priority",
+			},
+			FilterColumns: map[string]string{
+				"type":     "n.type",
+				"priority": "n.priority",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("n.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("(n.user_id::text = ? OR n.user_id IS NULL)", userID)
+			},
+		},
+		"notification_templates": {
+			Table:        "notification_templates nt",
+			IDColumn:     "nt.id",
+			Select:       "nt.*",
+			DefaultOrder: "nt.name ASC",
+			SearchColumns: []string{
+				"nt.name", "nt.type", "nt.category", "coalesce(nt.subject, '')",
+			},
+			FilterColumns: map[string]string{
+				"status":   "nt.status",
+				"type":     "nt.type",
+				"category": "nt.category",
+			},
+			Access: legacyAccessAuth,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("nt.deleted_at IS NULL")
+			},
+		},
+		"notification_campaigns": {
+			Table:        "notification_campaigns nc",
+			IDColumn:     "nc.id",
+			Select:       "nc.*",
+			DefaultOrder: "nc.created_at DESC",
+			SearchColumns: []string{
+				"nc.name", "nc.type", "nc.status",
+			},
+			FilterColumns: map[string]string{
+				"status": "nc.status",
+				"type":   "nc.type",
+			},
+			Access: legacyAccessAuth,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("nc.deleted_at IS NULL")
+			},
+		},
+		"support_tickets": {
+			Table:        "support_tickets st",
+			IDColumn:     "st.id",
+			Select:       "st.*",
+			DefaultOrder: "st.updated_at DESC",
+			SearchColumns: []string{
+				"st.subject", "st.description", "coalesce(st.category, '')", "st.status", "st.priority",
+			},
+			FilterColumns: map[string]string{
+				"status":   "st.status",
+				"priority": "st.priority",
+				"category": "st.category",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("st.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("(st.user_id::text = ? OR st.assigned_to::text = ?)", userID, userID)
+			},
+		},
+		"support_ticket_replies": {
+			Table:        "support_ticket_replies str",
+			IDColumn:     "str.id",
+			Select:       "str.*",
+			DefaultOrder: "str.created_at ASC",
+			SearchColumns: []string{
+				"str.message",
+			},
+			FilterColumns: map[string]string{
+				"ticket_id":   "str.ticket_id::text",
+				"is_internal": "str.is_internal::text",
+			},
+			Access: legacyAccessUser,
+			Joins:  []string{"LEFT JOIN support_tickets st ON st.id = str.ticket_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("str.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("(str.user_id::text = ? OR st.user_id::text = ? OR st.assigned_to::text = ?)", userID, userID, userID)
+			},
+		},
+		"conversations": {
+			Table:        "conversations c",
+			IDColumn:     "c.id",
+			Select:       "c.*",
+			DefaultOrder: "c.updated_at DESC",
+			FilterColumns: map[string]string{
+				"participant1_user_id": "c.participant1_user_id::text",
+				"participant2_user_id": "c.participant2_user_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("c.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("(c.participant1_user_id::text = ? OR c.participant2_user_id::text = ?)", userID, userID)
+			},
+		},
+		"messages": {
+			Table:        "messages m",
+			IDColumn:     "m.id",
+			Select:       "m.*",
+			DefaultOrder: "m.created_at DESC",
+			SearchColumns: []string{
+				"m.content", "coalesce(m.message_type, '')",
+			},
+			FilterColumns: map[string]string{
+				"conversation_id": "m.conversation_id::text",
+				"sender_user_id":  "m.sender_user_id::text",
+				"message_type":    "m.message_type",
+			},
+			Access: legacyAccessUser,
+			Joins:  []string{"LEFT JOIN conversations c ON c.id = m.conversation_id"},
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("m.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("(c.participant1_user_id::text = ? OR c.participant2_user_id::text = ?)", userID, userID)
+			},
+		},
+		"reading_progress": {
+			Table:        "reading_progress rp",
+			IDColumn:     "rp.id",
+			Select:       "rp.*",
+			DefaultOrder: "rp.updated_at DESC",
+			FilterColumns: map[string]string{
+				"guideline_document_id": "rp.guideline_document_id::text",
+				"is_bookmarked":         "rp.is_bookmarked::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("rp.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("rp.user_id::text = ?", userID)
+			},
+		},
+		"calculator_usage_logs": {
+			Table:        "calculator_usage_logs cul",
+			IDColumn:     "cul.id",
+			Select:       "cul.*",
+			DefaultOrder: "cul.created_at DESC",
+			FilterColumns: map[string]string{
+				"calculator_id":   "cul.calculator_id::text",
+				"calculator_type": "cul.calculator_type",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("cul.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("cul.user_id::text = ?", userID)
+			},
+		},
+		"guideline_usage_logs": {
+			Table:        "guideline_usage_logs gul",
+			IDColumn:     "gul.id",
+			Select:       "gul.*",
+			DefaultOrder: "gul.created_at DESC",
+			FilterColumns: map[string]string{
+				"guideline_document_id": "gul.guideline_document_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("gul.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("gul.user_id::text = ?", userID)
+			},
+		},
+		"drug_usage_logs": {
+			Table:        "drug_usage_logs dul",
+			IDColumn:     "dul.id",
+			Select:       "dul.*",
+			DefaultOrder: "dul.created_at DESC",
+			FilterColumns: map[string]string{
+				"drug_id": "dul.drug_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("dul.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("dul.user_id::text = ?", userID)
+			},
+		},
+		"abbreviation_usage_logs": {
+			Table:        "abbreviation_usage_logs aul",
+			IDColumn:     "aul.id",
+			Select:       "aul.*",
+			DefaultOrder: "aul.created_at DESC",
+			FilterColumns: map[string]string{
+				"abbreviation_id": "aul.abbreviation_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("aul.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("aul.user_id::text = ?", userID)
+			},
+		},
+		"consultant_usage_logs": {
+			Table:        "consultant_usage_logs cul",
+			IDColumn:     "cul.id",
+			Select:       "cul.*",
+			DefaultOrder: "cul.created_at DESC",
+			FilterColumns: map[string]string{
+				"consultant_id": "cul.consultant_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("cul.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("cul.user_id::text = ?", userID)
+			},
+		},
+		"facility_usage_logs": {
+			Table:        "facility_usage_logs ful",
+			IDColumn:     "ful.id",
+			Select:       "ful.*",
+			DefaultOrder: "ful.created_at DESC",
+			FilterColumns: map[string]string{
+				"facility_id": "ful.facility_id::text",
+			},
+			Access: legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("ful.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("ful.user_id::text = ?", userID)
+			},
+		},
+		"ai_usage_logs": {
+			Table:        "ai_usage_logs aiu",
+			IDColumn:     "aiu.id",
+			Select:       "aiu.*",
+			DefaultOrder: "aiu.created_at DESC",
+			Access:       legacyAccessUser,
+			ApplyScopes: func(query *gorm.DB) *gorm.DB {
+				return query.Where("aiu.deleted_at IS NULL")
+			},
+			ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+				return query.Where("aiu.user_id::text = ?", userID)
+			},
+		},
+	}
+}
+
+func (s LegacyCollectionService) SupportedCollections() []string {
+	names := make([]string, 0, len(legacyCollectionSpecs()))
+	for name := range legacyCollectionSpecs() {
+		names = append(names, name)
+	}
+	return names
+}
+
+func LegacyCollectionErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, ErrLegacyCollectionNotFound):
+		return "collection not found"
+	case errors.Is(err, ErrLegacyCollectionAuthNeeded):
+		return "authentication required"
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return "record not found"
+	default:
+		return fmt.Sprintf("legacy collection error: %v", err)
+	}
+}

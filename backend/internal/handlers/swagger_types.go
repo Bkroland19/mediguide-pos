@@ -152,6 +152,26 @@ type LanguagesEnvelope struct {
 	Data    []models.Language `json:"data"`
 }
 
+type LegacyTreeNode = services.TreeNode
+type LegacyTreeResult = services.TreeResult
+type LegacyOverviewResult = services.OverviewResult
+type LegacyStatsResult = services.StatsResult
+
+type LegacyCollectionListResult struct {
+	Success    bool      `json:"success" example:"true"`
+	Collection string    `json:"collection" example:"medical_guidelines"`
+	Page       int       `json:"page" example:"1"`
+	PerPage    int       `json:"per_page" example:"20"`
+	TotalItems int64     `json:"total_items" example:"1"`
+	Items      []JSONMap `json:"items"`
+}
+
+type LegacyCollectionItemResult struct {
+	Success    bool    `json:"success" example:"true"`
+	Collection string  `json:"collection" example:"medical_guidelines"`
+	Item       JSONMap `json:"item"`
+}
+
 type DownloadURLEnvelope struct {
 	Success bool              `json:"success" example:"true"`
 	Data    DownloadURLResult `json:"data"`

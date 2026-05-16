@@ -22,6 +22,7 @@ type AuthHandler struct{ Service services.AuthService }
 // @Param payload body handlers.RegisterRequest true "Registration payload"
 // @Success 201 {object} handlers.UserEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v1/auth/register [post]
 // @Router /api/v2/auth/register [post]
 func (h AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
@@ -47,6 +48,7 @@ func (h AuthHandler) Register(c *gin.Context) {
 // @Success 200 {object} handlers.LoginEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
+// @Router /api/v1/auth/login [post]
 // @Router /api/v2/auth/login [post]
 func (h AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
@@ -71,6 +73,7 @@ func (h AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} handlers.UserEnvelope
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
+// @Router /api/v1/me [get]
 // @Router /api/v2/me [get]
 func (h AuthHandler) Me(c *gin.Context) {
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)

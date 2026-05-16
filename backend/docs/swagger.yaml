@@ -124,6 +124,124 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.LegacyCollectionItemResult:
+    properties:
+      collection:
+        example: medical_guidelines
+        type: string
+      item:
+        $ref: '#/definitions/handlers.JSONMap'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.LegacyCollectionListResult:
+    properties:
+      collection:
+        example: medical_guidelines
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/handlers.JSONMap'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      success:
+        example: true
+        type: boolean
+      total_items:
+        example: 1
+        type: integer
+    type: object
+  handlers.LegacyOverviewResult:
+    properties:
+      cached_at:
+        type: string
+      contentHealth:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      coverage:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      engagement:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      metrics:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      pipeline:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      series:
+        additionalProperties: {}
+        type: object
+      success:
+        type: boolean
+      support:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      taxonomy:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+    type: object
+  handlers.LegacyStatsResult:
+    properties:
+      abbreviations:
+        type: integer
+      cached_at:
+        type: string
+      calculators:
+        type: integer
+      consultants:
+        type: integer
+      drugs:
+        type: integer
+      faqs:
+        type: integer
+      health_facilities:
+        type: integer
+      medical_guidelines:
+        type: integer
+      ministry_directory:
+        type: integer
+      success:
+        type: boolean
+      total_users:
+        type: integer
+      unread_messages_count:
+        type: integer
+      user_conversations_count:
+        type: integer
+    type: object
+  handlers.LegacyTreeResult:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.TreeNode'
+        type: array
+      level:
+        type: integer
+      success:
+        type: boolean
+    type: object
   handlers.LoginEnvelope:
     properties:
       data:
@@ -799,6 +917,25 @@ definitions:
       title:
         type: string
     type: object
+  services.TreeNode:
+    properties:
+      count:
+        type: integer
+      filters:
+        additionalProperties:
+          type: string
+        type: object
+      hasChildren:
+        type: boolean
+      id:
+        type: string
+      level:
+        type: integer
+      subtitle:
+        type: string
+      title:
+        type: string
+    type: object
 info:
   contact:
     email: admin@mediguide.local
@@ -810,6 +947,421 @@ info:
   title: MediGuide Backend API
   version: "1.0"
 paths:
+  /api/v1/{collection}:
+    get:
+      description: Legacy v1 collection listing endpoint. Some collections are public
+        while others require authentication depending on the collection name.
+      parameters:
+      - description: Legacy collection name
+        enum:
+        - medical_guidelines
+        - drugs
+        - calculators
+        - abbreviations
+        - emergency_protocols
+        - faqs
+        - documentation
+        - generic_pages
+        - guideline_categories
+        - guideline_tags
+        - drug_categories
+        - drug_tags
+        - drug_classes
+        - therapeutic_categories
+        - consultants
+        - health_facilities
+        - regions
+        - districts
+        - counties
+        - subcounties
+        - parishes
+        - facility_levels
+        - ownership_types
+        - authorities
+        - ministry_directory
+        - languages
+        - notifications
+        - notification_templates
+        - notification_campaigns
+        - support_tickets
+        - support_ticket_replies
+        - conversations
+        - messages
+        - reading_progress
+        - calculator_usage_logs
+        - guideline_usage_logs
+        - drug_usage_logs
+        - abbreviation_usage_logs
+        - consultant_usage_logs
+        - facility_usage_logs
+        - ai_usage_logs
+        in: path
+        name: collection
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      - description: Search term alias
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyCollectionListResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: List legacy collection records
+      tags:
+      - legacy-v1
+  /api/v1/{collection}/{id}:
+    get:
+      description: Legacy v1 collection detail endpoint. Some collections are public
+        while others require authentication depending on the collection name.
+      parameters:
+      - description: Legacy collection name
+        enum:
+        - medical_guidelines
+        - drugs
+        - calculators
+        - abbreviations
+        - emergency_protocols
+        - faqs
+        - documentation
+        - generic_pages
+        - guideline_categories
+        - guideline_tags
+        - drug_categories
+        - drug_tags
+        - drug_classes
+        - therapeutic_categories
+        - consultants
+        - health_facilities
+        - regions
+        - districts
+        - counties
+        - subcounties
+        - parishes
+        - facility_levels
+        - ownership_types
+        - authorities
+        - ministry_directory
+        - languages
+        - notifications
+        - notification_templates
+        - notification_campaigns
+        - support_tickets
+        - support_ticket_replies
+        - conversations
+        - messages
+        - reading_progress
+        - calculator_usage_logs
+        - guideline_usage_logs
+        - drug_usage_logs
+        - abbreviation_usage_logs
+        - consultant_usage_logs
+        - facility_usage_logs
+        - ai_usage_logs
+        in: path
+        name: collection
+        required: true
+        type: string
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get legacy collection record
+      tags:
+      - legacy-v1
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and return a JWT bearer token.
+      parameters:
+      - description: Login payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Log in a user
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new backend user account.
+      parameters:
+      - description: Registration payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.UserEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Register a user
+      tags:
+      - auth
+  /api/v1/consultants/tree:
+    get:
+      description: Legacy v1 endpoint that groups consultants by region, city, then
+        specialty.
+      parameters:
+      - description: Tree level
+        in: query
+        maximum: 2
+        minimum: 0
+        name: level
+        type: integer
+      - description: JSON encoded filters
+        in: query
+        name: filters
+        type: string
+      - description: Optional JSON context
+        in: query
+        name: context
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyTreeResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get consultants tree
+      tags:
+      - legacy-v1
+  /api/v1/health-facilities/tree:
+    get:
+      description: Legacy v1 endpoint that groups facilities by region, district,
+        then facility level.
+      parameters:
+      - description: Tree level
+        in: query
+        maximum: 2
+        minimum: 0
+        name: level
+        type: integer
+      - description: JSON encoded filters
+        in: query
+        name: filters
+        type: string
+      - description: Optional JSON context
+        in: query
+        name: context
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyTreeResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get health facilities tree
+      tags:
+      - legacy-v1
+  /api/v1/me:
+    get:
+      description: Return the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/ministry-directory/tree:
+    get:
+      description: Legacy v1 endpoint that groups ministry directory contacts by region,
+        district, then ministry.
+      parameters:
+      - description: Tree level
+        in: query
+        maximum: 2
+        minimum: 0
+        name: level
+        type: integer
+      - description: JSON encoded filters
+        in: query
+        name: filters
+        type: string
+      - description: Optional JSON context
+        in: query
+        name: context
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyTreeResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ministry directory tree
+      tags:
+      - legacy-v1
+  /api/v1/overview:
+    get:
+      description: Dashboard-oriented legacy v1 overview endpoint with metrics, pipeline,
+        engagement, support and coverage totals.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyOverviewResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get legacy overview metrics
+      tags:
+      - legacy-v1
+  /api/v1/stats:
+    get:
+      description: Legacy v1 stats endpoint used by the mobile home screen. Authentication
+        is optional, but user-specific message counts are only returned when a valid
+        bearer token is provided.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyStatsResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get legacy mobile stats
+      tags:
+      - legacy-v1
   /api/v2/auth/login:
     post:
       consumes:

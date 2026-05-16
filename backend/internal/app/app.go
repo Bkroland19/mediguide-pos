@@ -49,6 +49,7 @@ func New(cfg config.Config) (*App, error) {
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
+	legacyCollectionSvc := services.LegacyCollectionService{DB: database}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -58,15 +59,21 @@ func New(cfg config.Config) (*App, error) {
 	syncH := handlers.SyncHandler{Service: syncSvc}
 	referenceH := handlers.ReferenceHandler{Service: referenceSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
+	legacyCollectionH := handlers.LegacyCollectionHandler{Service: legacyCollectionSvc, Cfg: cfg}
 
 	legacyV1 := r.Group("/api/v1")
+	legacyV1.POST("/auth/register", authH.Register)
+	legacyV1.POST("/auth/login", authH.Login)
 	legacyV1.GET("/stats", legacyAPIH.Stats)
 	legacyProtected := legacyV1.Group("")
 	legacyProtected.Use(middleware.AuthRequired(cfg))
+	legacyProtected.GET("/me", authH.Me)
 	legacyProtected.GET("/consultants/tree", legacyAPIH.ConsultantsTree)
 	legacyProtected.GET("/health-facilities/tree", legacyAPIH.HealthFacilitiesTree)
 	legacyProtected.GET("/ministry-directory/tree", legacyAPIH.MinistryDirectoryTree)
 	legacyProtected.GET("/overview", legacyAPIH.Overview)
+	legacyV1.GET("/:collection/:id", legacyCollectionH.Get)
+	legacyV1.GET("/:collection", legacyCollectionH.List)
 
 	v2 := r.Group("/api/v2")
 	{
