@@ -5,6 +5,7 @@ import (
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
+	"mediguide/internal/models"
 	"mediguide/internal/security"
 	"mediguide/internal/services"
 
@@ -30,7 +31,27 @@ func (h AuthHandler) Register(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	u, err := h.Service.Register(services.RegisterInput(req))
+	u, err := h.Service.Register(services.RegisterInput{
+		Name:              req.Name,
+		Email:             req.Email,
+		Password:          req.Password,
+		Phone:             req.Phone,
+		AlternativePhone:  req.AlternativePhone,
+		FacilityID:        req.FacilityID,
+		Address:           req.Address,
+		City:              req.City,
+		Country:           req.Country,
+		PostalCode:        req.PostalCode,
+		LicenseNumber:     req.LicenseNumber,
+		Organization:      req.Organization,
+		Department:        req.Department,
+		JobTitle:          req.JobTitle,
+		PreferredLanguage: req.PreferredLanguage,
+		Timezone:          req.Timezone,
+		Notes:             req.Notes,
+		Specialization:    models.StringList(req.Specialization),
+		Avatar:            req.Avatar,
+	})
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return

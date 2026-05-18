@@ -172,7 +172,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		return nil, nil, err
 	}
 	clinician := models.User{Email: "clinician@mediguide.local"}
-	preferredLanguage := "en"
+	preferredLanguage := "English"
 	organization := "Kampala Central Health Centre III"
 	specialization := "General Practice"
 	if err := database.Where(models.User{Email: clinician.Email}).Assign(models.User{
@@ -185,7 +185,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		Status:            "active",
 		Organization:      &organization,
 		PreferredLanguage: &preferredLanguage,
-		Specialization:    &specialization,
+		Specialization:    models.StringList{specialization},
 	}).FirstOrCreate(&clinician).Error; err != nil {
 		return nil, nil, err
 	}
@@ -413,9 +413,9 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"country":             "Uganda",
 				"organization":        "Ministry of Health",
 				"department":          "Clinical Services",
-				"preferred_language":  "en",
+				"preferred_language":  "English",
 				"timezone":            "Africa/Kampala",
-				"consultation_types":  "phone,chat",
+				"consultation_types":  "Phone Consultation",
 				"status":              "active",
 				"is_verified":         true,
 				"rating":              4.8,
@@ -436,9 +436,9 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"region":              "Central Region",
 				"country":             "Uganda",
 				"organization":        "Kampala Central Health Centre III",
-				"preferred_language":  "en",
+				"preferred_language":  "English",
 				"timezone":            "Africa/Kampala",
-				"consultation_types":  "chat",
+				"consultation_types":  "Telemedicine",
 				"status":              "active",
 				"is_verified":         true,
 				"rating":              4.6,
@@ -542,7 +542,7 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"name":         "essential",
 				"description":  "Core essential medicine",
 				"color":        "#dc2626",
-				"tag_category": "formulary",
+				"tag_category": "regulatory",
 				"sort_order":   1,
 				"status":       "active",
 			},
@@ -578,7 +578,7 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"description":             "Preferred treatment for severe malaria.",
 				"adult_dose":              "2.4 mg/kg IV at 0, 12 and 24 hours, then daily.",
 				"pediatric_dose":          "2.4 mg/kg IV at 0, 12 and 24 hours, then daily.",
-				"route_of_administration": "IV/IM",
+				"route_of_administration": "IV",
 				"indications":             "Severe malaria",
 				"side_effects":            "Transient neutropenia, delayed hemolysis.",
 				"warnings":                "Monitor for post-artesunate hemolysis.",

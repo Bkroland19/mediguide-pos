@@ -23,25 +23,25 @@ type LoginResult struct {
 }
 
 type RegisterInput struct {
-	Name              string `json:"name"`
-	Email             string `json:"email"`
-	Password          string `json:"password"`
-	Phone             string `json:"phone"`
-	AlternativePhone  string `json:"alternative_phone"`
-	FacilityID        string `json:"facility_id"`
-	Address           string `json:"address"`
-	City              string `json:"city"`
-	Country           string `json:"country"`
-	PostalCode        string `json:"postal_code"`
-	LicenseNumber     string `json:"license_number"`
-	Organization      string `json:"organization"`
-	Department        string `json:"department"`
-	JobTitle          string `json:"job_title"`
-	PreferredLanguage string `json:"preferred_language"`
-	Timezone          string `json:"timezone"`
-	Notes             string `json:"notes"`
-	Specialization    string `json:"specialization"`
-	Avatar            string `json:"avatar"`
+	Name              string            `json:"name"`
+	Email             string            `json:"email"`
+	Password          string            `json:"password"`
+	Phone             string            `json:"phone"`
+	AlternativePhone  string            `json:"alternative_phone"`
+	FacilityID        string            `json:"facility_id"`
+	Address           string            `json:"address"`
+	City              string            `json:"city"`
+	Country           string            `json:"country"`
+	PostalCode        string            `json:"postal_code"`
+	LicenseNumber     string            `json:"license_number"`
+	Organization      string            `json:"organization"`
+	Department        string            `json:"department"`
+	JobTitle          string            `json:"job_title"`
+	PreferredLanguage string            `json:"preferred_language"`
+	Timezone          string            `json:"timezone"`
+	Notes             string            `json:"notes"`
+	Specialization    models.StringList `json:"specialization"`
+	Avatar            string            `json:"avatar"`
 }
 
 func (s AuthService) Register(in RegisterInput) (*models.User, error) {
@@ -68,7 +68,7 @@ func (s AuthService) Register(in RegisterInput) (*models.User, error) {
 		PreferredLanguage: optionalString(in.PreferredLanguage),
 		Timezone:          optionalString(in.Timezone),
 		Notes:             optionalString(in.Notes),
-		Specialization:    optionalString(in.Specialization),
+		Specialization:    models.StringList(in.Specialization),
 		Avatar:            optionalString(in.Avatar),
 		Verified:          false,
 		Status:            "active",

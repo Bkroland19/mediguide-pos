@@ -6,25 +6,25 @@ import (
 )
 
 type RegisterRequest struct {
-	Name              string `json:"name" example:"Admin User"`
-	Email             string `json:"email" example:"admin@mediguide.local"`
-	Password          string `json:"password" example:"Admin123!"`
-	Phone             string `json:"phone" example:"+256700000001"`
-	AlternativePhone  string `json:"alternative_phone" example:"+256700000002"`
-	FacilityID        string `json:"facility_id" example:"3fa85f64-5717-4562-b3fc-2c963f66afa6"`
-	Address           string `json:"address" example:"Plot 12 Kampala Road"`
-	City              string `json:"city" example:"Kampala"`
-	Country           string `json:"country" example:"Uganda"`
-	PostalCode        string `json:"postal_code" example:"256"`
-	LicenseNumber     string `json:"license_number" example:"MD-12345"`
-	Organization      string `json:"organization" example:"Mulago Hospital"`
-	Department        string `json:"department" example:"Emergency"`
-	JobTitle          string `json:"job_title" example:"Medical Officer"`
-	PreferredLanguage string `json:"preferred_language" example:"en"`
-	Timezone          string `json:"timezone" example:"Africa/Kampala"`
-	Notes             string `json:"notes" example:"Night shift clinician"`
-	Specialization    string `json:"specialization" example:"Internal Medicine"`
-	Avatar            string `json:"avatar" example:"https://example.com/avatar.png"`
+	Name              string   `json:"name" example:"Admin User"`
+	Email             string   `json:"email" example:"admin@mediguide.local"`
+	Password          string   `json:"password" example:"Admin123!"`
+	Phone             string   `json:"phone" example:"+256700000001"`
+	AlternativePhone  string   `json:"alternative_phone" example:"+256700000002"`
+	FacilityID        string   `json:"facility_id" example:"3fa85f64-5717-4562-b3fc-2c963f66afa6"`
+	Address           string   `json:"address" example:"Plot 12 Kampala Road"`
+	City              string   `json:"city" example:"Kampala"`
+	Country           string   `json:"country" example:"Uganda"`
+	PostalCode        string   `json:"postal_code" example:"256"`
+	LicenseNumber     string   `json:"license_number" example:"MD-12345"`
+	Organization      string   `json:"organization" example:"Mulago Hospital"`
+	Department        string   `json:"department" example:"Emergency"`
+	JobTitle          string   `json:"job_title" example:"Medical Officer"`
+	PreferredLanguage string   `json:"preferred_language" example:"English"`
+	Timezone          string   `json:"timezone" example:"Africa/Kampala"`
+	Notes             string   `json:"notes" example:"Night shift clinician"`
+	Specialization    []string `json:"specialization" swaggertype:"array,string" example:"Internal Medicine,Pediatrics"`
+	Avatar            string   `json:"avatar" example:"https://example.com/avatar.png"`
 }
 
 type LoginRequest struct {
