@@ -37,6 +37,7 @@ _COMMON_SUBHEADINGS = {
 }
 _TABLE_HEAD_BG = "#dbe5f1"
 _TABLE_BORDER = "#667085"
+_ROMAN_NUMERAL_RE = re.compile(r"^[IVXLCDM]+$", re.I)
 
 
 def _clean_text(text: str) -> str:
@@ -57,6 +58,10 @@ def _is_noise_line(line: str) -> bool:
         return True
     if re.fullmatch(r"CHAPTER \d+:\s+.+", line, re.I):
         return True
+    if re.fullmatch(r"\d{1,4}", line):
+        return True
+    if _ROMAN_NUMERAL_RE.fullmatch(line):
+        return True
     return False
 
 
@@ -67,7 +72,50 @@ def _content_lines(text: str) -> list[str]:
         if not line or _is_noise_line(line):
             continue
         lines.append(line)
-    return lines
+    return _explode_inline_bullets(lines)
+
+
+def _explode_inline_bullets(lines: list[str]) -> list[str]:
+    exploded: list[str] = []
+    for line in lines:
+        if "~" in line:
+            normalized = line.strip()
+            if normalized.startswith("~"):
+                normalized = normalized[1:].strip()
+                parts = [part.strip() for part in re.split(r"\s+~\s+", normalized) if part.strip()]
+                exploded.extend(f"~ {part}" for part in parts)
+                continue
+            if " ~ " in normalized:
+                parts = [part.strip() for part in re.split(r"\s+~\s+", normalized) if part.strip()]
+                if parts:
+                    exploded.append(parts[0])
+                    exploded.extend(f"~ {part}" for part in parts[1:])
+                    continue
+        exploded.append(line)
+    return exploded
+
+
+def _header_signature(cells: list[str]) -> list[str]:
+    return [_normalize_for_match(cell) for cell in cells if cell]
+
+
+def _remove_matching_heading_runs(soup: BeautifulSoup, header_cells: list[str]) -> None:
+    signature = _header_signature(header_cells)
+    if not signature:
+        return
+    removed = True
+    while removed:
+        removed = False
+        headings = list(soup.find_all(re.compile(r"^h[1-6]$")))
+        for idx in range(len(headings) - len(signature) + 1):
+            texts = [_normalize_for_match(headings[idx + offset].get_text(" ", strip=True)) for offset in range(len(signature))]
+            if texts == signature:
+                for offset in range(len(signature)):
+                    headings[idx + offset].decompose()
+                removed = True
+                continue
+            if removed:
+                break
 
 
 def _guess_heading(line: str) -> int:
@@ -136,6 +184,10 @@ def _section_html(title: str, level: int, text: str) -> str:
 def _is_subheading(line: str) -> bool:
     candidate = line.strip().rstrip(":")
     if not candidate or len(candidate) > 80 or _LOC_CODE_RE.fullmatch(candidate):
+        return False
+    if _BULLET_RE.fullmatch(candidate):
+        return False
+    if not re.search(r"[A-Za-z]", candidate):
         return False
     if candidate.lower() in _COMMON_SUBHEADINGS:
         return True
@@ -295,31 +347,188 @@ def _is_management_table_data(rows: list[list[str]]) -> bool:
     return "TREATMENT" in header and "LOC" in header
 
 
-def _render_table_html(rows: list[list[str]], title: str | None, already_escaped: bool = False) -> str:
+def _non_empty_cells(row: list[str]) -> list[str]:
+    return [cell for cell in row if cell]
+
+
+def _looks_like_header_row(row: list[str]) -> bool:
+    cells = _non_empty_cells(row)
+    if len(cells) < 2:
+        return False
+    shortish = 0
+    for cell in cells:
+        if len(cell) <= 40 and not cell.endswith("."):
+            shortish += 1
+    return shortish == len(cells)
+
+
+def _table_column_count(rows: list[list[str]]) -> int:
+    return max((len(_non_empty_cells(row)) for row in rows), default=0)
+
+
+def _is_low_signal_table(rows: list[list[str]]) -> bool:
+    if len(rows) < 2:
+        return True
+    non_empty_counts = [len(_non_empty_cells(row)) for row in rows]
+    max_cols = max(non_empty_counts, default=0)
+    if max_cols <= 1:
+        return True
+    if sum(non_empty_counts) <= max_cols + 1:
+        return True
+    return False
+
+
+def _split_table_parts(rows: list[list[str]]) -> tuple[str | None, list[str] | None, list[list[str]]]:
     if not rows:
+        return None, None, []
+
+    title: str | None = None
+    working = [list(row) for row in rows]
+    max_cols = _table_column_count(working)
+
+    if (
+        len(working) >= 2
+        and len(_non_empty_cells(working[0])) == 1
+        and _table_column_count(working[1:]) >= 2
+    ):
+        title = _non_empty_cells(working[0])[0]
+        working = working[1:]
+        max_cols = _table_column_count(working)
+
+    if max_cols <= 1:
+        return title, None, working
+
+    header: list[str] | None = None
+    if working and _looks_like_header_row(working[0]):
+        header = working[0]
+        working = working[1:]
+
+    return title, header, working
+
+
+def _looks_like_inline_table_value(token: str) -> bool:
+    token = token.strip()
+    if not token:
+        return False
+    if len(token) > 18:
+        return False
+    return any(ch.isdigit() for ch in token) or token[0].isalpha()
+
+
+def _extract_inline_table(lines: list[str]) -> tuple[list[list[str]] | None, int]:
+    candidate_lines: list[str] = []
+    for line in lines:
+        if _strip_bullet(line) is not None:
+            break
+        if line.endswith("."):
+            break
+        candidate_lines.append(line)
+    if len(candidate_lines) < 2:
+        return None, 0
+
+    tokenized = [line.split() for line in candidate_lines]
+    for cols in range(6, 1, -1):
+        rows: list[list[str]] = []
+        for tokens in tokenized:
+            if len(tokens) < cols + 1:
+                rows = []
+                break
+            label = " ".join(tokens[:-cols]).strip()
+            values = [value.strip() for value in tokens[-cols:]]
+            if not label or not all(_looks_like_inline_table_value(value) for value in values):
+                rows = []
+                break
+            rows.append([label, *values])
+        if rows and len(rows) >= 2:
+            return rows, len(rows)
+    return None, 0
+
+
+def _render_table_cell_content(value: str, already_escaped: bool = False) -> str:
+    if not value:
+        return ""
+    lines = [_clean_line(part) for part in value.splitlines()]
+    lines = [line for line in lines if line]
+    if not lines:
+        return ""
+
+    inline_table_html = ""
+    inline_table_rows, consumed = _extract_inline_table(lines)
+    if inline_table_rows:
+        inline_table_html = _render_table_html(inline_table_rows, title=None)
+        lines = lines[consumed:]
+
+    def esc(text: str) -> str:
+        return text if already_escaped else html.escape(text)
+
+    parts: list[str] = []
+    if inline_table_html:
+        parts.append(inline_table_html)
+
+    paragraph: list[str] = []
+    bullets: list[str] = []
+
+    def flush_paragraph() -> None:
+        if paragraph:
+            parts.append(f"<p>{esc(' '.join(paragraph).strip())}</p>")
+            paragraph.clear()
+
+    def flush_bullets() -> None:
+        if bullets:
+            rendered = "".join(f"<li>{esc(item)}</li>" for item in bullets)
+            parts.append(f"<ul>{rendered}</ul>")
+            bullets.clear()
+
+    for line in lines:
+        bullet = _strip_bullet(line)
+        if bullet is not None:
+            flush_paragraph()
+            bullets.append(bullet)
+            continue
+        flush_bullets()
+        paragraph.append(line)
+
+    flush_paragraph()
+    flush_bullets()
+    return "".join(parts) if parts else esc(value)
+
+
+def _render_table_html(
+    rows: list[list[str]],
+    title: str | None,
+    already_escaped: bool = False,
+) -> str:
+    if not rows or _is_low_signal_table(rows):
         return ""
 
     def cell(value: str) -> str:
         return value if already_escaped else html.escape(value)
 
-    header = rows[0]
-    body = rows[1:] if len(rows) > 1 else []
+    inferred_title, header, body = _split_table_parts(rows)
+    title = title or inferred_title
+    all_rows = ([header] if header else []) + body
+    column_count = _table_column_count(all_rows)
+    if column_count <= 1:
+        return ""
 
     caption_html = (
         f"<caption style=\"caption-side:top;text-align:left;font-weight:600;padding:0 0 8px 0;\">{cell(title)}</caption>"
         if title else ""
     )
-    thead_cells = "".join(
-        f"<th style=\"border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG};padding:8px 10px;text-align:left;vertical-align:top;font-weight:600;\">{cell(col)}</th>"
-        for col in header
-    )
-    thead = f"<thead><tr>{thead_cells}</tr></thead>"
+    thead = ""
+    if header:
+        padded_header = header + [""] * (column_count - len(header))
+        thead_cells = "".join(
+            f"<th style=\"border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG};padding:8px 10px;text-align:left;vertical-align:top;font-weight:600;\">{cell(col)}</th>"
+            for col in padded_header[:column_count]
+        )
+        thead = f"<thead><tr>{thead_cells}</tr></thead>"
     tbody_rows = []
     for row in body:
-        padded = row + [""] * (len(header) - len(row))
+        padded = row + [""] * (column_count - len(row))
         tds = "".join(
-            f"<td style=\"border:1px solid {_TABLE_BORDER};padding:8px 10px;vertical-align:top;\">{cell(col)}</td>"
-            for col in padded[:len(header)]
+            f"<td style=\"border:1px solid {_TABLE_BORDER};padding:8px 10px;vertical-align:top;\">{_render_table_cell_content(col, already_escaped=already_escaped)}</td>"
+            for col in padded[:column_count]
         )
         tbody_rows.append(f"<tr>{tds}</tr>")
     tbody = f"<tbody>{''.join(tbody_rows)}</tbody>" if tbody_rows else ""
@@ -330,22 +539,70 @@ def _render_table_html(rows: list[list[str]], title: str | None, already_escaped
     )
 
 
+def _normalize_for_match(text: str) -> str:
+    return " ".join((text or "").lower().split())
+
+
+def _table_anchor_phrases(rows: list[list[str]]) -> list[str]:
+    anchors: list[str] = []
+    for row in rows[:4]:
+        for cell in row:
+            normalized = _normalize_for_match(cell)
+            if len(normalized) >= 18 and normalized not in anchors:
+                anchors.append(normalized)
+    return anchors
+
+
+def _dedupe_section_html(section_html: str, tables: list[ExtractedTable]) -> str:
+    if not tables:
+        return section_html
+
+    soup = BeautifulSoup(section_html, "html.parser")
+    for table in tables:
+        rows = _clean_table_rows(table.data)
+        if not rows:
+            continue
+
+        title, header, _ = _split_table_parts(rows)
+        header_cells = [cell for cell in (header or []) if cell]
+        if not header_cells and title:
+            header_cells = [title]
+
+        if header_cells:
+            _remove_matching_heading_runs(soup, header_cells)
+
+        anchors = _table_anchor_phrases(rows)
+        if not anchors:
+            continue
+        for paragraph in list(soup.find_all("p")):
+            text = _normalize_for_match(paragraph.get_text(" ", strip=True))
+            matches = sum(1 for anchor in anchors if anchor in text)
+            header_hits = sum(1 for cell in _header_signature(header_cells) if cell and cell in text)
+            if matches >= 2 or (len(text) > 280 and (matches >= 1 or header_hits >= 1)):
+                paragraph.decompose()
+
+    return str(soup)
+
+
 def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
     tables: list[ExtractedTable] = []
     try:
         import pdfplumber
         with pdfplumber.open(str(path)) as pdf:
             for i, page in enumerate(pdf.pages, start=1):
-                for idx, table in enumerate(page.extract_tables() or []):
+                for table in page.extract_tables() or []:
                     cleaned_rows = _clean_table_rows(table or [])
-                    if len(cleaned_rows) < 2:
+                    if _is_low_signal_table(cleaned_rows):
                         continue
-                    title = f"Table {len(tables)+1}"
+                    title, _, _ = _split_table_parts(cleaned_rows)
+                    html_table = _render_table_html(cleaned_rows, title=title)
+                    if not html_table:
+                        continue
                     tables.append(
                         ExtractedTable(
                             title=title,
                             page=i,
-                            html=_render_table_html(cleaned_rows, title=title),
+                            html=html_table,
                             data=cleaned_rows,
                         )
                     )
@@ -382,12 +639,19 @@ def extract_pdf(path: Path) -> ExtractedDocument:
             section_by_page.setdefault(page, section)
 
     orphan_table_html: list[str] = []
+    section_tables: dict[int, list[ExtractedTable]] = {}
     for table in tables:
         section = section_by_page.get(table.page)
         if section and not _is_management_table_data(_clean_table_rows(table.data)):
             section.html += table.html
+            section_tables.setdefault(id(section), []).append(table)
         elif not _is_management_table_data(_clean_table_rows(table.data)):
             orphan_table_html.append(table.html)
+
+    for section in sections:
+        attached = section_tables.get(id(section), [])
+        if attached:
+            section.html = _dedupe_section_html(section.html, attached)
 
     body_html = "\n".join(s.html for s in sections)
     if orphan_table_html:
