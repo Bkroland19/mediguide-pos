@@ -775,6 +775,21 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "maximum": 500,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -782,6 +797,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.GuidelineChunksEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
@@ -853,6 +874,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -879,6 +906,21 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "maximum": 500,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -886,6 +928,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.GuidelineSectionsEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
@@ -2366,11 +2414,17 @@ const docTemplate = `{
                 },
                 "preferred_language": {
                     "type": "string",
-                    "example": "en"
+                    "example": "English"
                 },
                 "specialization": {
-                    "type": "string",
-                    "example": "Internal Medicine"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Internal Medicine",
+                        "Pediatrics"
+                    ]
                 },
                 "timezone": {
                     "type": "string",
@@ -2673,7 +2727,12 @@ const docTemplate = `{
         "models.IngestionJob": {
             "type": "object",
             "properties": {
-                "completed_at": {},
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2689,7 +2748,9 @@ const docTemplate = `{
                 "payload_json": {
                     "type": "string"
                 },
-                "started_at": {},
+                "started_at": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
@@ -2934,7 +2995,10 @@ const docTemplate = `{
                     }
                 },
                 "specialization": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "status": {
                     "type": "string"

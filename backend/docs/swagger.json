@@ -772,6 +772,21 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "maximum": 500,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -779,6 +794,12 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.GuidelineChunksEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
@@ -850,6 +871,12 @@
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -876,6 +903,21 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "maximum": 500,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -883,6 +925,12 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.GuidelineSectionsEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
@@ -2363,11 +2411,17 @@
                 },
                 "preferred_language": {
                     "type": "string",
-                    "example": "en"
+                    "example": "English"
                 },
                 "specialization": {
-                    "type": "string",
-                    "example": "Internal Medicine"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Internal Medicine",
+                        "Pediatrics"
+                    ]
                 },
                 "timezone": {
                     "type": "string",
@@ -2670,7 +2724,12 @@
         "models.IngestionJob": {
             "type": "object",
             "properties": {
-                "completed_at": {},
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2686,7 +2745,9 @@
                 "payload_json": {
                     "type": "string"
                 },
-                "started_at": {},
+                "started_at": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
@@ -2931,7 +2992,10 @@
                     }
                 },
                 "specialization": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "status": {
                     "type": "string"

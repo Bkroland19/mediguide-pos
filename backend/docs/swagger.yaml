@@ -340,11 +340,15 @@ definitions:
         example: "256"
         type: string
       preferred_language:
-        example: en
+        example: English
         type: string
       specialization:
-        example: Internal Medicine
-        type: string
+        example:
+        - Internal Medicine
+        - Pediatrics
+        items:
+          type: string
+        type: array
       timezone:
         example: Africa/Kampala
         type: string
@@ -544,7 +548,10 @@ definitions:
     type: object
   models.IngestionJob:
     properties:
-      completed_at: {}
+      attempt_count:
+        type: integer
+      completed_at:
+        type: string
       created_at:
         type: string
       error:
@@ -555,7 +562,8 @@ definitions:
         type: string
       payload_json:
         type: string
-      started_at: {}
+      started_at:
+        type: string
       status:
         type: string
       updated_at:
@@ -717,7 +725,9 @@ definitions:
           $ref: '#/definitions/models.Role'
         type: array
       specialization:
-        type: string
+        items:
+          type: string
+        type: array
       status:
         type: string
       timezone:
@@ -1466,6 +1476,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Maximum results
+        in: query
+        maximum: 500
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -1473,6 +1494,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.GuidelineChunksEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1518,6 +1543,10 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Publish a guideline version
@@ -1532,6 +1561,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Maximum results
+        in: query
+        maximum: 500
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -1539,6 +1579,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.GuidelineSectionsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
