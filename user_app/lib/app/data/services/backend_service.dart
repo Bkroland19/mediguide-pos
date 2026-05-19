@@ -30,12 +30,14 @@ class BackendService extends GetxService {
 
   final Map<String, Timer> _pollers = {};
   String? _token;
+  String? _refreshToken;
   BackendErrorInterceptor? _errorInterceptor;
   bool _isHandlingAuthFailure = false;
 
   Future<BackendService> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(SharedPreferencesKeys.userToken);
+    _refreshToken = prefs.getString(SharedPreferencesKeys.refreshToken);
     return this;
   }
 
@@ -128,6 +130,7 @@ class BackendService extends GetxService {
       'POST',
       '/api/v2/auth/register',
       body: payload,
+      authRequired: false,
     );
 
     final user = _extractDataMap(response);
@@ -152,12 +155,18 @@ class BackendService extends GetxService {
       'POST',
       '/api/v2/auth/login',
       body: {'email': email, 'password': password},
+      authRequired: false,
     );
 
     final data = _extractDataMap(response);
     _token = (data['token'] ?? '').toString();
+    _refreshToken = (data['refresh_token'] ?? '').toString();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(SharedPreferencesKeys.userToken, _token ?? '');
+    await prefs.setString(
+      SharedPreferencesKeys.refreshToken,
+      _refreshToken ?? '',
+    );
 
     final user = Map<String, dynamic>.from(data['user'] as Map? ?? const {});
     return RecordModel.fromJson(
@@ -192,6 +201,10 @@ class BackendService extends GetxService {
   }
 
   Future<void> refreshAuth() async {
+    if ((_refreshToken ?? '').isNotEmpty) {
+      await refreshSession();
+      return;
+    }
     if (!isAuthenticated) return;
     final response = await _requestJson('GET', '/api/v2/me');
     final data = _extractDataMap(response);
@@ -211,10 +224,43 @@ class BackendService extends GetxService {
   }
 
   Future<void> logout() async {
+    if (isAuthenticated) {
+      try {
+        await _requestJson('POST', '/api/v2/auth/logout', body: const {});
+      } catch (_) {}
+    }
     _token = null;
+    _refreshToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(SharedPreferencesKeys.userToken);
+    await prefs.remove(SharedPreferencesKeys.refreshToken);
     await prefs.remove(SharedPreferencesKeys.currentUser);
+  }
+
+  Future<void> refreshSession() async {
+    final refreshToken = (_refreshToken ?? '').trim();
+    if (refreshToken.isEmpty) {
+      throw ClientException(
+        response: const {'error': 'refresh token missing'},
+        originalError: 'Refresh token missing',
+      );
+    }
+
+    final response = await _requestJson(
+      'POST',
+      '/api/v2/auth/refresh',
+      body: {'refresh_token': refreshToken},
+      authRequired: false,
+    );
+    final data = _extractDataMap(response);
+    _token = (data['token'] ?? '').toString();
+    _refreshToken = (data['refresh_token'] ?? '').toString();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(SharedPreferencesKeys.userToken, _token ?? '');
+    await prefs.setString(
+      SharedPreferencesKeys.refreshToken,
+      _refreshToken ?? '',
+    );
   }
 
   Future<RecordModel> createRecord({
@@ -526,6 +572,7 @@ class BackendService extends GetxService {
     Map<String, dynamic>? query,
     Map<String, String>? headers,
     bool forceRefresh = false,
+    Duration? timeout,
   }) async {
     return _requestJson(
       method.toUpperCase(),
@@ -533,6 +580,7 @@ class BackendService extends GetxService {
       body: body,
       query: query,
       headers: headers,
+      timeout: timeout,
     );
   }
 
@@ -541,6 +589,7 @@ class BackendService extends GetxService {
     Map<String, dynamic>? query,
     Map<String, String>? headers,
     bool forceRefresh = false,
+    Duration? timeout,
   }) async {
     return callCustomEndpoint(
       path: path,
@@ -548,6 +597,7 @@ class BackendService extends GetxService {
       query: query,
       headers: headers,
       forceRefresh: forceRefresh,
+      timeout: timeout,
     );
   }
 
@@ -556,6 +606,7 @@ class BackendService extends GetxService {
     required Map<String, dynamic> body,
     Map<String, dynamic>? query,
     Map<String, String>? headers,
+    Duration? timeout,
   }) async {
     return callCustomEndpoint(
       path: path,
@@ -563,6 +614,7 @@ class BackendService extends GetxService {
       body: body,
       query: query,
       headers: headers,
+      timeout: timeout,
     );
   }
 
@@ -641,8 +693,21 @@ class BackendService extends GetxService {
     Map<String, dynamic>? query,
     Map<String, String>? headers,
     bool authRequired = true,
+    Duration? timeout,
+    bool attemptedRefresh = false,
   }) async {
     final uri = _buildUri(path, query: query);
+    if (authRequired && !isAuthenticated) {
+      final exception = ClientException(
+        url: uri,
+        statusCode: 401,
+        response: const {'error': 'authentication required'},
+        originalError: 'Authentication required',
+      );
+      await _handleClientException(exception);
+      throw exception;
+    }
+
     final mergedHeaders = <String, String>{
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
@@ -650,52 +715,89 @@ class BackendService extends GetxService {
       ...?headers,
     };
 
-    late final http.Response response;
-    switch (method.toUpperCase()) {
-      case 'GET':
-        response = await http.get(uri, headers: mergedHeaders);
-      case 'POST':
-        response = await http.post(
-          uri,
-          headers: mergedHeaders,
-          body: jsonEncode(body ?? const {}),
-        );
-      case 'PATCH':
-        response = await http.patch(
-          uri,
-          headers: mergedHeaders,
-          body: jsonEncode(body ?? const {}),
-        );
-      case 'PUT':
-        response = await http.put(
-          uri,
-          headers: mergedHeaders,
-          body: jsonEncode(body ?? const {}),
-        );
-      case 'DELETE':
-        response = await http.delete(uri, headers: mergedHeaders);
-      default:
-        throw Exception('Unsupported HTTP method: $method');
-    }
+    try {
+      late final Future<http.Response> request;
+      switch (method.toUpperCase()) {
+        case 'GET':
+          request = http.get(uri, headers: mergedHeaders);
+        case 'POST':
+          request = http.post(
+            uri,
+            headers: mergedHeaders,
+            body: jsonEncode(body ?? const {}),
+          );
+        case 'PATCH':
+          request = http.patch(
+            uri,
+            headers: mergedHeaders,
+            body: jsonEncode(body ?? const {}),
+          );
+        case 'PUT':
+          request = http.put(
+            uri,
+            headers: mergedHeaders,
+            body: jsonEncode(body ?? const {}),
+          );
+        case 'DELETE':
+          request = http.delete(uri, headers: mergedHeaders);
+        default:
+          throw Exception('Unsupported HTTP method: $method');
+      }
 
-    final decoded = response.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(response.body) as Map<String, dynamic>;
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return decoded;
-    }
+      final response = timeout == null
+          ? await request
+          : await request.timeout(timeout);
 
-    final exception = ClientException(
-      url: uri,
-      statusCode: response.statusCode,
-      response: decoded,
-      originalError:
-          decoded['error']?.toString() ??
-          decoded['message']?.toString() ??
-          'Request failed with status ${response.statusCode}',
-    );
-    await _handleClientException(exception);
-    throw exception;
+      final decoded = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return decoded;
+      }
+
+      if (response.statusCode == 401 &&
+          authRequired &&
+          !attemptedRefresh &&
+          (_refreshToken ?? '').trim().isNotEmpty) {
+        try {
+          await refreshSession();
+          return _requestJson(
+            method,
+            path,
+            body: body,
+            query: query,
+            headers: headers,
+            authRequired: authRequired,
+            timeout: timeout,
+            attemptedRefresh: true,
+          );
+        } catch (_) {}
+      }
+
+      final exception = ClientException(
+        url: uri,
+        statusCode: response.statusCode,
+        response: decoded,
+        originalError:
+            decoded['error']?.toString() ??
+            decoded['message']?.toString() ??
+            'Request failed with status ${response.statusCode}',
+      );
+      await _handleClientException(exception);
+      throw exception;
+    } on TimeoutException {
+      final seconds = timeout?.inSeconds ?? 0;
+      final exception = ClientException(
+        url: uri,
+        isAbort: true,
+        response: const {'error': 'request timed out'},
+        originalError: seconds > 0
+            ? 'Request timed out after $seconds seconds'
+            : 'Request timed out',
+      );
+      await _handleClientException(exception);
+      throw exception;
+    }
   }
 
   bool isAuthenticationError(ClientException error) {
@@ -745,6 +847,10 @@ class BackendService extends GetxService {
     required String collectionName,
     String? search,
   }) async {
+    if (_collectionNeedsAuth(collectionName) && !isAuthenticated) {
+      return const <Map<String, dynamic>>[];
+    }
+
     final items = <Map<String, dynamic>>[];
     var page = 1;
     const perPage = 100;

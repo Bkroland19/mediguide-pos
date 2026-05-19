@@ -5,7 +5,6 @@ import 'package:toastification/toastification.dart';
 import 'package:user_app/app/data/services/backend_service.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
 import 'package:user_app/app/data/services/main_service.dart';
-import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/themes/app_theme.dart';
@@ -53,10 +52,11 @@ Future<void> _initServices() async {
         description: 'Please sign in again.',
       );
     }
-  });
 
-  // Initialize OpenAI service for AI assistant
-  await Get.putAsync(() => OpenAiService().init());
+    if (Get.currentRoute != AppRoutes.login) {
+      Get.offAllNamed(AppRoutes.login);
+    }
+  });
 
   // Initialize AI Context service for context-aware AI assistance
   await Get.putAsync(() => AiContextService().init());

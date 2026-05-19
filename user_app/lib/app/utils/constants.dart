@@ -26,6 +26,7 @@ class SharedPreferencesKeys {
   static const String notFirstTime = 'not_first_time';
   static const String isLoggedIn = 'is_logged_in';
   static const String userToken = 'user_token';
+  static const String refreshToken = 'refresh_token';
   static const String userId = 'user_id';
   static const String currentUser = 'current_user';
   static const String biometricEnabled = 'biometric_enabled';

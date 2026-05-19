@@ -174,12 +174,33 @@ func (s RAGService) getOrCreateSession(userID *uuid.UUID, req AskRequest) (*mode
 		s.DB.First(&session, "id = ?", sid)
 	}
 	if session.ID == uuid.Nil {
-		session = models.ChatSession{UserID: userID, Title: truncate(req.Question, 80)}
+		session = models.ChatSession{
+			UserID: s.resolveChatSessionUserID(userID),
+			Title:  truncate(req.Question, 80),
+		}
 		if err := s.DB.Create(&session).Error; err != nil {
 			return nil, err
 		}
 	}
 	return &session, nil
+}
+
+func (s RAGService) resolveChatSessionUserID(userID *uuid.UUID) *uuid.UUID {
+	if userID == nil || *userID == uuid.Nil {
+		return nil
+	}
+
+	var count int64
+	if err := s.DB.Model(&models.User{}).Where("id = ?", *userID).Count(&count).Error; err != nil {
+		log.Warn().Err(err).Str("user_id", userID.String()).Msg("failed to validate RAG chat user; creating anonymous session")
+		return nil
+	}
+	if count == 0 {
+		log.Warn().Str("user_id", userID.String()).Msg("RAG chat user not found; creating anonymous session")
+		return nil
+	}
+
+	return userID
 }
 
 // truncate shortens s to at most n Unicode code points (runes), not bytes,

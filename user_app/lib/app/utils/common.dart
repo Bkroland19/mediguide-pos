@@ -57,6 +57,15 @@ class Common {
       return e.response['message'].toString();
     }
 
+    if (e.response.containsKey('error')) {
+      return e.response['error'].toString();
+    }
+
+    if (e.originalError != null &&
+        e.originalError.toString().trim().isNotEmpty) {
+      return e.originalError.toString().trim();
+    }
+
     return 'An error occurred. Please try again.';
   }
 

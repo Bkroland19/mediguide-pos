@@ -259,6 +259,20 @@ definitions:
         example: Admin123!
         type: string
     type: object
+  handlers.LogoutEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.LogoutResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.LogoutResult:
+    properties:
+      logged_out:
+        example: true
+        type: boolean
+    type: object
   handlers.ManifestEnvelope:
     properties:
       data:
@@ -288,6 +302,12 @@ definitions:
       published:
         example: true
         type: boolean
+    type: object
+  handlers.RefreshRequest:
+    properties:
+      refresh_token:
+        example: Gm8m3Wq2oJ7l6p4XnYx9QbT2f1WvL0H1v2z3k4m5n6o
+        type: string
     type: object
   handlers.RegisterRequest:
     properties:
@@ -862,6 +882,14 @@ definitions:
     type: object
   services.LoginResult:
     properties:
+      expires_at:
+        type: string
+      refresh_expires_at:
+        type: string
+      refresh_token:
+        type: string
+      session_id:
+        type: string
       token:
         type: string
       user:
@@ -1283,6 +1311,56 @@ paths:
       summary: Log in a user
       tags:
       - auth
+  /api/v1/auth/logout:
+    post:
+      description: Revoke the current authenticated session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LogoutEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log out current session
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a refresh token for a new access token and rotated refresh
+        token.
+      parameters:
+      - description: Refresh payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Refresh a user session
+      tags:
+      - auth
   /api/v1/auth/register:
     post:
       consumes:
@@ -1520,6 +1598,56 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       summary: Log in a user
+      tags:
+      - auth
+  /api/v2/auth/logout:
+    post:
+      description: Revoke the current authenticated session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LogoutEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log out current session
+      tags:
+      - auth
+  /api/v2/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a refresh token for a new access token and rotated refresh
+        token.
+      parameters:
+      - description: Refresh payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Refresh a user session
       tags:
       - auth
   /api/v2/auth/register:

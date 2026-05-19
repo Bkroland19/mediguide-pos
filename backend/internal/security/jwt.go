@@ -9,20 +9,22 @@ import (
 )
 
 type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
-	Roles  []string  `json:"roles"`
-	Perms  []string  `json:"perms"`
+	UserID    uuid.UUID `json:"user_id"`
+	SessionID string    `json:"sid,omitempty"`
+	Email     string    `json:"email"`
+	Roles     []string  `json:"roles"`
+	Perms     []string  `json:"perms"`
 	jwt.RegisteredClaims
 }
 
-func GenerateJWT(secret, issuer string, ttlMinutes int, userID uuid.UUID, email string, roles, perms []string) (string, error) {
+func GenerateJWT(secret, issuer string, ttlMinutes int, userID, sessionID uuid.UUID, email string, roles, perms []string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID: userID,
-		Email:  email,
-		Roles:  roles,
-		Perms:  perms,
+		UserID:    userID,
+		SessionID: sessionID.String(),
+		Email:     email,
+		Roles:     roles,
+		Perms:     perms,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer,
 			Subject:   userID.String(),

@@ -77,12 +77,67 @@ func (h AuthHandler) Login(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	res, err := h.Service.Login(req.Email, req.Password)
+	res, err := h.Service.Login(req.Email, req.Password, services.RequestMetadata{
+		UserAgent: c.Request.UserAgent(),
+		IPAddress: c.ClientIP(),
+	})
 	if err != nil {
 		httpx.Error(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 	httpx.OK(c, res)
+}
+
+// Refresh godoc
+// @Summary Refresh a user session
+// @Description Exchange a refresh token for a new access token and rotated refresh token.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.RefreshRequest true "Refresh payload"
+// @Success 200 {object} handlers.LoginEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Router /api/v1/auth/refresh [post]
+// @Router /api/v2/auth/refresh [post]
+func (h AuthHandler) Refresh(c *gin.Context) {
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	res, err := h.Service.Refresh(req.RefreshToken, services.RequestMetadata{
+		UserAgent: c.Request.UserAgent(),
+		IPAddress: c.ClientIP(),
+	})
+	if err != nil {
+		httpx.Error(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+	httpx.OK(c, res)
+}
+
+// Logout godoc
+// @Summary Log out current session
+// @Description Revoke the current authenticated session.
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} handlers.LogoutEnvelope
+// @Failure 401 {object} handlers.ErrorResponse
+// @Router /api/v1/auth/logout [post]
+// @Router /api/v2/auth/logout [post]
+func (h AuthHandler) Logout(c *gin.Context) {
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	if claims.SessionID == "" {
+		httpx.Error(c, http.StatusUnauthorized, "invalid session")
+		return
+	}
+	if err := h.Service.Logout(claims.SessionID); err != nil {
+		httpx.Error(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+	httpx.OK(c, LogoutResult{LoggedOut: true})
 }
 
 // Me godoc
