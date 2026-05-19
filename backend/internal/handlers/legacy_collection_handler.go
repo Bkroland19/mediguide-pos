@@ -92,10 +92,85 @@ func (h LegacyCollectionHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// Create godoc
+// @Summary Create legacy collection record
+// @Description Legacy v1 collection create endpoint for authenticated user-owned resources and compatibility write flows.
+// @Tags legacy-v1
+// @Accept json
+// @Produce json
+// @Param collection path string true "Legacy collection name" Enums(support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
+// @Param payload body map[string]interface{} true "Legacy collection payload"
+// @Success 200 {object} handlers.LegacyCollectionItemResult
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/v1/{collection} [post]
+func (h LegacyCollectionHandler) Create(c *gin.Context) {
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	userID := ""
+	if claims := h.optionalClaims(c.GetHeader("Authorization")); claims != nil {
+		userID = claims.UserID.String()
+	}
+
+	result, err := h.Service.Create(c.Param("collection"), payload, userID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+// Update godoc
+// @Summary Update legacy collection record
+// @Description Legacy v1 collection patch endpoint for authenticated compatibility flows.
+// @Tags legacy-v1
+// @Accept json
+// @Produce json
+// @Param collection path string true "Legacy collection name" Enums(users,conversations,messages,reading_progress,calculator_usage_logs)
+// @Param id path string true "Record ID"
+// @Param payload body map[string]interface{} true "Legacy collection payload"
+// @Success 200 {object} handlers.LegacyCollectionItemResult
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/v1/{collection}/{id} [patch]
+func (h LegacyCollectionHandler) Update(c *gin.Context) {
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	userID := ""
+	if claims := h.optionalClaims(c.GetHeader("Authorization")); claims != nil {
+		userID = claims.UserID.String()
+	}
+
+	result, err := h.Service.Update(c.Param("collection"), c.Param("id"), payload, userID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 func (h LegacyCollectionHandler) writeError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrLegacyCollectionAuthNeeded):
 		httpx.Error(c, http.StatusUnauthorized, "authentication required")
+	case errors.Is(err, services.ErrLegacyCollectionForbidden):
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+	case errors.Is(err, services.ErrLegacyCollectionWrite):
+		httpx.Error(c, http.StatusMethodNotAllowed, "write operation not supported")
+	case errors.Is(err, services.ErrLegacyCollectionInvalid):
+		httpx.Error(c, http.StatusBadRequest, "invalid payload")
 	case errors.Is(err, services.ErrLegacyCollectionNotFound):
 		httpx.Error(c, http.StatusNotFound, "collection not found")
 	case errors.Is(err, gorm.ErrRecordNotFound):

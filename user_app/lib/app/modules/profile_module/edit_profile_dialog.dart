@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:toastification/toastification.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/backend_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/loading.dart';
@@ -27,6 +28,10 @@ class EditProfileDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final supportsAvatarUpload = BackendService.to.supportsCollectionWrite(
+      'users',
+      files: true,
+    );
     return GetBuilder<EditProfileController>(
       init: EditProfileController(),
       builder: (controller) => PopScope(
@@ -173,32 +178,37 @@ class EditProfileDialog extends StatelessWidget {
                       child: Column(
                         children: [
                           GestureDetector(
-                            onTap: () {
-                              _pickAndUploadAvatar(controller);
-                            },
+                            onTap: supportsAvatarUpload
+                                ? () {
+                                    _pickAndUploadAvatar(controller);
+                                  }
+                                : null,
                             child: Obx(
                               () => UserAvatar.xlarge(
                                 name: AuthService.to.userName,
                                 avatarUrl: AuthService.to.userProfilePicture,
-                                showEditButton: true,
+                                showEditButton: supportsAvatarUpload,
                                 isLoading: controller.isUploadingAvatar.value,
-                                onEdit: () {
-                                  _pickAndUploadAvatar(controller);
-                                },
+                                onEdit: supportsAvatarUpload
+                                    ? () {
+                                        _pickAndUploadAvatar(controller);
+                                      }
+                                    : null,
                               ),
                             ),
                           ),
                           AppSpacing.gapSm,
-                          GestureDetector(
-                            onTap: () {
-                              _pickAndUploadAvatar(controller);
-                            },
-                            child: Text(
-                              'Tap to change photo',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.theme.colorScheme.primary,
-                                decoration: TextDecoration.underline,
-                              ),
+                          Text(
+                            supportsAvatarUpload
+                                ? 'Tap to change photo'
+                                : 'Profile photo uploads are not available yet',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: supportsAvatarUpload
+                                  ? context.theme.colorScheme.primary
+                                  : context.theme.colorScheme.onSurfaceVariant,
+                              decoration: supportsAvatarUpload
+                                  ? TextDecoration.underline
+                                  : TextDecoration.none,
                             ),
                           ),
                         ],

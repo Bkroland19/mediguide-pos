@@ -9,6 +9,8 @@ import 'package:user_app/app/utils/constants.dart';
 
 import '../models/user.dart';
 
+typedef BackendErrorInterceptor = Future<void> Function(ClientException error);
+
 /// Backend compatibility service.
 ///
 /// Provides a backend-first data API for the mobile app.
@@ -28,6 +30,8 @@ class BackendService extends GetxService {
 
   final Map<String, Timer> _pollers = {};
   String? _token;
+  BackendErrorInterceptor? _errorInterceptor;
+  bool _isHandlingAuthFailure = false;
 
   Future<BackendService> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,11 +41,32 @@ class BackendService extends GetxService {
 
   bool get isAuthenticated => (_token ?? '').isNotEmpty;
 
+  void setErrorInterceptor(BackendErrorInterceptor interceptor) {
+    _errorInterceptor = interceptor;
+  }
+
   bool supportsCollectionWrite(String collectionName, {bool files = false}) {
     if (files) {
       return false;
     }
-    return false;
+    switch (collectionName) {
+      case User.collection:
+      case 'support_tickets':
+      case 'support_ticket_replies':
+      case 'conversations':
+      case 'messages':
+      case 'reading_progress':
+      case 'calculator_usage_logs':
+      case 'guideline_usage_logs':
+      case 'drug_usage_logs':
+      case 'abbreviation_usage_logs':
+      case 'consultant_usage_logs':
+      case 'facility_usage_logs':
+      case 'ai_usage_logs':
+        return true;
+      default:
+        return false;
+    }
   }
 
   bool get supportsMessaging =>
@@ -189,6 +214,7 @@ class BackendService extends GetxService {
     _token = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(SharedPreferencesKeys.userToken);
+    await prefs.remove(SharedPreferencesKeys.currentUser);
   }
 
   Future<RecordModel> createRecord({
@@ -202,6 +228,11 @@ class BackendService extends GetxService {
       );
     }
 
+    if (!supportsCollectionWrite(collectionName) &&
+        !isBestEffortCollectionWrite(collectionName)) {
+      throw UnsupportedError(unsupportedCollectionWriteMessage(collectionName));
+    }
+
     try {
       final response = await _requestJson(
         'POST',
@@ -212,7 +243,10 @@ class BackendService extends GetxService {
       return RecordModel.fromJson(
         _normalizeIncomingRecord(collectionName, item),
       );
-    } catch (_) {
+    } catch (e) {
+      if (supportsCollectionWrite(collectionName)) {
+        rethrow;
+      }
       if (!isBestEffortCollectionWrite(collectionName)) {
         throw UnsupportedError(
           unsupportedCollectionWriteMessage(collectionName),
@@ -341,6 +375,11 @@ class BackendService extends GetxService {
       );
     }
 
+    if (!supportsCollectionWrite(collectionName) &&
+        !isBestEffortCollectionWrite(collectionName)) {
+      throw UnsupportedError(unsupportedCollectionWriteMessage(collectionName));
+    }
+
     try {
       final response = await _requestJson(
         'PATCH',
@@ -351,7 +390,10 @@ class BackendService extends GetxService {
       return RecordModel.fromJson(
         _normalizeIncomingRecord(collectionName, item),
       );
-    } catch (_) {
+    } catch (e) {
+      if (supportsCollectionWrite(collectionName)) {
+        rethrow;
+      }
       if (!isBestEffortCollectionWrite(collectionName)) {
         throw UnsupportedError(
           unsupportedCollectionWriteMessage(collectionName),
@@ -643,7 +685,7 @@ class BackendService extends GetxService {
       return decoded;
     }
 
-    throw ClientException(
+    final exception = ClientException(
       url: uri,
       statusCode: response.statusCode,
       response: decoded,
@@ -652,6 +694,36 @@ class BackendService extends GetxService {
           decoded['message']?.toString() ??
           'Request failed with status ${response.statusCode}',
     );
+    await _handleClientException(exception);
+    throw exception;
+  }
+
+  bool isAuthenticationError(ClientException error) {
+    final message =
+        error.originalError?.toString().toLowerCase() ??
+        error.response['error']?.toString().toLowerCase() ??
+        error.response['message']?.toString().toLowerCase() ??
+        '';
+    return error.statusCode == 401 ||
+        message.contains('invalid token') ||
+        message.contains('authentication required') ||
+        message.contains('unauthorized');
+  }
+
+  Future<void> _handleClientException(ClientException error) async {
+    if (isAuthenticationError(error) && !_isHandlingAuthFailure) {
+      _isHandlingAuthFailure = true;
+      try {
+        await logout();
+      } finally {
+        _isHandlingAuthFailure = false;
+      }
+    }
+
+    final interceptor = _errorInterceptor;
+    if (interceptor != null) {
+      await interceptor(error);
+    }
   }
 
   Uri _buildUri(String path, {Map<String, dynamic>? query}) {
@@ -908,6 +980,7 @@ class BackendService extends GetxService {
             normalized['availability'] ??
             normalized['availability_json'] ??
             <String, dynamic>{};
+        _setRelatedUserExpand(normalized, fieldName: 'user', prefix: 'user');
         break;
       case 'health_facilities':
         normalized['facility_level_name'] =
@@ -958,6 +1031,16 @@ class BackendService extends GetxService {
             normalized['participant2'] ??
             normalized['participant2_user_id'] ??
             '';
+        _setRelatedUserExpand(
+          normalized,
+          fieldName: 'participant1',
+          prefix: 'participant1',
+        );
+        _setRelatedUserExpand(
+          normalized,
+          fieldName: 'participant2',
+          prefix: 'participant2',
+        );
         break;
       case 'messages':
         normalized['conversation'] =
@@ -978,6 +1061,21 @@ class BackendService extends GetxService {
             normalized['reactions'] ??
             normalized['reactions_json'] ??
             <String, dynamic>{};
+        _setRelatedUserExpand(
+          normalized,
+          fieldName: 'sender',
+          prefix: 'sender',
+        );
+        _setSelfRelationExpand(
+          normalized,
+          fieldName: 'reply_to',
+          collectionName: 'messages',
+          idKey: 'reply_to_id',
+          displayKey: 'reply_to',
+        );
+        break;
+      case 'support_ticket_replies':
+        _setRelatedUserExpand(normalized, fieldName: 'user_id', prefix: 'user');
         break;
       case 'reading_progress':
         normalized['guideline_id'] =
@@ -1003,7 +1101,19 @@ class BackendService extends GetxService {
 
   String _extractFileValue(dynamic value) {
     if (value == null) return '';
-    if (value is String) return value;
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return '';
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          final decoded = jsonDecode(trimmed);
+          return _extractFileValue(decoded);
+        } catch (_) {
+          return trimmed;
+        }
+      }
+      return trimmed;
+    }
     if (value is Map) {
       final map = Map<String, dynamic>.from(value);
       for (final key in ['url', 'file_url', 'path', 'filename', 'name']) {
@@ -1042,6 +1152,69 @@ class BackendService extends GetxService {
   void _rename(Map<String, dynamic> map, String from, String to) {
     if (!map.containsKey(from) || map.containsKey(to)) return;
     map[to] = map.remove(from);
+  }
+
+  Map<String, dynamic> _ensureExpandMap(Map<String, dynamic> normalized) {
+    final existing = normalized['expand'];
+    if (existing is Map<String, dynamic>) {
+      return existing;
+    }
+    if (existing is Map) {
+      final map = Map<String, dynamic>.from(existing);
+      normalized['expand'] = map;
+      return map;
+    }
+    final map = <String, dynamic>{};
+    normalized['expand'] = map;
+    return map;
+  }
+
+  void _setRelatedUserExpand(
+    Map<String, dynamic> normalized, {
+    required String fieldName,
+    required String prefix,
+  }) {
+    final id =
+        normalized['${prefix}_expand_id']?.toString() ??
+        normalized['${fieldName}_expand_id']?.toString() ??
+        '';
+    if (id.isEmpty) return;
+    final expand = _ensureExpandMap(normalized);
+    expand[fieldName] = {
+      'id': id,
+      'collectionName': User.collection,
+      'collectionId': User.collection,
+      'created': '',
+      'updated': '',
+      'name': normalized['${prefix}_expand_name']?.toString() ?? '',
+      'email': normalized['${prefix}_expand_email']?.toString() ?? '',
+      'avatar': normalized['${prefix}_expand_avatar']?.toString() ?? '',
+      'verified': normalized['${prefix}_expand_verified'] == true,
+      'emailVisibility': normalized['${prefix}_expand_verified'] == true,
+    };
+  }
+
+  void _setSelfRelationExpand(
+    Map<String, dynamic> normalized, {
+    required String fieldName,
+    required String collectionName,
+    required String idKey,
+    required String displayKey,
+  }) {
+    final id =
+        normalized[idKey]?.toString() ??
+        normalized[fieldName]?.toString() ??
+        '';
+    if (id.isEmpty) return;
+    final expand = _ensureExpandMap(normalized);
+    expand[fieldName] = {
+      'id': id,
+      'collectionName': collectionName,
+      'collectionId': collectionName,
+      'created': '',
+      'updated': '',
+      'content': normalized[displayKey]?.toString() ?? '',
+    };
   }
 
   List<Map<String, dynamic>> _applyFilter(

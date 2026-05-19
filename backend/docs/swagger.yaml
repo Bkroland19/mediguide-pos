@@ -1054,6 +1054,67 @@ paths:
       summary: List legacy collection records
       tags:
       - legacy-v1
+    post:
+      consumes:
+      - application/json
+      description: Legacy v1 collection create endpoint for authenticated user-owned
+        resources and compatibility write flows.
+      parameters:
+      - description: Legacy collection name
+        enum:
+        - support_tickets
+        - support_ticket_replies
+        - conversations
+        - messages
+        - reading_progress
+        - calculator_usage_logs
+        - guideline_usage_logs
+        - drug_usage_logs
+        - abbreviation_usage_logs
+        - consultant_usage_logs
+        - facility_usage_logs
+        - ai_usage_logs
+        in: path
+        name: collection
+        required: true
+        type: string
+      - description: Legacy collection payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create legacy collection record
+      tags:
+      - legacy-v1
   /api/v1/{collection}/{id}:
     get:
       description: Legacy v1 collection detail endpoint. Some collections are public
@@ -1131,6 +1192,65 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       summary: Get legacy collection record
+      tags:
+      - legacy-v1
+    patch:
+      consumes:
+      - application/json
+      description: Legacy v1 collection patch endpoint for authenticated compatibility
+        flows.
+      parameters:
+      - description: Legacy collection name
+        enum:
+        - users
+        - conversations
+        - messages
+        - reading_progress
+        - calculator_usage_logs
+        in: path
+        name: collection
+        required: true
+        type: string
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Legacy collection payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update legacy collection record
       tags:
       - legacy-v1
   /api/v1/auth/login:

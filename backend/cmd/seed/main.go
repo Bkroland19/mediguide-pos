@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"mediguide/internal/config"
@@ -23,7 +26,6 @@ var (
 	countyID                = uuid.MustParse("11111111-1111-1111-1111-111111111114")
 	healthSubDistrictID     = uuid.MustParse("11111111-1111-1111-1111-111111111115")
 	subcountyID             = uuid.MustParse("11111111-1111-1111-1111-111111111116")
-	parishID                = uuid.MustParse("11111111-1111-1111-1111-111111111117")
 	facilityLevelHC3ID      = uuid.MustParse("11111111-1111-1111-1111-111111111118")
 	facilityLevelHospitalID = uuid.MustParse("11111111-1111-1111-1111-111111111119")
 	ownershipTypeGovID      = uuid.MustParse("11111111-1111-1111-1111-111111111120")
@@ -197,6 +199,10 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 }
 
 func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
+	if err := seedMasterFacilities(database); err != nil {
+		return err
+	}
+
 	rows := []struct {
 		table string
 		row   map[string]any
@@ -308,16 +314,6 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 			},
 		},
 		{
-			table: "parishes",
-			row: map[string]any{
-				"id":           parishID,
-				"subcounty_id": subcountyID,
-				"name":         "Nakasero Parish",
-				"nhpi_code":    "PAR-C-001",
-				"hsdt_code":    "HSDT-PAR-001",
-			},
-		},
-		{
 			table: "facility_levels",
 			row: map[string]any{
 				"id":   facilityLevelHC3ID,
@@ -370,7 +366,6 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"authority_id":           authorityDistrictID,
 				"ownership_type_id":      ownershipTypeGovID,
 				"health_sub_district_id": healthSubDistrictID,
-				"parish_id":              parishID,
 				"subcounty_id":           subcountyID,
 				"county_id":              countyID,
 				"district_id":            districtID,
@@ -390,7 +385,6 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"authority_id":           authorityMOHID,
 				"ownership_type_id":      ownershipTypeGovID,
 				"health_sub_district_id": healthSubDistrictID,
-				"parish_id":              parishID,
 				"subcounty_id":           subcountyID,
 				"county_id":              countyID,
 				"district_id":            districtID,
@@ -601,24 +595,6 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"description":  "Standard malaria treatment abbreviation.",
 				"common_usage": true,
 				"usage_count":  12,
-			},
-		},
-		{
-			table: "calculators",
-			row: map[string]any{
-				"id":               calculatorID,
-				"added_by_user_id": admin.ID,
-				"name":             "Pediatric Weight Dosing",
-				"description":      "Calculate safe weight-based dosing for emergency care.",
-				"icon":             "calculator",
-				"color":            "#0284c7",
-				"background_color": "#e0f2fe",
-				"app_file_json":    mustJSON(`{"path":"calculators/pediatric-weight-dosing.html","size":2048}`),
-				"version":          "1.0.0",
-				"type":             "html",
-				"status":           "active",
-				"usage_count":      11,
-				"featured":         true,
 			},
 		},
 		{
@@ -890,7 +866,7 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 				"calculator_id":   calculatorID,
 				"session_start":   "2026-05-16T08:00:00Z",
 				"session_end":     "2026-05-16T08:05:00Z",
-				"calculator_type": "html",
+				"calculator_type": "calculator",
 			},
 		},
 		{
@@ -942,6 +918,35 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 		},
 	}
 
+	calculatorRows := make([]struct {
+		table string
+		row   map[string]any
+	}, 0, len(seededCalculatorSamples()))
+	for _, spec := range seededCalculatorSamples() {
+		calculatorRows = append(calculatorRows, struct {
+			table string
+			row   map[string]any
+		}{
+			table: "calculators",
+			row: map[string]any{
+				"id":               spec.ID,
+				"added_by_user_id": admin.ID,
+				"name":             spec.Name,
+				"description":      spec.Description,
+				"icon":             spec.Icon,
+				"color":            spec.Color,
+				"background_color": spec.BackgroundColor,
+				"app_file_json":    mustJSON(fmt.Sprintf(`{"path":"samples/%s","size":2048}`, spec.FileName)),
+				"version":          "1.0.0",
+				"type":             spec.Type,
+				"status":           "active",
+				"usage_count":      spec.UsageCount,
+				"featured":         spec.Featured,
+			},
+		})
+	}
+	rows = append(calculatorRows, rows...)
+
 	for _, entry := range rows {
 		if err := upsertByID(database, entry.table, entry.row); err != nil {
 			return err
@@ -991,6 +996,590 @@ func seedLegacyData(database *gorm.DB, admin, clinician *models.User) error {
 	return database.Table("guideline_documents").
 		Where("id = ?", guidelineDocumentID).
 		Update("current_version_id", guidelineVersionID).Error
+}
+
+type masterFacilityRow struct {
+	OrganisationUnitID string
+	UID                string
+	Name               string
+	ShortName          string
+	NHFRID             string
+	SubcountyUID       string
+	Subcounty          string
+	AdminUnitUID       string
+	AdminUnit          string
+	DistrictUID        string
+	District           string
+	RegionUID          string
+	Region             string
+	HFLevel            string
+	Ownership          string
+	Status             string
+	Reporting          string
+}
+
+func seedMasterFacilities(database *gorm.DB) error {
+	rows, err := loadMasterFacilityRows()
+	if err != nil {
+		return err
+	}
+
+	ownershipTypeIDs := map[string]uuid.UUID{}
+	for _, ownership := range []struct {
+		ID   uuid.UUID
+		Code string
+		Name string
+	}{
+		{ID: ownershipTypeGovID, Code: "GOV", Name: "Government"},
+		{ID: masterDataUUID("ownership-type", "PNFP"), Code: "PNFP", Name: "Private Not For Profit"},
+		{ID: masterDataUUID("ownership-type", "PFP"), Code: "PFP", Name: "Private For Profit"},
+		{ID: masterDataUUID("ownership-type", "UNK"), Code: "UNK", Name: "Unknown Ownership"},
+	} {
+		id := ownership.ID
+		ownershipTypeIDs[ownership.Code] = id
+		if err := upsertByID(database, "ownership_types", map[string]any{
+			"id":   id,
+			"code": ownership.Code,
+			"name": ownership.Name,
+		}); err != nil {
+			return err
+		}
+	}
+
+	levelNames := map[string]string{
+		"HCII":     "Health Centre II",
+		"HCIII":    "Health Centre III",
+		"HCIV":     "Health Centre IV",
+		"HOSP":     "General Hospital",
+		"CLINIC":   "Clinic",
+		"DRUGSHOP": "Drug Shop",
+		"RRH":      "Regional Referral Hospital",
+		"NRH":      "National Referral Hospital",
+		"RBB":      "Regional Blood Bank",
+		"NBB":      "National Blood Bank",
+		"BCDP":     "Blood Collection and Distribution Point",
+	}
+	seededLevels := map[string]uuid.UUID{}
+	seededAuthorities := map[string]uuid.UUID{}
+
+	for _, row := range rows {
+		regionUID := strings.TrimSpace(row.RegionUID)
+		districtUID := strings.TrimSpace(row.DistrictUID)
+		adminUID := strings.TrimSpace(row.AdminUnitUID)
+		subcountyUID := strings.TrimSpace(row.SubcountyUID)
+		facilityUID := strings.TrimSpace(row.UID)
+		regionName := strings.TrimSpace(row.Region)
+		districtName := strings.TrimSpace(row.District)
+		adminName := strings.TrimSpace(row.AdminUnit)
+		subcountyName := strings.TrimSpace(row.Subcounty)
+		facilityName := strings.TrimSpace(row.Name)
+		if regionUID == "" || districtUID == "" || adminUID == "" || subcountyUID == "" || facilityUID == "" {
+			continue
+		}
+		if regionName == "" || districtName == "" || adminName == "" || subcountyName == "" || facilityName == "" {
+			continue
+		}
+
+		regionID := masterDataUUID("region", regionUID)
+		healthSubRegionID := masterDataUUID("health-sub-region", regionUID)
+		districtID := masterDataUUID("district", districtUID)
+		countyID := masterDataUUID("county", adminUID)
+		healthSubDistrictID := masterDataUUID("health-sub-district", adminUID)
+		subcountyID := masterDataUUID("subcounty", subcountyUID)
+		facilityID := masterDataUUID("facility", facilityUID)
+
+		if err := upsertByID(database, "regions", map[string]any{
+			"id":        regionID,
+			"name":      regionName,
+			"nhpi_code": "REG-" + regionUID,
+			"hsdt_code": "HSDT-REG-" + regionUID,
+		}); err != nil {
+			return err
+		}
+		if err := upsertByID(database, "health_sub_regions", map[string]any{
+			"id":        healthSubRegionID,
+			"region_id": regionID,
+			"name":      regionName,
+			"nhpi_code": "HSR-" + regionUID,
+			"hsdt_code": "HSDT-HSR-" + regionUID,
+		}); err != nil {
+			return err
+		}
+		if err := upsertByID(database, "districts", map[string]any{
+			"id":                   districtID,
+			"health_sub_region_id": healthSubRegionID,
+			"region_id":            regionID,
+			"name":                 districtName,
+			"nhpi_code":            "DST-" + districtUID,
+			"hsdt_code":            "HSDT-DST-" + districtUID,
+		}); err != nil {
+			return err
+		}
+		if err := upsertByID(database, "counties", map[string]any{
+			"id":          countyID,
+			"district_id": districtID,
+			"name":        adminName,
+			"nhpi_code":   "CNT-" + adminUID,
+			"hsdt_code":   "HSDT-CNT-" + adminUID,
+		}); err != nil {
+			return err
+		}
+		if err := upsertByID(database, "health_sub_districts", map[string]any{
+			"id":          healthSubDistrictID,
+			"district_id": districtID,
+			"name":        adminName,
+			"nhpi_code":   "HSD-" + adminUID,
+			"hsdt_code":   "HSDT-HSD-" + adminUID,
+		}); err != nil {
+			return err
+		}
+		if err := upsertByID(database, "subcounties", map[string]any{
+			"id":          subcountyID,
+			"county_id":   countyID,
+			"district_id": districtID,
+			"name":        subcountyName,
+			"nhpi_code":   "SUB-" + subcountyUID,
+			"hsdt_code":   "HSDT-SUB-" + subcountyUID,
+		}); err != nil {
+			return err
+		}
+		levelCode := canonicalLevelCode(row.HFLevel)
+		if levelCode == "" {
+			levelCode = "UNSPECIFIED"
+		}
+		levelID, ok := seededLevels[levelCode]
+		if !ok {
+			levelName := levelNames[levelCode]
+			if levelName == "" {
+				levelName = titleFromCode(levelCode)
+			}
+			levelID = preferredFacilityLevelID(levelCode)
+			if existingID, found, err := lookupRowIDByCodeOrName(database, "facility_levels", levelCode, levelName); err != nil {
+				return err
+			} else if found {
+				levelID = existingID
+			}
+			seededLevels[levelCode] = levelID
+			switch levelCode {
+			case "HCIII":
+				facilityLevelHC3ID = levelID
+			case "HOSP":
+				facilityLevelHospitalID = levelID
+			}
+			if err := upsertByID(database, "facility_levels", map[string]any{
+				"id":   levelID,
+				"code": levelCode,
+				"name": levelName,
+			}); err != nil {
+				return err
+			}
+		}
+
+		ownershipCode := strings.ToUpper(strings.TrimSpace(row.Ownership))
+		if ownershipCode == "" {
+			ownershipCode = "UNK"
+		}
+		ownershipID, ok := ownershipTypeIDs[ownershipCode]
+		if !ok {
+			ownershipID = ownershipTypeIDs["UNK"]
+		}
+
+		authorityKey, authorityName, authorityCode := authorityForRow(row)
+		authorityID, ok := seededAuthorities[authorityKey]
+		if !ok {
+			authorityID = masterDataUUID("authority", authorityKey)
+			if authorityKey == "gov:moh" {
+				authorityID = authorityMOHID
+			}
+			seededAuthorities[authorityKey] = authorityID
+			if err := upsertByID(database, "authorities", map[string]any{
+				"id":                authorityID,
+				"name":              authorityName,
+				"code":              authorityCode,
+				"ownership_type_id": ownershipID,
+			}); err != nil {
+				return err
+			}
+		}
+
+		if err := upsertByID(database, "health_facilities", map[string]any{
+			"id":                     facilityID,
+			"name":                   facilityName,
+			"nhpi_code":              "FAC-" + facilityUID,
+			"hsdt_code":              "HSDT-FAC-" + strings.TrimSpace(row.OrganisationUnitID),
+			"facility_level_id":      levelID,
+			"authority_id":           authorityID,
+			"ownership_type_id":      ownershipID,
+			"health_sub_district_id": healthSubDistrictID,
+			"subcounty_id":           subcountyID,
+			"county_id":              countyID,
+			"district_id":            districtID,
+			"health_sub_region_id":   healthSubRegionID,
+			"region_id":              regionID,
+			"usage_count":            masterFacilityUsageCount(row),
+		}); err != nil {
+			return err
+		}
+	}
+
+	log.Info().Int("rows", len(rows)).Msg("seeded master facility hierarchy from MoH CSV")
+	return nil
+}
+
+func loadMasterFacilityRows() ([]masterFacilityRow, error) {
+	paths := []string{
+		filepath.Join("migrations", "data", "MasterFacility.csv"),
+		filepath.Join("backend", "migrations", "data", "MasterFacility.csv"),
+	}
+
+	var file *os.File
+	var err error
+	for _, path := range paths {
+		file, err = os.Open(path)
+		if err == nil {
+			defer file.Close()
+			return parseMasterFacilityRows(file)
+		}
+	}
+	return nil, fmt.Errorf("open MasterFacility.csv: %w", err)
+}
+
+func parseMasterFacilityRows(file *os.File) ([]masterFacilityRow, error) {
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	if len(records) < 2 {
+		return nil, fmt.Errorf("MasterFacility.csv has no data rows")
+	}
+
+	headerIndex := map[string]int{}
+	for i, name := range records[0] {
+		headerIndex[strings.ToLower(strings.TrimSpace(name))] = i
+	}
+	get := func(row []string, key string) string {
+		idx, ok := headerIndex[key]
+		if !ok || idx >= len(row) {
+			return ""
+		}
+		return strings.TrimSpace(row[idx])
+	}
+
+	rows := make([]masterFacilityRow, 0, len(records)-1)
+	for _, record := range records[1:] {
+		rows = append(rows, masterFacilityRow{
+			OrganisationUnitID: get(record, "organisationunitid"),
+			UID:                get(record, "uid"),
+			Name:               get(record, "name"),
+			ShortName:          get(record, "shortname"),
+			NHFRID:             get(record, "nhfrid"),
+			SubcountyUID:       get(record, "subcounty_uid"),
+			Subcounty:          get(record, "subcounty"),
+			AdminUnitUID:       get(record, "admin_unit_uid"),
+			AdminUnit:          get(record, "admin_unit"),
+			DistrictUID:        get(record, "district_uid"),
+			District:           get(record, "district"),
+			RegionUID:          get(record, "region_uid"),
+			Region:             get(record, "region"),
+			HFLevel:            get(record, "hflevel"),
+			Ownership:          get(record, "ownership"),
+			Status:             get(record, "status"),
+			Reporting:          get(record, "reporting"),
+		})
+	}
+
+	return rows, nil
+}
+
+func masterDataUUID(kind, source string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte("mediguide:"+kind+":"+strings.TrimSpace(source)))
+}
+
+func canonicalLevelCode(raw string) string {
+	level := strings.ToUpper(strings.TrimSpace(raw))
+	switch level {
+	case "HC II":
+		return "HCII"
+	case "HC III":
+		return "HCIII"
+	case "HC IV":
+		return "HCIV"
+	case "GENERAL HOSPITAL":
+		return "HOSP"
+	case "DRUG SHOP":
+		return "DRUGSHOP"
+	default:
+		level = strings.ReplaceAll(level, " ", "")
+		level = strings.ReplaceAll(level, "_", "")
+		return level
+	}
+}
+
+func preferredFacilityLevelID(code string) uuid.UUID {
+	switch code {
+	case "HCIII":
+		return facilityLevelHC3ID
+	case "HOSP":
+		return facilityLevelHospitalID
+	default:
+		return masterDataUUID("facility-level", code)
+	}
+}
+
+func titleFromCode(code string) string {
+	parts := strings.Split(strings.ToLower(strings.ReplaceAll(code, "_", " ")), " ")
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(part[:1]) + part[1:]
+	}
+	return strings.Join(parts, " ")
+}
+
+func authorityForRow(row masterFacilityRow) (key, name, code string) {
+	ownership := strings.ToUpper(strings.TrimSpace(row.Ownership))
+	level := strings.ToUpper(strings.TrimSpace(row.HFLevel))
+	switch {
+	case ownership == "GOV" && (level == "NRH" || level == "RRH" || level == "NBB" || level == "RBB" || level == "BCDP"):
+		return "gov:moh", "Ministry of Health", "MOH"
+	case ownership == "GOV":
+		adminUID := strings.TrimSpace(row.AdminUnitUID)
+		adminName := strings.TrimSpace(row.AdminUnit)
+		if adminUID == "" || adminName == "" {
+			return "gov:moh", "Ministry of Health", "MOH"
+		}
+		return "gov:" + adminUID, adminName, "ADM-" + adminUID
+	case ownership == "PNFP":
+		return "pnfp", "Private Not For Profit", "PNFP"
+	case ownership == "PFP":
+		return "pfp", "Private For Profit", "PFP"
+	default:
+		return "unknown", "Unknown Ownership Authority", "UNK"
+	}
+}
+
+func masterFacilityUsageCount(row masterFacilityRow) int {
+	var usage int
+	if strings.EqualFold(strings.TrimSpace(row.Status), "Functional") {
+		usage += 1
+	}
+	if strings.EqualFold(strings.TrimSpace(row.Reporting), "Reporting") {
+		usage += 1
+	}
+	return usage
+}
+
+type calculatorSampleSeed struct {
+	ID              uuid.UUID
+	FileName        string
+	Name            string
+	Description     string
+	Type            string
+	Icon            string
+	Color           string
+	BackgroundColor string
+	UsageCount      int
+	Featured        bool
+}
+
+func seededCalculatorSamples() []calculatorSampleSeed {
+	return []calculatorSampleSeed{
+		{
+			ID:              calculatorID,
+			FileName:        "medication-dosage-calculator.html",
+			Name:            "Medication Dosage Calculator",
+			Description:     "Dose support for common medication calculations in routine and emergency care.",
+			Type:            "calculator",
+			Icon:            "calculator",
+			Color:           "#0284c7",
+			BackgroundColor: "#e0f2fe",
+			UsageCount:      31,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("apgar-score-calculator.html"),
+			FileName:        "apgar-score-calculator.html",
+			Name:            "APGAR Score Calculator",
+			Description:     "Rapid newborn APGAR scoring support for immediate post-delivery assessment.",
+			Type:            "calculator",
+			Icon:            "baby",
+			Color:           "#db2777",
+			BackgroundColor: "#fce7f3",
+			UsageCount:      18,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("bmi-calculator.html"),
+			FileName:        "bmi-calculator.html",
+			Name:            "BMI Calculator",
+			Description:     "Body mass index calculation and quick weight category interpretation.",
+			Type:            "calculator",
+			Icon:            "activity",
+			Color:           "#16a34a",
+			BackgroundColor: "#dcfce7",
+			UsageCount:      15,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("fluid-balance-calculator.html"),
+			FileName:        "fluid-balance-calculator.html",
+			Name:            "Fluid Balance Calculator",
+			Description:     "Estimate intake, output, and fluid balance at the bedside.",
+			Type:            "calculator",
+			Icon:            "droplets",
+			Color:           "#0ea5e9",
+			BackgroundColor: "#e0f2fe",
+			UsageCount:      17,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("pregnancy-due-date-calculator.html"),
+			FileName:        "pregnancy-due-date-calculator.html",
+			Name:            "Pregnancy Due Date Calculator",
+			Description:     "Estimate expected delivery date from last menstrual period or gestation.",
+			Type:            "calculator",
+			Icon:            "calendar-heart",
+			Color:           "#ea580c",
+			BackgroundColor: "#ffedd5",
+			UsageCount:      12,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("blood-pressure-assessment.html"),
+			FileName:        "blood-pressure-assessment.html",
+			Name:            "Blood Pressure Risk Assessment",
+			Description:     "Assess elevated blood pressure readings and clinical risk response.",
+			Type:            "decision_tool",
+			Icon:            "heart-pulse",
+			Color:           "#dc2626",
+			BackgroundColor: "#fee2e2",
+			UsageCount:      20,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("cardiac-risk-assessment.html"),
+			FileName:        "cardiac-risk-assessment.html",
+			Name:            "Cardiac Risk Assessment Tool",
+			Description:     "Decision support for identifying cardiovascular risk factors and escalation needs.",
+			Type:            "decision_tool",
+			Icon:            "heart",
+			Color:           "#b91c1c",
+			BackgroundColor: "#fee2e2",
+			UsageCount:      13,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("dehydration-assessment.html"),
+			FileName:        "dehydration-assessment.html",
+			Name:            "Dehydration Assessment Tool",
+			Description:     "Structured dehydration severity assessment to guide fluid management decisions.",
+			Type:            "decision_tool",
+			Icon:            "droplet",
+			Color:           "#0369a1",
+			BackgroundColor: "#e0f2fe",
+			UsageCount:      22,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("emergency-triage-assessment.html"),
+			FileName:        "emergency-triage-assessment.html",
+			Name:            "Emergency Triage Assessment Tool",
+			Description:     "Rapid triage support for sorting patients by urgency in acute care settings.",
+			Type:            "decision_tool",
+			Icon:            "siren",
+			Color:           "#7c3aed",
+			BackgroundColor: "#ede9fe",
+			UsageCount:      24,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("glasgow-coma-scale.html"),
+			FileName:        "glasgow-coma-scale.html",
+			Name:            "Glasgow Coma Scale Assessment",
+			Description:     "Neurologic assessment support using the standard Glasgow Coma Scale.",
+			Type:            "decision_tool",
+			Icon:            "brain",
+			Color:           "#4f46e5",
+			BackgroundColor: "#e0e7ff",
+			UsageCount:      19,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("pain-assessment-scale.html"),
+			FileName:        "pain-assessment-scale.html",
+			Name:            "Comprehensive Pain Assessment Scale",
+			Description:     "Structured pain scoring support for symptom assessment and monitoring.",
+			Type:            "decision_tool",
+			Icon:            "badge-alert",
+			Color:           "#c2410c",
+			BackgroundColor: "#ffedd5",
+			UsageCount:      16,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("pediatric-fever-management.html"),
+			FileName:        "pediatric-fever-management.html",
+			Name:            "Pediatric Fever Management Tool",
+			Description:     "Clinical decision support for evaluating and managing fever in children.",
+			Type:            "decision_tool",
+			Icon:            "thermometer",
+			Color:           "#d97706",
+			BackgroundColor: "#fef3c7",
+			UsageCount:      21,
+			Featured:        true,
+		},
+		{
+			ID:              sampleCalculatorUUID("wound-assessment-tool.html"),
+			FileName:        "wound-assessment-tool.html",
+			Name:            "Wound Assessment and Care Tool",
+			Description:     "Structured wound review to guide classification and care planning.",
+			Type:            "decision_tool",
+			Icon:            "bandage",
+			Color:           "#059669",
+			BackgroundColor: "#d1fae5",
+			UsageCount:      14,
+			Featured:        false,
+		},
+		{
+			ID:              sampleCalculatorUUID("immunization-schedule-checker.html"),
+			FileName:        "immunization-schedule-checker.html",
+			Name:            "Immunization Schedule Checker",
+			Description:     "Checklist support for reviewing immunization status and schedule completeness.",
+			Type:            "checklist",
+			Icon:            "list-checks",
+			Color:           "#0891b2",
+			BackgroundColor: "#cffafe",
+			UsageCount:      11,
+			Featured:        false,
+		},
+	}
+}
+
+func sampleCalculatorUUID(fileName string) uuid.UUID {
+	return masterDataUUID("calculator-sample", fileName)
+}
+
+func lookupRowIDByCodeOrName(database *gorm.DB, table, code, name string) (uuid.UUID, bool, error) {
+	type row struct {
+		ID uuid.UUID `gorm:"column:id"`
+	}
+	var found row
+	err := database.Table(table).
+		Select("id").
+		Where("deleted_at IS NULL").
+		Where("code = ? OR name = ?", code, name).
+		Take(&found).Error
+	if err == nil {
+		return found.ID, true, nil
+	}
+	if err == gorm.ErrRecordNotFound {
+		return uuid.Nil, false, nil
+	}
+	return uuid.Nil, false, err
 }
 
 func upsertByID(database *gorm.DB, table string, row map[string]any) error {

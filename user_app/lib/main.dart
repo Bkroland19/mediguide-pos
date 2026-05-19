@@ -38,6 +38,22 @@ Future<void> _initServices() async {
 
   // Initialize backend service.
   await Get.putAsync(() => BackendService().init());
+  BackendService.to.setErrorInterceptor((error) async {
+    if (!BackendService.to.isAuthenticationError(error)) {
+      return;
+    }
+
+    final hadUser = AuthService.to.currentUser.value != null;
+    await AuthService.to.clearUser();
+
+    if (hadUser) {
+      Common.quickToast(
+        type: ToastificationType.info,
+        title: 'Session expired',
+        description: 'Please sign in again.',
+      );
+    }
+  });
 
   // Initialize OpenAI service for AI assistant
   await Get.putAsync(() => OpenAiService().init());

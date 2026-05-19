@@ -89,7 +89,7 @@ class Conversation extends BaseModel {
   /// Get latest message content from the expanded back-relation
   String get latestMessageContent {
     final msgs = messages;
-    if (msgs.isEmpty) return '';
+    if (msgs.isEmpty) return lastMessage;
     // Sort by created desc and return the latest content
     msgs.sort((a, b) => b.created.compareTo(a.created));
     return msgs.first.content;

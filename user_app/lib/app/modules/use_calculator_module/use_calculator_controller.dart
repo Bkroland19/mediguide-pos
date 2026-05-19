@@ -8,11 +8,13 @@ import 'dart:io';
 import '../../data/services/backend_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/models.dart';
+import '../../data/models/backend_record.dart';
 import '../../utils/constants.dart';
 
 class UseCalculatorController extends GetxController {
   static const String _bundledSampleAssetRoot =
       'lib/app/modules/tools_module/assets/samples';
+  static const String _appPackageName = 'user_app';
 
   void _log(String message) => debugPrint(message);
 
@@ -116,6 +118,11 @@ class UseCalculatorController extends GetxController {
           _log('   📦 [Calculator] Loading bundled sample asset');
           fileUrl = bundledContent;
           await localFile.writeAsString(bundledContent);
+        } else if (_isBundledSampleReference(calculator!.appFile)) {
+          throw Exception(
+            'Bundled sample asset not found for ${calculator!.appFile}. '
+            'Rebuild the app so Flutter repackages module assets.',
+          );
         }
       }
 
@@ -179,7 +186,8 @@ class UseCalculatorController extends GetxController {
       try {
         _log('   🔎 [Calculator] Trying bundled asset: $assetPath');
         return await rootBundle.loadString(assetPath);
-      } catch (_) {
+      } catch (e) {
+        _log('   ⚠️  [Calculator] Bundled asset miss: $assetPath -> $e');
         continue;
       }
     }
@@ -196,12 +204,24 @@ class UseCalculatorController extends GetxController {
     final candidates = <String>{
       if (normalized.startsWith('assets/')) normalized,
       if (normalized.startsWith('lib/')) normalized,
+      if (normalized.startsWith('samples/')) normalized,
       if (normalized.startsWith('samples/'))
         '$_bundledSampleAssetRoot/${normalized.split('/').last}',
+      'packages/$_appPackageName/$_bundledSampleAssetRoot/$basename',
       '$_bundledSampleAssetRoot/$basename',
     };
 
     return candidates.toList(growable: false);
+  }
+
+  bool _isBundledSampleReference(String appFile) {
+    final normalized = appFile.trim().replaceAll('\\', '/');
+    if (normalized.isEmpty) {
+      return false;
+    }
+    return normalized.startsWith('samples/') ||
+        normalized.startsWith(_bundledSampleAssetRoot) ||
+        normalized.startsWith('lib/app/modules/tools_module/assets/samples/');
   }
 
   /// Retry loading the calculator
@@ -311,6 +331,12 @@ class UseCalculatorController extends GetxController {
       currentUsageLogId = record.id;
       _log('📊 [Usage] Started tracking session: $currentUsageLogId');
     } catch (e) {
+      if (e is ClientException && BackendService.to.isAuthenticationError(e)) {
+        _log(
+          '⚠️  [Usage] Skipping tracking because the session is no longer valid',
+        );
+        return;
+      }
       _log('⚠️  [Usage] Failed to start tracking: $e');
       // Don't show error to user - tracking failure shouldn't interrupt app flow
     }
@@ -346,7 +372,13 @@ class UseCalculatorController extends GetxController {
         '📊 [Usage] Ended session: ${duration.inMinutes}m ${duration.inSeconds % 60}s',
       );
     } catch (e) {
-      _log('⚠️  [Usage] Failed to end tracking: $e');
+      if (e is ClientException && BackendService.to.isAuthenticationError(e)) {
+        _log(
+          '⚠️  [Usage] Skipping usage completion because the session is no longer valid',
+        );
+      } else {
+        _log('⚠️  [Usage] Failed to end tracking: $e');
+      }
       // Don't show error to user - tracking failure shouldn't interrupt app flow
     } finally {
       // Reset tracking variables

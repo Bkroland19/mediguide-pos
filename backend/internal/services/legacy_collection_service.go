@@ -1,16 +1,24 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"mediguide/internal/models"
+
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 var (
 	ErrLegacyCollectionNotFound   = errors.New("legacy collection not found")
 	ErrLegacyCollectionAuthNeeded = errors.New("legacy collection requires authentication")
+	ErrLegacyCollectionForbidden  = errors.New("legacy collection forbidden")
+	ErrLegacyCollectionWrite      = errors.New("legacy collection write unsupported")
+	ErrLegacyCollectionInvalid    = errors.New("legacy collection invalid payload")
 )
 
 type LegacyCollectionService struct {
@@ -81,17 +89,19 @@ func (s LegacyCollectionService) List(collection string, in LegacyListInput, use
 		perPage = 100
 	}
 
-	query := s.buildQuery(spec, userID)
-	query = applyLegacySearch(query, spec.SearchColumns, in.Search)
-	query = applyLegacyFilters(query, spec.FilterColumns, in.Filters)
+	baseQuery := s.buildQuery(spec, userID)
+	baseQuery = applyLegacySearch(baseQuery, spec.SearchColumns, in.Search)
+	baseQuery = applyLegacyFilters(baseQuery, spec.FilterColumns, in.Filters)
 
 	var total int64
-	if err := query.Distinct(spec.IDColumn).Count(&total).Error; err != nil {
+	countQuery := baseQuery.Session(&gorm.Session{})
+	if err := countQuery.Distinct(spec.IDColumn).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	items := []map[string]any{}
-	if err := query.
+	dataQuery := baseQuery.Session(&gorm.Session{})
+	if err := dataQuery.
 		Select(spec.Select).
 		Order(spec.DefaultOrder).
 		Limit(perPage).
@@ -134,6 +144,70 @@ func (s LegacyCollectionService) Get(collection, id, userID string) (*LegacyItem
 	}, nil
 }
 
+func (s LegacyCollectionService) Create(collection string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	spec, ok := legacyCollectionSpecs[collection]
+	if !ok {
+		return nil, ErrLegacyCollectionNotFound
+	}
+	if err := validateLegacyAccess(spec, userID); err != nil {
+		return nil, err
+	}
+
+	switch collection {
+	case "support_tickets":
+		return s.createSupportTicket(payload, userID)
+	case "support_ticket_replies":
+		return s.createSupportTicketReply(payload, userID)
+	case "conversations":
+		return s.createConversation(payload, userID)
+	case "messages":
+		return s.createMessage(payload, userID)
+	case "reading_progress":
+		return s.createReadingProgress(payload, userID)
+	case "calculator_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "guideline_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "drug_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "abbreviation_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "consultant_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "facility_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	case "ai_usage_logs":
+		return s.createUsageLog(collection, payload, userID)
+	default:
+		return nil, ErrLegacyCollectionWrite
+	}
+}
+
+func (s LegacyCollectionService) Update(collection, id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	spec, ok := legacyCollectionSpecs[collection]
+	if !ok {
+		return nil, ErrLegacyCollectionNotFound
+	}
+	if err := validateLegacyAccess(spec, userID); err != nil {
+		return nil, err
+	}
+
+	switch collection {
+	case "users":
+		return s.updateUser(id, payload, userID)
+	case "conversations":
+		return s.updateConversation(id, payload, userID)
+	case "messages":
+		return s.updateMessage(id, payload, userID)
+	case "reading_progress":
+		return s.updateReadingProgress(id, payload, userID)
+	case "calculator_usage_logs":
+		return s.updateUsageLog(collection, id, payload, userID)
+	default:
+		return nil, ErrLegacyCollectionWrite
+	}
+}
+
 func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID string) *gorm.DB {
 	query := s.DB.Table(spec.Table)
 	for _, join := range spec.Joins {
@@ -146,6 +220,696 @@ func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID st
 		query = spec.ApplyUser(query, userID)
 	}
 	return query
+}
+
+func (s LegacyCollectionService) createSupportTicket(payload map[string]any, userID string) (*LegacyItemResult, error) {
+	row := map[string]any{
+		"id":          uuid.New(),
+		"user_id":     mustUUID(userID),
+		"subject":     firstPayloadString(payload, "subject"),
+		"description": firstPayloadString(payload, "description"),
+		"status":      defaultString(firstPayloadString(payload, "status"), "open"),
+		"priority":    defaultString(firstPayloadString(payload, "priority"), "normal"),
+		"category":    nullableString(firstPayloadString(payload, "category")),
+		"created_at":  time.Now().UTC(),
+		"updated_at":  time.Now().UTC(),
+	}
+	if row["subject"] == "" || row["description"] == "" {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if err := s.DB.Table("support_tickets").Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("support_tickets", row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) createSupportTicketReply(payload map[string]any, userID string) (*LegacyItemResult, error) {
+	ticketID, err := parsePayloadUUID(payload, "ticket_id")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if err := s.ensureTicketAccess(ticketID, userID); err != nil {
+		return nil, err
+	}
+	message := firstPayloadString(payload, "message")
+	if message == "" {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	row := map[string]any{
+		"id":          uuid.New(),
+		"ticket_id":   ticketID,
+		"user_id":     mustUUID(userID),
+		"message":     message,
+		"is_internal": false,
+		"created_at":  time.Now().UTC(),
+		"updated_at":  time.Now().UTC(),
+	}
+	if err := s.DB.Table("support_ticket_replies").Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("support_ticket_replies", row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) createConversation(payload map[string]any, userID string) (*LegacyItemResult, error) {
+	p1, err := parsePayloadUUIDAny(payload, "participant1_user_id", "participant1")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	p2, err := parsePayloadUUIDAny(payload, "participant2_user_id", "participant2")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	currentUserID := mustUUID(userID)
+	if p1 != currentUserID && p2 != currentUserID {
+		return nil, ErrLegacyCollectionForbidden
+	}
+
+	existingID, found, err := s.findConversationID(p1, p2)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		return s.Get("conversations", existingID.String(), userID)
+	}
+
+	row := map[string]any{
+		"id":                   uuid.New(),
+		"participant1_user_id": p1,
+		"participant2_user_id": p2,
+		"last_activity":        nullableString(firstPayloadStringAny(payload, "last_activity")),
+		"created_at":           time.Now().UTC(),
+		"updated_at":           time.Now().UTC(),
+	}
+	if err := s.DB.Table("conversations").Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("conversations", row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) createMessage(payload map[string]any, userID string) (*LegacyItemResult, error) {
+	conversationID, err := parsePayloadUUIDAny(payload, "conversation_id", "conversation")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if err := s.ensureConversationAccess(conversationID, userID); err != nil {
+		return nil, err
+	}
+	senderID, err := parsePayloadUUIDAny(payload, "sender_user_id", "sender")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if senderID != mustUUID(userID) {
+		return nil, ErrLegacyCollectionForbidden
+	}
+	content := firstPayloadString(payload, "content")
+	if content == "" {
+		return nil, ErrLegacyCollectionInvalid
+	}
+
+	row := map[string]any{
+		"id":               uuid.New(),
+		"conversation_id":  conversationID,
+		"sender_user_id":   senderID,
+		"content":          content,
+		"message_type":     nullableString(firstPayloadStringAny(payload, "message_type")),
+		"attachments_json": jsonbValue(firstPayloadValue(payload, "attachments_json", "attachments")),
+		"read_by_json":     jsonbValue(firstPayloadValue(payload, "read_by_json", "read_by")),
+		"reactions_json":   jsonbValue(firstPayloadValue(payload, "reactions_json", "reactions")),
+		"is_edited":        boolPayload(payload, "is_edited", false),
+		"edited_at":        nullableString(firstPayloadStringAny(payload, "edited_at")),
+		"created_at":       time.Now().UTC(),
+		"updated_at":       time.Now().UTC(),
+	}
+	if replyID, ok := optionalPayloadUUIDAny(payload, "reply_to_id", "reply_to"); ok {
+		row["reply_to_id"] = replyID
+	}
+
+	if err := s.DB.Table("messages").Create(&row).Error; err != nil {
+		return nil, err
+	}
+
+	_ = s.DB.Table("conversations").Where("id = ?", conversationID).Updates(map[string]any{
+		"last_activity": time.Now().UTC().Format(time.RFC3339),
+		"updated_at":    time.Now().UTC(),
+	}).Error
+
+	return s.Get("messages", row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) createReadingProgress(payload map[string]any, userID string) (*LegacyItemResult, error) {
+	docID, err := parsePayloadUUIDAny(payload, "guideline_document_id", "guideline_id")
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+
+	if existingID, found, err := s.findReadingProgressID(docID, mustUUID(userID)); err != nil {
+		return nil, err
+	} else if found {
+		return s.updateReadingProgress(existingID.String(), payload, userID)
+	}
+
+	row := map[string]any{
+		"id":                    uuid.New(),
+		"user_id":               mustUUID(userID),
+		"guideline_document_id": docID,
+		"progress_percentage":   floatPayload(payload, "progress_percentage", 0),
+		"current_section":       nullableString(firstPayloadStringAny(payload, "current_section")),
+		"last_read_at":          nullableString(firstPayloadStringAny(payload, "last_read_at")),
+		"is_bookmarked":         boolPayload(payload, "is_bookmarked", false),
+		"reading_time_seconds":  nullableIntPayload(payload, "reading_time_seconds"),
+		"created_at":            time.Now().UTC(),
+		"updated_at":            time.Now().UTC(),
+	}
+	if err := s.DB.Table("reading_progress").Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("reading_progress", row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) createUsageLog(collection string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	row := map[string]any{
+		"id":         uuid.New(),
+		"user_id":    mustUUID(userID),
+		"created_at": time.Now().UTC(),
+		"updated_at": time.Now().UTC(),
+	}
+	switch collection {
+	case "calculator_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "calculator_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["calculator_id"] = id
+		row["session_start"] = firstPayloadStringAny(payload, "session_start")
+		row["session_end"] = nullableString(firstPayloadStringAny(payload, "session_end"))
+		row["calculator_type"] = defaultString(firstPayloadStringAny(payload, "calculator_type"), "calculator")
+		if row["session_start"] == "" {
+			return nil, ErrLegacyCollectionInvalid
+		}
+	case "guideline_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "guideline_document_id", "guideline_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["guideline_document_id"] = id
+	case "drug_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "drug_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["drug_id"] = id
+	case "abbreviation_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "abbreviation_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["abbreviation_id"] = id
+	case "consultant_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "consultant_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["consultant_id"] = id
+	case "facility_usage_logs":
+		id, err := parsePayloadUUIDAny(payload, "facility_id")
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		row["facility_id"] = id
+	case "ai_usage_logs":
+	default:
+		return nil, ErrLegacyCollectionWrite
+	}
+
+	if err := s.DB.Table(collection).Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.Get(collection, row["id"].(uuid.UUID).String(), userID)
+}
+
+func (s LegacyCollectionService) updateUser(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	if strings.TrimSpace(id) != strings.TrimSpace(userID) {
+		return nil, ErrLegacyCollectionForbidden
+	}
+
+	updates := map[string]any{}
+	copyStringUpdate(payload, updates, "name")
+	copyStringUpdate(payload, updates, "phone")
+	copyNullableStringUpdate(payload, updates, "alternative_phone")
+	copyNullableStringUpdate(payload, updates, "facility_id")
+	copyNullableStringUpdate(payload, updates, "address")
+	copyNullableStringUpdate(payload, updates, "city")
+	copyNullableStringUpdate(payload, updates, "state")
+	copyNullableStringUpdate(payload, updates, "country")
+	copyNullableStringUpdate(payload, updates, "postal_code")
+	copyNullableStringUpdate(payload, updates, "license_number")
+	copyNullableStringUpdate(payload, updates, "organization")
+	copyNullableStringUpdate(payload, updates, "department")
+	copyNullableStringUpdate(payload, updates, "job_title")
+	copyNullableStringUpdate(payload, updates, "preferred_language")
+	copyNullableStringUpdate(payload, updates, "timezone")
+	copyNullableStringUpdate(payload, updates, "notes")
+	if specialization, ok := payload["specialization"]; ok {
+		list, err := stringListPayload(specialization)
+		if err != nil {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		updates["specialization_json"] = models.StringList(list)
+	}
+	if len(updates) == 0 {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.DB.Model(&models.User{}).Where("id = ?", mustUUID(userID)).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	var user models.User
+	if err := s.DB.Preload("Roles.Permissions").First(&user, "id = ?", mustUUID(userID)).Error; err != nil {
+		return nil, err
+	}
+	item, err := structToMap(user)
+	if err != nil {
+		return nil, err
+	}
+	return &LegacyItemResult{Success: true, Collection: "users", Item: item}, nil
+}
+
+func (s LegacyCollectionService) updateConversation(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	conversationID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if err := s.ensureConversationAccess(conversationID, userID); err != nil {
+		return nil, err
+	}
+	updates := map[string]any{}
+	copyNullableStringUpdateAny(payload, updates, "last_activity")
+	if len(updates) == 0 {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.DB.Table("conversations").Where("id = ?", conversationID).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("conversations", id, userID)
+}
+
+func (s LegacyCollectionService) updateMessage(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	messageID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if err := s.ensureMessageAccess(messageID, userID); err != nil {
+		return nil, err
+	}
+	updates := map[string]any{}
+	copyStringUpdate(payload, updates, "content")
+	if value, ok := firstExistingPayloadValue(payload, "read_by_json", "read_by"); ok {
+		updates["read_by_json"] = jsonbValue(value)
+	}
+	if value, ok := firstExistingPayloadValue(payload, "reactions_json", "reactions"); ok {
+		updates["reactions_json"] = jsonbValue(value)
+	}
+	if value, ok := payload["is_edited"]; ok {
+		updates["is_edited"] = value
+	}
+	copyNullableStringUpdateAny(payload, updates, "edited_at")
+	if len(updates) == 0 {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.DB.Table("messages").Where("id = ?", messageID).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("messages", id, userID)
+}
+
+func (s LegacyCollectionService) updateReadingProgress(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	rowID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if !s.ownsRow("reading_progress", rowID, userID) {
+		return nil, ErrLegacyCollectionForbidden
+	}
+	updates := map[string]any{}
+	copyNullableStringUpdateAny(payload, updates, "current_section")
+	if value, ok := payload["progress_percentage"]; ok {
+		updates["progress_percentage"] = value
+	}
+	copyNullableStringUpdateAny(payload, updates, "last_read_at")
+	if value, ok := payload["is_bookmarked"]; ok {
+		updates["is_bookmarked"] = value
+	}
+	if value, ok := payload["reading_time_seconds"]; ok {
+		updates["reading_time_seconds"] = value
+	}
+	if len(updates) == 0 {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.DB.Table("reading_progress").Where("id = ?", rowID).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return s.Get("reading_progress", id, userID)
+}
+
+func (s LegacyCollectionService) updateUsageLog(collection, id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+	rowID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	if !s.ownsRow(collection, rowID, userID) {
+		return nil, ErrLegacyCollectionForbidden
+	}
+	updates := map[string]any{}
+	if collection == "calculator_usage_logs" {
+		copyNullableStringUpdate(payload, updates, "session_end")
+	}
+	if len(updates) == 0 {
+		return nil, ErrLegacyCollectionInvalid
+	}
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.DB.Table(collection).Where("id = ?", rowID).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return s.Get(collection, id, userID)
+}
+
+func (s LegacyCollectionService) ensureTicketAccess(ticketID uuid.UUID, userID string) error {
+	var count int64
+	if err := s.DB.Table("support_tickets").
+		Where("id = ? AND deleted_at IS NULL AND (user_id::text = ? OR assigned_to::text = ?)", ticketID, userID, userID).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrLegacyCollectionForbidden
+	}
+	return nil
+}
+
+func (s LegacyCollectionService) ensureConversationAccess(conversationID uuid.UUID, userID string) error {
+	var count int64
+	if err := s.DB.Table("conversations").
+		Where("id = ? AND deleted_at IS NULL AND (participant1_user_id::text = ? OR participant2_user_id::text = ?)", conversationID, userID, userID).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrLegacyCollectionForbidden
+	}
+	return nil
+}
+
+func (s LegacyCollectionService) ensureMessageAccess(messageID uuid.UUID, userID string) error {
+	var count int64
+	if err := s.DB.Table("messages m").
+		Joins("JOIN conversations c ON c.id = m.conversation_id").
+		Where("m.id = ? AND m.deleted_at IS NULL AND (c.participant1_user_id::text = ? OR c.participant2_user_id::text = ?)", messageID, userID, userID).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrLegacyCollectionForbidden
+	}
+	return nil
+}
+
+func (s LegacyCollectionService) ownsRow(table string, rowID uuid.UUID, userID string) bool {
+	var count int64
+	err := s.DB.Table(table).
+		Where("id = ? AND deleted_at IS NULL AND user_id::text = ?", rowID, userID).
+		Count(&count).Error
+	return err == nil && count > 0
+}
+
+func (s LegacyCollectionService) findConversationID(participant1, participant2 uuid.UUID) (uuid.UUID, bool, error) {
+	var row struct {
+		ID uuid.UUID `gorm:"column:id"`
+	}
+	err := s.DB.Table("conversations").
+		Select("id").
+		Where("deleted_at IS NULL").
+		Where(
+			"((participant1_user_id = ? AND participant2_user_id = ?) OR (participant1_user_id = ? AND participant2_user_id = ?))",
+			participant1, participant2, participant2, participant1,
+		).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, false, nil
+	}
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	return row.ID, true, nil
+}
+
+func (s LegacyCollectionService) findReadingProgressID(guidelineDocumentID, userID uuid.UUID) (uuid.UUID, bool, error) {
+	var row struct {
+		ID uuid.UUID `gorm:"column:id"`
+	}
+	err := s.DB.Table("reading_progress").
+		Select("id").
+		Where("deleted_at IS NULL AND user_id = ? AND guideline_document_id = ?", userID, guidelineDocumentID).
+		Order("updated_at DESC").
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, false, nil
+	}
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	return row.ID, true, nil
+}
+
+func parsePayloadUUID(payload map[string]any, key string) (uuid.UUID, error) {
+	value := firstPayloadString(payload, key)
+	if value == "" {
+		return uuid.Nil, errors.New("missing uuid")
+	}
+	return uuid.Parse(value)
+}
+
+func parsePayloadUUIDAny(payload map[string]any, keys ...string) (uuid.UUID, error) {
+	value := firstPayloadStringAny(payload, keys...)
+	if value == "" {
+		return uuid.Nil, errors.New("missing uuid")
+	}
+	return uuid.Parse(value)
+}
+
+func optionalPayloadUUID(payload map[string]any, key string) (uuid.UUID, bool) {
+	value := firstPayloadString(payload, key)
+	if value == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(value)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+func optionalPayloadUUIDAny(payload map[string]any, keys ...string) (uuid.UUID, bool) {
+	value := firstPayloadStringAny(payload, keys...)
+	if value == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(value)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+func firstPayloadValue(payload map[string]any, keys ...string) any {
+	for _, key := range keys {
+		if value, ok := payload[key]; ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func firstExistingPayloadValue(payload map[string]any, keys ...string) (any, bool) {
+	for _, key := range keys {
+		if value, ok := payload[key]; ok {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+func firstPayloadString(payload map[string]any, key string) string {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprintf("%v", value))
+}
+
+func firstPayloadStringAny(payload map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value := firstPayloadString(payload, key); value != "" {
+			return value
+		}
+		if raw, ok := payload[key]; ok && raw != nil {
+			return strings.TrimSpace(fmt.Sprintf("%v", raw))
+		}
+	}
+	return ""
+}
+
+func nullableString(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return strings.TrimSpace(value)
+}
+
+func defaultString(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return strings.TrimSpace(value)
+}
+
+func copyStringUpdate(payload map[string]any, updates map[string]any, key string) {
+	if value := firstPayloadString(payload, key); value != "" {
+		updates[key] = value
+	}
+}
+
+func copyNullableStringUpdate(payload map[string]any, updates map[string]any, key string) {
+	if raw, ok := payload[key]; ok {
+		value := strings.TrimSpace(fmt.Sprintf("%v", raw))
+		if value == "" {
+			updates[key] = nil
+			return
+		}
+		updates[key] = value
+	}
+}
+
+func copyNullableStringUpdateAny(payload map[string]any, updates map[string]any, keys ...string) {
+	for _, key := range keys {
+		if raw, ok := payload[key]; ok {
+			value := strings.TrimSpace(fmt.Sprintf("%v", raw))
+			targetKey := key
+			if len(keys) > 0 {
+				targetKey = keys[0]
+			}
+			if value == "" {
+				updates[targetKey] = nil
+				return
+			}
+			updates[targetKey] = value
+			return
+		}
+	}
+}
+
+func boolPayload(payload map[string]any, key string, fallback bool) bool {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return fallback
+	}
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case string:
+		return strings.EqualFold(strings.TrimSpace(typed), "true")
+	default:
+		return fallback
+	}
+}
+
+func floatPayload(payload map[string]any, key string, fallback float64) float64 {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return fallback
+	}
+	switch typed := value.(type) {
+	case float64:
+		return typed
+	case float32:
+		return float64(typed)
+	case int:
+		return float64(typed)
+	case int64:
+		return float64(typed)
+	default:
+		return fallback
+	}
+}
+
+func nullableIntPayload(payload map[string]any, key string) any {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil
+	}
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int64:
+		return typed
+	case float64:
+		return int64(typed)
+	default:
+		return nil
+	}
+}
+
+func jsonbValue(value any) any {
+	if value == nil {
+		return nil
+	}
+	switch typed := value.(type) {
+	case map[string]any, []any:
+		return typed
+	default:
+		return value
+	}
+}
+
+func stringListPayload(value any) ([]string, error) {
+	switch typed := value.(type) {
+	case []string:
+		return typed, nil
+	case []any:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			out = append(out, strings.TrimSpace(fmt.Sprintf("%v", item)))
+		}
+		return out, nil
+	case string:
+		trimmed := strings.TrimSpace(typed)
+		if trimmed == "" {
+			return []string{}, nil
+		}
+		return []string{trimmed}, nil
+	default:
+		return nil, errors.New("invalid string list")
+	}
+}
+
+func mustUUID(raw string) uuid.UUID {
+	id, _ := uuid.Parse(strings.TrimSpace(raw))
+	return id
+}
+
+func structToMap(v any) (map[string]any, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func validateLegacyAccess(spec legacyCollectionSpec, userID string) error {
@@ -437,7 +1201,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 	"consultants": {
 		Table:        "consultants c",
 		IDColumn:     "c.id",
-		Select:       "c.*",
+		Select:       "c.*, u.id::text AS user_expand_id, u.name AS user_expand_name, u.email AS user_expand_email, u.avatar AS user_expand_avatar, u.verified AS user_expand_verified",
 		DefaultOrder: "c.name ASC",
 		SearchColumns: []string{
 			"c.name", "c.email", "c.phone", "c.specialty", "coalesce(c.organization, '')", "coalesce(c.region, '')", "coalesce(c.city, '')",
@@ -450,6 +1214,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			"is_verified": "c.is_verified::text",
 		},
 		Access: legacyAccessPublic,
+		Joins:  []string{"LEFT JOIN users u ON u.id = c.user_id"},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("c.deleted_at IS NULL").Where("c.status = ?", "active")
 		},
@@ -650,6 +1415,22 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			return query.Where("l.deleted_at IS NULL").Where("l.is_active = ?", true)
 		},
 	},
+	"users": {
+		Table:        "users u",
+		IDColumn:     "u.id",
+		Select:       "u.*",
+		DefaultOrder: "u.updated_at DESC",
+		SearchColumns: []string{
+			"u.name", "u.email", "coalesce(u.phone, '')",
+		},
+		Access: legacyAccessUser,
+		ApplyScopes: func(query *gorm.DB) *gorm.DB {
+			return query.Where("u.deleted_at IS NULL")
+		},
+		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
+			return query.Where("u.id::text = ?", userID)
+		},
+	},
 	"notifications": {
 		Table:        "notifications n",
 		IDColumn:     "n.id",
@@ -729,7 +1510,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 	"support_ticket_replies": {
 		Table:        "support_ticket_replies str",
 		IDColumn:     "str.id",
-		Select:       "str.*",
+		Select:       "str.*, u.id::text AS user_expand_id, u.name AS user_expand_name, u.email AS user_expand_email, u.avatar AS user_expand_avatar, u.verified AS user_expand_verified",
 		DefaultOrder: "str.created_at ASC",
 		SearchColumns: []string{
 			"str.message",
@@ -739,7 +1520,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			"is_internal": "str.is_internal::text",
 		},
 		Access: legacyAccessUser,
-		Joins:  []string{"LEFT JOIN support_tickets st ON st.id = str.ticket_id"},
+		Joins:  []string{"LEFT JOIN support_tickets st ON st.id = str.ticket_id", "LEFT JOIN users u ON u.id = str.user_id"},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("str.deleted_at IS NULL")
 		},
@@ -750,13 +1531,18 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 	"conversations": {
 		Table:        "conversations c",
 		IDColumn:     "c.id",
-		Select:       "c.*",
+		Select:       "c.*, p1.id::text AS participant1_expand_id, p1.name AS participant1_expand_name, p1.email AS participant1_expand_email, p1.avatar AS participant1_expand_avatar, p1.verified AS participant1_expand_verified, p2.id::text AS participant2_expand_id, p2.name AS participant2_expand_name, p2.email AS participant2_expand_email, p2.avatar AS participant2_expand_avatar, p2.verified AS participant2_expand_verified, lm.id::text AS last_message_id, lm.content AS last_message",
 		DefaultOrder: "c.updated_at DESC",
 		FilterColumns: map[string]string{
 			"participant1_user_id": "c.participant1_user_id::text",
 			"participant2_user_id": "c.participant2_user_id::text",
 		},
 		Access: legacyAccessUser,
+		Joins: []string{
+			"LEFT JOIN users p1 ON p1.id = c.participant1_user_id",
+			"LEFT JOIN users p2 ON p2.id = c.participant2_user_id",
+			"LEFT JOIN LATERAL (SELECT id, content FROM messages WHERE conversation_id = c.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) lm ON true",
+		},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("c.deleted_at IS NULL")
 		},
@@ -767,7 +1553,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 	"messages": {
 		Table:        "messages m",
 		IDColumn:     "m.id",
-		Select:       "m.*",
+		Select:       "m.*, u.id::text AS sender_expand_id, u.name AS sender_expand_name, u.email AS sender_expand_email, u.avatar AS sender_expand_avatar, u.verified AS sender_expand_verified",
 		DefaultOrder: "m.created_at DESC",
 		SearchColumns: []string{
 			"m.content", "coalesce(m.message_type, '')",
@@ -778,7 +1564,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			"message_type":    "m.message_type",
 		},
 		Access: legacyAccessUser,
-		Joins:  []string{"LEFT JOIN conversations c ON c.id = m.conversation_id"},
+		Joins:  []string{"LEFT JOIN conversations c ON c.id = m.conversation_id", "LEFT JOIN users u ON u.id = m.sender_user_id"},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("m.deleted_at IS NULL")
 		},
@@ -929,6 +1715,12 @@ func LegacyCollectionErrorMessage(err error) string {
 		return "collection not found"
 	case errors.Is(err, ErrLegacyCollectionAuthNeeded):
 		return "authentication required"
+	case errors.Is(err, ErrLegacyCollectionForbidden):
+		return "forbidden"
+	case errors.Is(err, ErrLegacyCollectionWrite):
+		return "write operation not supported"
+	case errors.Is(err, ErrLegacyCollectionInvalid):
+		return "invalid payload"
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return "record not found"
 	default:

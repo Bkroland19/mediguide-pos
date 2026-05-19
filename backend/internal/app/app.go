@@ -100,6 +100,8 @@ func New(cfg config.Config) (*App, error) {
 	legacyProtected.GET("/health-facilities/tree", legacyAPIH.HealthFacilitiesTree)
 	legacyProtected.GET("/ministry-directory/tree", legacyAPIH.MinistryDirectoryTree)
 	legacyProtected.GET("/overview", legacyAPIH.Overview)
+	legacyProtected.POST("/:collection", legacyCollectionH.Create)
+	legacyProtected.PATCH("/:collection/:id", legacyCollectionH.Update)
 	legacyV1.GET("/:collection/:id", legacyCollectionH.Get)
 	legacyV1.GET("/:collection", legacyCollectionH.List)
 
