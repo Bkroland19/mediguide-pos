@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Balance Calculator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #2196f3; }
+        .patient-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        .input-group input { flex: 1; }
+        .input-group span { color: #666; white-space: nowrap; min-width: 50px; }
+        .calculation-section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .calculation-section h3 { color: #2c5aa0; margin-bottom: 15px; }
+        .intake-output { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .intake-section, .output-section { padding: 15px; background: #f8f9fa; border-radius: 4px; }
+        .intake-section h4, .output-section h4 { margin-bottom: 15px; color: #2c5aa0; }
+        .fluid-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px; border: 1px solid #ddd; }
+        .fluid-item span { font-weight: 500; }
+        .fluid-item input { max-width: 80px; margin-left: 10px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #1e3f73; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; }
+        .result h3 { margin-bottom: 15px; }
+        .balanced { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .positive-balance { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .negative-balance { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .critical-balance { background: #ffebee; border-left: 4px solid #f44336; }
+        .balance-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .summary-card { background: white; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ddd; }
+        .summary-card .value { font-size: 24px; font-weight: bold; color: #2c5aa0; }
+        .summary-card .label { font-size: 14px; color: #666; margin-top: 5px; }
+        .recommendations { margin-top: 15px; }
+        .recommendations ul { padding-left: 20px; }
+        .recommendations li { margin-bottom: 8px; }
+        .warning { color: #d32f2f; font-weight: bold; }
+        .hourly-tracker { margin-top: 20px; }
+        .hourly-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
+        .hour-input { text-align: center; }
+        .hour-input label { font-size: 12px; }
+        .hour-input input { padding: 5px; font-size: 12px; }
+        .reset-btn { background: #ff9800; margin-top: 10px; width: auto; padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fluid Balance Calculator</h1>
+        
+        <div class="info-box">
+            <h4>Fluid Balance Assessment</h4>
+            <p>Track fluid intake and output over 24 hours to assess fluid balance status. This tool helps identify fluid retention, dehydration, and guides appropriate interventions.</p>
+        </div>
+        
+        <div class="patient-info">
+            <h3>Patient Information</h3>
+            <div class="input-group">
+                <div style="flex: 1; margin-right: 10px;">
+                    <label for="weight">Weight (kg):</label>
+                    <input type="number" id="weight" step="0.1" min="1" max="300" required>
+                </div>
+                <div style="flex: 1;">
+                    <label for="age">Age (years):</label>
+                    <input type="number" id="age" min="0" max="120" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="clinical-condition">Clinical Condition:</label>
+                <select id="clinical-condition">
+                    <option value="normal">Normal/Stable</option>
+                    <option value="heart-failure">Heart Failure</option>
+                    <option value="kidney-disease">Kidney Disease</option>
+                    <option value="liver-disease">Liver Disease</option>
+                    <option value="diabetes">Diabetes</option>
+                    <option value="surgery">Post-Surgical</option>
+                    <option value="fever">Fever/Infection</option>
+                    <option value="burns">Burns</option>
+                    <option value="pregnancy">Pregnancy</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="calculation-section">
+            <h3>24-Hour Fluid Intake & Output</h3>
+            
+            <div class="intake-output">
+                <div class="intake-section">
+                    <h4>📥 Fluid Intake (mL)</h4>
+                    
+                    <div class="fluid-item">
+                        <span>Oral fluids (water, juice, etc.)</span>
+                        <input type="number" id="oral-fluids" min="0" max="10000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>IV fluids</span>
+                        <input type="number" id="iv-fluids" min="0" max="5000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Tube feeding</span>
+                        <input type="number" id="tube-feeding" min="0" max="3000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Food moisture content</span>
+                        <input type="number" id="food-moisture" min="0" max="1500" value="800" placeholder="~800ml normal">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Medications (liquid)</span>
+                        <input type="number" id="medications" min="0" max="500" value="0">
+                    </div>
+                    
+                    <div class="fluid-item" style="border-top: 2px solid #2c5aa0; font-weight: bold;">
+                        <span>Total Intake</span>
+                        <span id="total-intake">0 mL</span>
+                    </div>
+                </div>
+                
+                <div class="output-section">
+                    <h4>📤 Fluid Output (mL)</h4>
+                    
+                    <div class="fluid-item">
+                        <span>Urine output</span>
+                        <input type="number" id="urine-output" min="0" max="5000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Vomiting</span>
+                        <input type="number" id="vomiting" min="0" max="2000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Diarrhea</span>
+                        <input type="number" id="diarrhea" min="0" max="3000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Drainage (surgical, etc.)</span>
+                        <input type="number" id="drainage" min="0" max="2000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Insensible losses (breathing, skin)</span>
+                        <input type="number" id="insensible" min="0" max="2000" value="800" placeholder="~800ml normal">
+                    </div>
+                    
+                    <div class="fluid-item">
+                        <span>Other losses</span>
+                        <input type="number" id="other-losses" min="0" max="1000" value="0">
+                    </div>
+                    
+                    <div class="fluid-item" style="border-top: 2px solid #2c5aa0; font-weight: bold;">
+                        <span>Total Output</span>
+                        <span id="total-output">0 mL</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hourly-tracker">
+            <h4>Hourly Urine Output Tracker (Optional)</h4>
+            <div class="hourly-grid">
+                <div class="hour-input">
+                    <label>Hr 1-4:</label>
+                    <input type="number" id="hour-1-4" min="0" placeholder="mL">
+                </div>
+                <div class="hour-input">
+                    <label>Hr 5-8:</label>
+                    <input type="number" id="hour-5-8" min="0" placeholder="mL">
+                </div>
+                <div class="hour-input">
+                    <label>Hr 9-12:</label>
+                    <input type="number" id="hour-9-12" min="0" placeholder="mL">
+                </div>
+                <div class="hour-input">
+                    <label>Hr 13-16:</label>
+                    <input type="number" id="hour-13-16" min="0" placeholder="mL">
+                </div>
+                <div class="hour-input">
+                    <label>Hr 17-20:</label>
+                    <input type="number" id="hour-17-20" min="0" placeholder="mL">
+                </div>
+                <div class="hour-input">
+                    <label>Hr 21-24:</label>
+                    <input type="number" id="hour-21-24" min="0" placeholder="mL">
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="calculateFluidBalance()">Calculate Fluid Balance</button>
+        <button class="reset-btn" onclick="resetCalculator()">Reset All Values</button>
+        
+        <div id="result" class="result">
+            <h3>Fluid Balance Assessment Results</h3>
+            
+            <div class="balance-summary">
+                <div class="summary-card">
+                    <div class="value" id="net-balance">0</div>
+                    <div class="label">Net Balance (mL)</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" id="balance-per-kg">0</div>
+                    <div class="label">Balance per kg</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" id="urine-per-kg">0</div>
+                    <div class="label">Urine Output (mL/kg/hr)</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" id="balance-status">Normal</div>
+                    <div class="label">Status</div>
+                </div>
+            </div>
+            
+            <div class="recommendations">
+                <h4>Clinical Interpretation & Recommendations:</h4>
+                <ul id="recommendations-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real-time calculation updates
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', updateTotals);
+        });
+
+        function updateTotals() {
+            // Calculate total intake
+            const intakeInputs = ['oral-fluids', 'iv-fluids', 'tube-feeding', 'food-moisture', 'medications'];
+            const totalIntake = intakeInputs.reduce((sum, id) => {
+                return sum + (parseInt(document.getElementById(id).value) || 0);
+            }, 0);
+            
+            // Calculate total output
+            const outputInputs = ['urine-output', 'vomiting', 'diarrhea', 'drainage', 'insensible', 'other-losses'];
+            const totalOutput = outputInputs.reduce((sum, id) => {
+                return sum + (parseInt(document.getElementById(id).value) || 0);
+            }, 0);
+            
+            document.getElementById('total-intake').textContent = `${totalIntake} mL`;
+            document.getElementById('total-output').textContent = `${totalOutput} mL`;
+        }
+
+        function calculateFluidBalance() {
+            const weight = parseFloat(document.getElementById('weight').value);
+            const age = parseInt(document.getElementById('age').value);
+            const condition = document.getElementById('clinical-condition').value;
+            
+            if (!weight || !age) {
+                alert('Please enter patient weight and age');
+                return;
+            }
+            
+            // Get totals
+            updateTotals();
+            const totalIntake = parseInt(document.getElementById('total-intake').textContent.split(' ')[0]);
+            const totalOutput = parseInt(document.getElementById('total-output').textContent.split(' ')[0]);
+            const urineOutput = parseInt(document.getElementById('urine-output').value) || 0;
+            
+            // Calculate net balance
+            const netBalance = totalIntake - totalOutput;
+            const balancePerKg = Math.round((netBalance / weight) * 10) / 10;
+            const urinePerKgPerHour = Math.round((urineOutput / weight / 24) * 100) / 100;
+            
+            // Determine status and recommendations
+            const assessment = assessFluidBalance(netBalance, balancePerKg, urinePerKgPerHour, condition, age);
+            
+            // Display results
+            document.getElementById('net-balance').textContent = `${netBalance > 0 ? '+' : ''}${netBalance}`;
+            document.getElementById('balance-per-kg').textContent = `${balancePerKg > 0 ? '+' : ''}${balancePerKg}`;
+            document.getElementById('urine-per-kg').textContent = urinePerKgPerHour.toFixed(2);
+            document.getElementById('balance-status').textContent = assessment.status;
+            
+            // Update recommendations
+            const recList = document.getElementById('recommendations-list');
+            recList.innerHTML = '';
+            assessment.recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.innerHTML = rec;
+                if (rec.includes('🚨') || rec.includes('⚠️')) {
+                    li.className = 'warning';
+                }
+                recList.appendChild(li);
+            });
+            
+            // Set result styling
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${assessment.className}`;
+            resultDiv.style.display = 'block';
+        }
+
+        function assessFluidBalance(netBalance, balancePerKg, urinePerKgPerHour, condition, age) {
+            let status = 'Normal';
+            let className = 'balanced';
+            let recommendations = [];
+            
+            // Normal urine output ranges
+            const normalUrineMin = age < 65 ? 0.5 : 0.4; // mL/kg/hr
+            const normalUrineMax = 2.0;
+            
+            // Assess urine output first
+            if (urinePerKgPerHour < normalUrineMin) {
+                recommendations.push('⚠️ Low urine output (oliguria) - may indicate dehydration, kidney problems, or inadequate fluid intake');
+                if (urinePerKgPerHour < 0.3) {
+                    recommendations.push('🚨 Critically low urine output - immediate medical evaluation needed');
+                    className = 'critical-balance';
+                    status = 'Critical';
+                }
+            } else if (urinePerKgPerHour > normalUrineMax) {
+                recommendations.push('High urine output (polyuria) - monitor for diabetes, diuretic effects, or excessive fluid intake');
+            }
+            
+            // Assess fluid balance
+            if (Math.abs(netBalance) <= 500 && Math.abs(balancePerKg) <= 7) {
+                if (className !== 'critical-balance') {
+                    status = 'Balanced';
+                    className = 'balanced';
+                }
+                recommendations.push('Fluid balance within normal limits');
+                recommendations.push('Continue current fluid management');
+                
+            } else if (netBalance > 500) {
+                // Positive fluid balance (fluid retention)
+                status = 'Positive Balance';
+                className = 'positive-balance';
+                
+                if (netBalance > 1500 || balancePerKg > 20) {
+                    status = 'Significant Fluid Retention';
+                    className = 'critical-balance';
+                    recommendations.push('🚨 Significant fluid retention - consider diuretics, restrict sodium');
+                    recommendations.push('Monitor for signs of fluid overload (edema, shortness of breath)');
+                } else {
+                    recommendations.push('⚠️ Mild to moderate fluid retention');
+                    recommendations.push('Monitor weight daily, consider fluid restriction');
+                }
+                
+                // Condition-specific recommendations
+                if (condition === 'heart-failure') {
+                    recommendations.push('Heart failure patients are at high risk for fluid overload');
+                    recommendations.push('Consider ACE inhibitors, beta-blockers, diuretics as per protocol');
+                } else if (condition === 'kidney-disease') {
+                    recommendations.push('Monitor renal function, adjust fluid intake accordingly');
+                }
+                
+            } else {
+                // Negative fluid balance (dehydration)
+                status = 'Negative Balance';
+                className = 'negative-balance';
+                
+                if (netBalance < -1500 || balancePerKg < -20) {
+                    status = 'Significant Dehydration';
+                    className = 'critical-balance';
+                    recommendations.push('🚨 Significant fluid deficit - consider IV fluid replacement');
+                    recommendations.push('Monitor vital signs, assess for clinical dehydration signs');
+                } else {
+                    recommendations.push('⚠️ Mild to moderate fluid deficit');
+                    recommendations.push('Increase oral fluid intake if tolerated');
+                }
+                
+                // Condition-specific recommendations
+                if (condition === 'fever') {
+                    recommendations.push('Fever increases insensible losses - increase fluid replacement');
+                } else if (condition === 'burns') {
+                    recommendations.push('Burns require significant fluid replacement - follow burn protocols');
+                }
+            }
+            
+            // General monitoring recommendations
+            recommendations.push('Monitor daily weights (same time, same conditions)');
+            recommendations.push('Assess clinical signs: skin turgor, mucous membranes, blood pressure');
+            recommendations.push('Continue accurate intake/output documentation');
+            
+            // Age-specific considerations
+            if (age > 65) {
+                recommendations.push('Elderly patients have reduced kidney function - monitor closely');
+            }
+            
+            return { status, className, recommendations };
+        }
+
+        function resetCalculator() {
+            // Reset all input values
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                if (input.id === 'food-moisture' || input.id === 'insensible') {
+                    input.value = 800; // Keep default values
+                } else {
+                    input.value = input.id === 'weight' || input.id === 'age' ? '' : '0';
+                }
+            });
+            
+            // Reset selects
+            document.getElementById('clinical-condition').value = 'normal';
+            
+            // Hide result
+            document.getElementById('result').style.display = 'none';
+            
+            // Update totals
+            updateTotals();
+        }
+
+        // Initialize with default values
+        updateTotals();
+    </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APGAR Score Calculator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #2196f3; }
+        .assessment-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .assessment-table th { background: #f5f5f5; padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+        .assessment-table td { padding: 10px; border: 1px solid #ddd; }
+        .score-column { width: 60px; text-align: center; }
+        .radio-group { display: flex; gap: 15px; justify-content: center; }
+        .radio-item { display: flex; align-items: center; gap: 5px; }
+        .radio-item input[type="radio"] { transform: scale(1.2); }
+        .total-score { font-size: 24px; font-weight: bold; color: #2c5aa0; text-align: center; margin: 20px 0; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .result h3 { margin-bottom: 10px; }
+        .excellent { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .good { background: #f3e5f5; border-left: 4px solid #9c27b0; }
+        .moderate { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .poor { background: #ffebee; border-left: 4px solid #f44336; }
+        .interpretation { margin-top: 15px; }
+        .interpretation ul { padding-left: 20px; }
+        .interpretation li { margin-bottom: 5px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        .time-inputs { display: flex; gap: 20px; margin-bottom: 20px; justify-content: center; }
+        .time-input { text-align: center; }
+        .time-input input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 80px; text-align: center; }
+        .comparison { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .comparison-table th, .comparison-table td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>APGAR Score Calculator</h1>
+        
+        <div class="info-box">
+            <h4>About APGAR Score</h4>
+            <p>The APGAR score is used to evaluate the health of newborn babies immediately after birth. It assesses five criteria, each scored from 0-2, for a maximum total of 10 points. The assessment is typically performed at 1 and 5 minutes after birth.</p>
+        </div>
+        
+        <div class="time-inputs">
+            <div class="time-input">
+                <label><strong>1 Minute Score</strong></label>
+                <input type="number" id="score-1min" min="0" max="10" placeholder="0-10">
+            </div>
+            <div class="time-input">
+                <label><strong>5 Minutes Score</strong></label>
+                <input type="number" id="score-5min" min="0" max="10" placeholder="0-10">
+            </div>
+        </div>
+        
+        <h3 style="color: #2c5aa0; margin-bottom: 15px;">Current Assessment</h3>
+        
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Sign</th>
+                    <th class="score-column">0 Points</th>
+                    <th class="score-column">1 Point</th>
+                    <th class="score-column">2 Points</th>
+                    <th class="score-column">Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>A</strong>ctivity (Muscle Tone)</td>
+                    <td>Limp, flaccid</td>
+                    <td>Some flexion of extremities</td>
+                    <td>Active motion, well-flexed</td>
+                    <td>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="activity" value="0" id="activity-0">
+                                <label for="activity-0">0</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="activity" value="1" id="activity-1">
+                                <label for="activity-1">1</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="activity" value="2" id="activity-2">
+                                <label for="activity-2">2</label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td><strong>P</strong>ulse (Heart Rate)</td>
+                    <td>Absent (0 bpm)</td>
+                    <td>Slow (&lt;100 bpm)</td>
+                    <td>Good (&gt;100 bpm)</td>
+                    <td>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="pulse" value="0" id="pulse-0">
+                                <label for="pulse-0">0</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="pulse" value="1" id="pulse-1">
+                                <label for="pulse-1">1</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="pulse" value="2" id="pulse-2">
+                                <label for="pulse-2">2</label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td><strong>G</strong>rimace (Reflex Irritability)</td>
+                    <td>No response to stimulation</td>
+                    <td>Grimace or weak cry</td>
+                    <td>Vigorous cry or sneeze</td>
+                    <td>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="grimace" value="0" id="grimace-0">
+                                <label for="grimace-0">0</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="grimace" value="1" id="grimace-1">
+                                <label for="grimace-1">1</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="grimace" value="2" id="grimace-2">
+                                <label for="grimace-2">2</label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td><strong>A</strong>ppearance (Color)</td>
+                    <td>Blue or pale all over</td>
+                    <td>Body pink, extremities blue</td>
+                    <td>Pink all over</td>
+                    <td>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="appearance" value="0" id="appearance-0">
+                                <label for="appearance-0">0</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="appearance" value="1" id="appearance-1">
+                                <label for="appearance-1">1</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="appearance" value="2" id="appearance-2">
+                                <label for="appearance-2">2</label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td><strong>R</strong>espiration (Breathing Effort)</td>
+                    <td>Absent, no breathing</td>
+                    <td>Slow, irregular, weak cry</td>
+                    <td>Good, strong cry</td>
+                    <td>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="respiration" value="0" id="respiration-0">
+                                <label for="respiration-0">0</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="respiration" value="1" id="respiration-1">
+                                <label for="respiration-1">1</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="respiration" value="2" id="respiration-2">
+                                <label for="respiration-2">2</label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <button onclick="calculateAPGAR()">Calculate APGAR Score</button>
+        
+        <div id="total-score" class="total-score" style="display: none;">
+            Total APGAR Score: <span id="score-value">0</span>/10
+        </div>
+        
+        <div id="result" class="result" style="display: none;">
+            <h3>Score Interpretation</h3>
+            <p><strong>Score:</strong> <span id="score-interpretation"></span></p>
+            <p><strong>Clinical Significance:</strong> <span id="clinical-significance"></span></p>
+            
+            <div class="interpretation">
+                <h4>Management Recommendations:</h4>
+                <ul id="management-recommendations"></ul>
+            </div>
+        </div>
+        
+        <div id="comparison" class="comparison" style="display: none;">
+            <h4>Score Comparison (if both 1min and 5min scores entered)</h4>
+            <table class="comparison-table">
+                <tr>
+                    <th>Time</th>
+                    <th>Score</th>
+                    <th>Trend</th>
+                    <th>Significance</th>
+                </tr>
+                <tr id="comparison-row">
+                    <!-- Filled by JavaScript -->
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Add event listeners for real-time calculation
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', calculateAPGAR);
+        });
+
+        function calculateAPGAR() {
+            const categories = ['activity', 'pulse', 'grimace', 'appearance', 'respiration'];
+            let totalScore = 0;
+            
+            categories.forEach(category => {
+                const checked = document.querySelector(`input[name="${category}"]:checked`);
+                if (checked) {
+                    totalScore += parseInt(checked.value);
+                }
+            });
+            
+            // Display total score
+            document.getElementById('score-value').textContent = totalScore;
+            document.getElementById('total-score').style.display = 'block';
+            
+            // Interpret score
+            let interpretation, significance, className, recommendations;
+            
+            if (totalScore >= 8) {
+                interpretation = 'Excellent (8-10)';
+                significance = 'Normal, healthy newborn';
+                className = 'excellent';
+                recommendations = [
+                    'No immediate resuscitation needed',
+                    'Routine newborn care',
+                    'Continue monitoring vital signs',
+                    'Skin-to-skin contact with mother',
+                    'Initiate breastfeeding when appropriate'
+                ];
+            } else if (totalScore >= 4) {
+                interpretation = 'Moderate Depression (4-7)';
+                significance = 'Some degree of asphyxia, requires intervention';
+                className = 'moderate';
+                recommendations = [
+                    'Provide supplemental oxygen',
+                    'Stimulate breathing (tactile stimulation)',
+                    'Clear airway if needed',
+                    'Positive pressure ventilation may be required',
+                    'Continue monitoring and reassess',
+                    'Prepare for possible intubation',
+                    'Document interventions provided'
+                ];
+            } else {
+                interpretation = 'Severe Depression (0-3)';
+                significance = 'Severe asphyxia, immediate resuscitation required';
+                className = 'poor';
+                recommendations = [
+                    '🚨 Immediate resuscitation required',
+                    'Begin positive pressure ventilation',
+                    'Consider intubation and mechanical ventilation',
+                    'Chest compressions may be needed',
+                    'Administer epinephrine if indicated',
+                    'Alert NICU team',
+                    'Continuous monitoring and support',
+                    'Consider underlying causes'
+                ];
+            }
+            
+            // Display interpretation
+            document.getElementById('score-interpretation').textContent = interpretation;
+            document.getElementById('clinical-significance').textContent = significance;
+            
+            const recList = document.getElementById('management-recommendations');
+            recList.innerHTML = '';
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.innerHTML = rec;
+                if (rec.includes('🚨')) {
+                    li.style.color = '#d32f2f';
+                    li.style.fontWeight = 'bold';
+                }
+                recList.appendChild(li);
+            });
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${className}`;
+            resultDiv.style.display = 'block';
+            
+            // Check for comparison scores
+            updateComparison();
+        }
+        
+        function updateComparison() {
+            const score1min = parseInt(document.getElementById('score-1min').value);
+            const score5min = parseInt(document.getElementById('score-5min').value);
+            
+            if (!isNaN(score1min) && !isNaN(score5min)) {
+                const trend = score5min > score1min ? '↑ Improving' : 
+                             score5min < score1min ? '↓ Worsening' : '→ Stable';
+                
+                let significance;
+                if (score1min < 7 && score5min >= 7) {
+                    significance = 'Good recovery, positive response to resuscitation';
+                } else if (score1min >= 7 && score5min >= 7) {
+                    significance = 'Consistently good condition';
+                } else if (score5min < score1min) {
+                    significance = 'Concerning deterioration, requires investigation';
+                } else if (score5min < 7) {
+                    significance = 'Persistent low score, ongoing intervention needed';
+                } else {
+                    significance = 'Stable condition';
+                }
+                
+                const comparisonRow = document.getElementById('comparison-row');
+                comparisonRow.innerHTML = `
+                    <td>1 min: ${score1min}<br>5 min: ${score5min}</td>
+                    <td>${score1min} → ${score5min}</td>
+                    <td style="font-weight: bold; color: ${score5min > score1min ? '#4caf50' : score5min < score1min ? '#f44336' : '#666'}">${trend}</td>
+                    <td>${significance}</td>
+                `;
+                
+                document.getElementById('comparison').style.display = 'block';
+            }
+        }
+        
+        // Add event listeners for comparison inputs
+        document.getElementById('score-1min').addEventListener('input', updateComparison);
+        document.getElementById('score-5min').addEventListener('input', updateComparison);
+    </script>
+</body>
+</html>

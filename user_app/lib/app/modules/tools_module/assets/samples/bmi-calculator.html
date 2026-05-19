@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMI Calculator - Health Assessment</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #1e3f73; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .result h3 { margin-bottom: 10px; }
+        .underweight { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .normal { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .overweight { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .obese { background: #ffebee; border-left: 4px solid #f44336; }
+        .recommendations { margin-top: 15px; }
+        .recommendations ul { padding-left: 20px; }
+        .recommendations li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMI Calculator & Health Assessment</h1>
+        
+        <form id="bmiForm">
+            <div class="form-group">
+                <label for="weight">Weight:</label>
+                <input type="number" id="weight" step="0.1" min="1" max="500" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="weightUnit">Weight Unit:</label>
+                <select id="weightUnit">
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="lbs">Pounds (lbs)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="height">Height:</label>
+                <input type="number" id="height" step="0.01" min="0.5" max="3" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="heightUnit">Height Unit:</label>
+                <select id="heightUnit">
+                    <option value="m">Meters (m)</option>
+                    <option value="cm">Centimeters (cm)</option>
+                    <option value="ft">Feet (ft)</option>
+                    <option value="in">Inches (in)</option>
+                </select>
+            </div>
+            
+            <button type="submit">Calculate BMI</button>
+        </form>
+        
+        <div id="result" class="result">
+            <h3>Your BMI: <span id="bmiValue"></span></h3>
+            <p><strong>Category:</strong> <span id="bmiCategory"></span></p>
+            <div class="recommendations">
+                <h4>Health Recommendations:</h4>
+                <ul id="recommendations"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('bmiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            calculateBMI();
+        });
+
+        function calculateBMI() {
+            let weight = parseFloat(document.getElementById('weight').value);
+            let height = parseFloat(document.getElementById('height').value);
+            const weightUnit = document.getElementById('weightUnit').value;
+            const heightUnit = document.getElementById('heightUnit').value;
+
+            // Convert weight to kg
+            if (weightUnit === 'lbs') {
+                weight = weight * 0.453592;
+            }
+
+            // Convert height to meters
+            if (heightUnit === 'cm') {
+                height = height / 100;
+            } else if (heightUnit === 'ft') {
+                height = height * 0.3048;
+            } else if (heightUnit === 'in') {
+                height = height * 0.0254;
+            }
+
+            // Calculate BMI
+            const bmi = weight / (height * height);
+            
+            // Display result
+            document.getElementById('bmiValue').textContent = bmi.toFixed(1);
+            
+            // Determine category and recommendations
+            let category, className, recommendations;
+            
+            if (bmi < 18.5) {
+                category = 'Underweight';
+                className = 'underweight';
+                recommendations = [
+                    'Consult with a healthcare provider about healthy weight gain',
+                    'Increase caloric intake with nutrient-dense foods',
+                    'Consider strength training exercises',
+                    'Monitor for underlying health conditions'
+                ];
+            } else if (bmi >= 18.5 && bmi < 25) {
+                category = 'Normal Weight';
+                className = 'normal';
+                recommendations = [
+                    'Maintain current weight through balanced diet',
+                    'Continue regular physical activity (150 min/week)',
+                    'Focus on overall health and wellness',
+                    'Regular health check-ups'
+                ];
+            } else if (bmi >= 25 && bmi < 30) {
+                category = 'Overweight';
+                className = 'overweight';
+                recommendations = [
+                    'Aim for gradual weight loss (1-2 lbs/week)',
+                    'Increase physical activity to 300 min/week',
+                    'Reduce caloric intake by 500-750 calories/day',
+                    'Monitor blood pressure and cholesterol levels'
+                ];
+            } else {
+                category = 'Obese';
+                className = 'obese';
+                recommendations = [
+                    'Consult healthcare provider for weight management plan',
+                    'Consider structured diet and exercise program',
+                    'Monitor for diabetes, heart disease, sleep apnea',
+                    'May benefit from professional nutrition counseling'
+                ];
+            }
+            
+            document.getElementById('bmiCategory').textContent = category;
+            document.getElementById('result').className = `result ${className}`;
+            
+            const recList = document.getElementById('recommendations');
+            recList.innerHTML = '';
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.textContent = rec;
+                recList.appendChild(li);
+            });
+            
+            document.getElementById('result').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

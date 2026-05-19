@@ -1,0 +1,43 @@
+const String backendBaseUrl = String.fromEnvironment(
+  'MEDIGUIDE_BACKEND_URL',
+  defaultValue: 'http://127.0.0.1:8080',
+);
+
+const String openRouterApiKey = String.fromEnvironment(
+  'MEDIGUIDE_OPENROUTER_API_KEY',
+  defaultValue: '',
+);
+const String openRouterBaseUrl = String.fromEnvironment(
+  'MEDIGUIDE_OPENROUTER_BASE_URL',
+  defaultValue: 'https://openrouter.ai/api/v1',
+);
+const String openRouterModel = String.fromEnvironment(
+  'MEDIGUIDE_OPENROUTER_MODEL',
+  defaultValue: 'deepseek/deepseek-chat-v3.1:free',
+);
+const bool aiAssistantEnabled = openRouterApiKey != '';
+
+// Pagination constants
+const int pageSize = 10;
+
+class SharedPreferencesKeys {
+  const SharedPreferencesKeys._();
+
+  static const String notFirstTime = 'not_first_time';
+  static const String isLoggedIn = 'is_logged_in';
+  static const String userToken = 'user_token';
+  static const String userId = 'user_id';
+  static const String currentUser = 'current_user';
+  static const String biometricEnabled = 'biometric_enabled';
+  static const String themeMode = 'theme_mode';
+  static const String language = 'language';
+}
+
+// Theme mode constants
+class ThemeModes {
+  const ThemeModes._();
+
+  static const String light = 'light';
+  static const String dark = 'dark';
+  static const String system = 'system';
+}

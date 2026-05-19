@@ -1,0 +1,167 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../utils/loading.dart';
+import '../../../utils/app_spacing.dart';
+import '../../../data/models/models.dart';
+import '../../../data/services/backend_service.dart';
+import '../../../utils/common.dart';
+import 'package:toastification/toastification.dart';
+import '../help_center_controller.dart';
+
+/// Full screen dialog for creating a new support ticket
+class CreateTicketDialog extends StatelessWidget {
+  const CreateTicketDialog({super.key});
+
+  /// Show the full screen create ticket dialog
+  static Future<void> show() {
+    if (!BackendService.to.supportsSupportTickets) {
+      Common.quickToast(
+        type: ToastificationType.info,
+        title: 'Support Center',
+        description: BackendService.to.unsupportedCollectionWriteMessage(
+          'support_tickets',
+        ),
+      );
+      return Future.value();
+    }
+    return showDialog<void>(
+      context: Get.overlayContext!,
+      barrierDismissible: false,
+      useSafeArea: false,
+      builder: (context) => const CreateTicketDialog(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<HelpCenterController>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Support Ticket'),
+        leading: IconButton(
+          icon: const Icon(LucideIcons.x),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          Obx(
+            () => TextButton.icon(
+              onPressed: controller.isCreatingTicket.value
+                  ? null
+                  : controller.submitCreateTicketForm,
+              icon: controller.isCreatingTicket.value
+                  ? const Loading.small()
+                  : const Icon(LucideIcons.save, size: 18),
+              label: Text(
+                controller.isCreatingTicket.value ? 'Creating...' : 'Create',
+              ),
+            ),
+          ),
+        ],
+        elevation: 1,
+      ),
+      body: FormBuilder(
+        key: controller.formKey,
+        child: ListView(
+          padding: AppSpacing.pagePadding,
+          children: [
+            AppSpacing.contentGap,
+
+            // Subject
+            FormBuilderTextField(
+              name: 'subject',
+              decoration: const InputDecoration(
+                labelText: 'Subject *',
+                hintText: 'Brief description of your issue',
+                prefixIcon: Icon(LucideIcons.type),
+              ),
+              textInputAction: TextInputAction.next,
+              validator: FormBuilderValidators.compose([
+                FormBuilderValidators.required(),
+                FormBuilderValidators.minLength(5),
+              ]),
+            ),
+
+            AppSpacing.fieldGap,
+
+            // Category dropdown
+            FormBuilderDropdown<String>(
+              name: 'category',
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                prefixIcon: Icon(LucideIcons.tag),
+              ),
+              initialValue: 'General Question',
+              items: controller.availableCategories
+                  .map(
+                    (category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    ),
+                  )
+                  .toList(),
+              validator: FormBuilderValidators.required(),
+            ),
+
+            AppSpacing.fieldGap,
+
+            // Priority dropdown
+            FormBuilderDropdown<TicketPriority>(
+              name: 'priority',
+              decoration: const InputDecoration(
+                labelText: 'Priority',
+                prefixIcon: Icon(LucideIcons.flag),
+              ),
+              initialValue: TicketPriority.normal,
+              items: TicketPriority.values
+                  .map(
+                    (priority) => DropdownMenuItem(
+                      value: priority,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: priority.color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          AppSpacing.gapSm,
+                          Text(priority.label),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+              validator: FormBuilderValidators.required(),
+            ),
+
+            AppSpacing.fieldGap,
+
+            // Description
+            FormBuilderTextField(
+              name: 'description',
+              decoration: const InputDecoration(
+                labelText: 'Description *',
+                hintText: 'Provide detailed information about your issue',
+                prefixIcon: Icon(LucideIcons.fileText),
+                alignLabelWithHint: true,
+              ),
+              maxLines: 8,
+              textInputAction: TextInputAction.newline,
+              validator: FormBuilderValidators.compose([
+                FormBuilderValidators.required(),
+                FormBuilderValidators.minLength(10),
+              ]),
+            ),
+
+            AppSpacing.sectionGap,
+          ],
+        ),
+      ),
+    );
+  }
+}
