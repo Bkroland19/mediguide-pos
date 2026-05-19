@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from pathlib import Path
 import html
 import re
@@ -38,6 +39,26 @@ _COMMON_SUBHEADINGS = {
 _TABLE_HEAD_BG = "#dbe5f1"
 _TABLE_BORDER = "#667085"
 _ROMAN_NUMERAL_RE = re.compile(r"^[IVXLCDM]+$", re.I)
+_GENERIC_TABLE_TERMS = {
+    "comments",
+    "features",
+    "loc",
+    "management",
+    "question",
+    "treatment",
+}
+_CHAPTER_HEADING_RE = re.compile(r"^CHAPTER\s+(\d+)\s*:?\s+(.+)$", re.I)
+_NUMBERED_HEADING_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){0,5})\s+(.+)$")
+_TOC_DOT_LEADER_RE = re.compile(r"\.{4,}\s*\d+\s*$")
+_TRAILING_PAGE_RE = re.compile(r"(?:\s+|\.{1,})\d{1,4}\s*$")
+_DOT_LEADER_ONLY_RE = re.compile(r"\.{6,}\s*$")
+
+
+@dataclass
+class HeadingInfo:
+    title: str
+    level: int
+    primary: bool = False
 
 
 def _clean_text(text: str) -> str:
@@ -62,7 +83,33 @@ def _is_noise_line(line: str) -> bool:
         return True
     if _ROMAN_NUMERAL_RE.fullmatch(line):
         return True
+    if _TOC_DOT_LEADER_RE.search(line):
+        return True
+    if _DOT_LEADER_ONLY_RE.search(line):
+        return True
     return False
+
+
+def _looks_like_toc_entry(line: str) -> bool:
+    if _TOC_DOT_LEADER_RE.search(line):
+        return True
+    if _DOT_LEADER_ONLY_RE.search(line):
+        return True
+    if _NUMBERED_HEADING_RE.match(line) and _TRAILING_PAGE_RE.search(line):
+        return True
+    return False
+
+
+def _is_semantic_subheading_title(title: str) -> bool:
+    normalized = title.strip().rstrip(":")
+    if not normalized:
+        return False
+    if _NUMBERED_HEADING_RE.match(normalized) or _CHAPTER_HEADING_RE.match(normalized):
+        return False
+    lowered = normalized.lower()
+    if lowered in _COMMON_SUBHEADINGS:
+        return True
+    return normalized.isupper() and 1 < len(normalized.split()) <= 10
 
 
 def _content_lines(text: str) -> list[str]:
@@ -133,28 +180,112 @@ def _guess_heading(line: str) -> int:
     return 0
 
 
+def _heading_info(line: str, current_level: int, current_title: str | None = None) -> HeadingInfo | None:
+    s = line.strip()
+    if not s or len(s) > 160:
+        return None
+    if _BULLET_RE.match(s) or _LOC_CODE_RE.fullmatch(s):
+        return None
+    if _looks_like_toc_entry(s):
+        return None
+
+    chapter = _CHAPTER_HEADING_RE.match(s)
+    if chapter:
+        number, title = chapter.groups()
+        return HeadingInfo(title=f"Chapter {number}: {_clean_line(title)}", level=1, primary=True)
+
+    numbered = _NUMBERED_HEADING_RE.match(s)
+    if numbered and len(s.split()) <= 16:
+        numbering, title = numbered.groups()
+        parts = [int(part) for part in numbering.split(".")]
+        if parts[0] > 40 or any(part > 100 for part in parts[1:]):
+            return None
+        if _TRAILING_PAGE_RE.search(title):
+            return None
+        clean_title = _clean_line(title)
+        if len(parts) == 1 and not clean_title.isupper():
+            return None
+        level = numbering.count(".") + 1
+        return HeadingInfo(title=f"{numbering} {clean_title}", level=level, primary=True)
+
+    candidate = s.rstrip(":")
+    if candidate.upper() in {"TREATMENT", "LOC"}:
+        return None
+    lowered = candidate.lower()
+    if lowered in _COMMON_SUBHEADINGS:
+        level = current_level if current_title and _is_semantic_subheading_title(current_title) else current_level + 1
+        return HeadingInfo(title=candidate, level=min(max(level, 2), 6))
+
+    if candidate.isupper() and 1 < len(candidate.split()) <= 10:
+        level = current_level if current_title and _is_semantic_subheading_title(current_title) else current_level + 1
+        return HeadingInfo(title=candidate, level=min(max(level, 2), 6))
+
+    return None
+
+
+def _finalize_section(section: ExtractedSection | None) -> ExtractedSection | None:
+    if section is None:
+        return None
+    section.text = _clean_text(section.text)
+    section.html = _section_html(section.title, section.level, section.text)
+    return section
+
+
+def _populate_breadcrumbs(sections: list[ExtractedSection]) -> None:
+    by_order = {section.sort_order: section for section in sections}
+    cache: dict[int, list[str]] = {}
+
+    def build_titles(section: ExtractedSection) -> list[str]:
+        cached = cache.get(section.sort_order)
+        if cached is not None:
+            return cached
+        titles: list[str] = []
+        if section.parent_sort_order is not None and section.parent_sort_order in by_order:
+            titles.extend(build_titles(by_order[section.parent_sort_order]))
+        titles.append(section.title)
+        cache[section.sort_order] = titles
+        return titles
+
+    for section in sections:
+        section.breadcrumb = " > ".join(build_titles(section))
+
+
 def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]:
     sections: list[ExtractedSection] = []
     current: ExtractedSection | None = None
     fallback_order = 0
+    next_sort_order = 0
+    stack: list[ExtractedSection] = []
+    seen_primary_heading = False
 
     for page, raw in page_lines:
         for line in _content_lines(raw):
-            level = _guess_heading(line)
-            if level:
-                if current:
-                    current.text = _clean_text(current.text)
-                    current.html = _section_html(current.title, current.level, current.text)
-                    current.page_end = page
-                    sections.append(current)
+            info = _heading_info(line, current.level if current else 1, current.title if current else None)
+            if info:
+                if info.primary:
+                    seen_primary_heading = True
+                elif not seen_primary_heading and current is None:
+                    continue
+                finalized = _finalize_section(current)
+                if finalized:
+                    finalized.page_end = page
+                    sections.append(finalized)
+                while stack and stack[-1].level >= info.level:
+                    stack.pop()
+                parent_sort_order = stack[-1].sort_order if stack else None
                 current = ExtractedSection(
-                    title=line,
-                    level=level,
+                    title=info.title,
+                    level=info.level,
                     page_start=page,
                     page_end=page,
-                    sort_order=len(sections),
+                    sort_order=next_sort_order,
+                    parent_sort_order=parent_sort_order,
                 )
+                next_sort_order += 1
+                stack.append(current)
             else:
+                if current is None and not seen_primary_heading:
+                    continue
                 if current is None:
                     fallback_order += 1
                     current = ExtractedSection(
@@ -162,17 +293,20 @@ def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]
                         level=1,
                         page_start=page,
                         page_end=page,
-                        sort_order=len(sections),
+                        sort_order=next_sort_order,
                     )
+                    next_sort_order += 1
+                    stack = [current]
                 current.text += line + "\n"
                 current.page_end = page
 
-    if current:
-        current.text = _clean_text(current.text)
-        current.html = _section_html(current.title, current.level, current.text)
-        sections.append(current)
+    finalized = _finalize_section(current)
+    if finalized:
+        sections.append(finalized)
 
-    return [s for s in sections if s.text or s.title]
+    sections = [s for s in sections if s.text or s.title]
+    _populate_breadcrumbs(sections)
+    return sections
 
 
 def _section_html(title: str, level: int, text: str) -> str:
@@ -423,7 +557,7 @@ def _extract_inline_table(lines: list[str]) -> tuple[list[list[str]] | None, int
         if line.endswith("."):
             break
         candidate_lines.append(line)
-    if len(candidate_lines) < 2:
+    if len(candidate_lines) < 3:
         return None, 0
 
     tokenized = [line.split() for line in candidate_lines]
@@ -444,6 +578,40 @@ def _extract_inline_table(lines: list[str]) -> tuple[list[list[str]] | None, int
     return None, 0
 
 
+def _render_inline_grid_html(rows: list[list[str]]) -> str:
+    if not rows:
+        return ""
+
+    normalized = []
+    max_cols = 0
+    for row in rows:
+        cells = [html.escape(cell) for cell in row if cell]
+        if not cells:
+            continue
+        normalized.append(cells)
+        max_cols = max(max_cols, len(cells))
+    if not normalized or max_cols == 0:
+        return ""
+
+    rendered_rows = []
+    for index, row in enumerate(normalized):
+        padded = row + [""] * (max_cols - len(row))
+        cell_tag = "strong" if index == 0 else "span"
+        cells = "".join(
+            f"<div style=\"padding:4px 8px;border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG if index == 0 else '#ffffff'};\"><{cell_tag}>{cell}</{cell_tag}></div>"
+            for cell in padded
+        )
+        rendered_rows.append(
+            f"<div style=\"display:grid;grid-template-columns:repeat({max_cols}, minmax(0,1fr));\">{cells}</div>"
+        )
+    return (
+        "<div class=\"guideline-inline-grid\" "
+        "style=\"margin:8px 0 10px 0;border:1px solid #667085;border-bottom:none;overflow-x:auto;\">"
+        + "".join(rendered_rows) +
+        "</div>"
+    )
+
+
 def _render_table_cell_content(value: str, already_escaped: bool = False) -> str:
     if not value:
         return ""
@@ -455,7 +623,7 @@ def _render_table_cell_content(value: str, already_escaped: bool = False) -> str
     inline_table_html = ""
     inline_table_rows, consumed = _extract_inline_table(lines)
     if inline_table_rows:
-        inline_table_html = _render_table_html(inline_table_rows, title=None)
+        inline_table_html = _render_inline_grid_html(inline_table_rows)
         lines = lines[consumed:]
 
     def esc(text: str) -> str:
@@ -545,12 +713,75 @@ def _normalize_for_match(text: str) -> str:
 
 def _table_anchor_phrases(rows: list[list[str]]) -> list[str]:
     anchors: list[str] = []
-    for row in rows[:4]:
-        for cell in row:
+    for row_index, row in enumerate(rows[:6]):
+        for cell_index, cell in enumerate(row):
             normalized = _normalize_for_match(cell)
-            if len(normalized) >= 18 and normalized not in anchors:
+            if not normalized or normalized in _GENERIC_TABLE_TERMS:
+                continue
+            if _LOC_CODE_RE.fullmatch(normalized.upper().replace(" ", "")):
+                continue
+            if (
+                len(normalized) >= 18
+                or (row_index > 0 and cell_index == 0 and len(normalized) >= 8)
+                or any(ch.isdigit() for ch in normalized)
+            ) and normalized not in anchors:
                 anchors.append(normalized)
     return anchors
+
+
+def _bbox_area(bbox: tuple[float, float, float, float]) -> float:
+    return max(0.0, bbox[2] - bbox[0]) * max(0.0, bbox[3] - bbox[1])
+
+
+def _bbox_intersection_area(
+    left: tuple[float, float, float, float],
+    right: tuple[float, float, float, float],
+) -> float:
+    x0 = max(left[0], right[0])
+    y0 = max(left[1], right[1])
+    x1 = min(left[2], right[2])
+    y1 = min(left[3], right[3])
+    if x1 <= x0 or y1 <= y0:
+        return 0.0
+    return (x1 - x0) * (y1 - y0)
+
+
+def _point_in_bbox(x: float, y: float, bbox: tuple[float, float, float, float]) -> bool:
+    return bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]
+
+
+def _block_overlaps_table(
+    block_bbox: tuple[float, float, float, float],
+    table_bboxes: list[tuple[float, float, float, float]],
+) -> bool:
+    area = _bbox_area(block_bbox)
+    if area <= 0:
+        return False
+    center_x = (block_bbox[0] + block_bbox[2]) / 2
+    center_y = (block_bbox[1] + block_bbox[3]) / 2
+    for table_bbox in table_bboxes:
+        if _point_in_bbox(center_x, center_y, table_bbox):
+            return True
+        overlap = _bbox_intersection_area(block_bbox, table_bbox)
+        if overlap / area >= 0.35:
+            return True
+    return False
+
+
+def _page_text_from_blocks(
+    blocks: list[tuple[float, float, float, float, str, int, int]],
+    table_bboxes: list[tuple[float, float, float, float]],
+) -> str:
+    kept: list[str] = []
+    for block in blocks:
+        text = (block[4] or "").strip()
+        if not text:
+            continue
+        block_bbox = (float(block[0]), float(block[1]), float(block[2]), float(block[3]))
+        if table_bboxes and _block_overlaps_table(block_bbox, table_bboxes):
+            continue
+        kept.append(text)
+    return _clean_text("\n".join(kept))
 
 
 def _dedupe_section_html(section_html: str, tables: list[ExtractedTable]) -> str:
@@ -590,8 +821,8 @@ def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
         import pdfplumber
         with pdfplumber.open(str(path)) as pdf:
             for i, page in enumerate(pdf.pages, start=1):
-                for table in page.extract_tables() or []:
-                    cleaned_rows = _clean_table_rows(table or [])
+                for table in page.find_tables() or []:
+                    cleaned_rows = _clean_table_rows(table.extract() or [])
                     if _is_low_signal_table(cleaned_rows):
                         continue
                     title, _, _ = _split_table_parts(cleaned_rows)
@@ -604,6 +835,7 @@ def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
                             page=i,
                             html=html_table,
                             data=cleaned_rows,
+                            bbox=tuple(float(value) for value in table.bbox),
                         )
                     )
     except Exception:
@@ -613,13 +845,20 @@ def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
 
 
 def extract_pdf(path: Path) -> ExtractedDocument:
+    tables = _extract_tables_pdfplumber(path)
+    table_bboxes_by_page: dict[int, list[tuple[float, float, float, float]]] = {}
+    for table in tables:
+        if table.bbox:
+            table_bboxes_by_page.setdefault(table.page, []).append(table.bbox)
+
     doc = fitz.open(str(path))
     page_lines: list[tuple[int, str]] = []
     all_text: list[str] = []
     title = None
 
     for page_number, page in enumerate(doc, start=1):
-        text = page.get_text("text") or ""
+        blocks = page.get_text("blocks") or []
+        text = _page_text_from_blocks(blocks, table_bboxes_by_page.get(page_number, []))
         text = _clean_text(text)
         if page_number == 1:
             for line in text.splitlines():
@@ -630,7 +869,6 @@ def extract_pdf(path: Path) -> ExtractedDocument:
         all_text.append(text)
 
     sections = _split_sections(page_lines)
-    tables = _extract_tables_pdfplumber(path)
     section_by_page: dict[int, ExtractedSection] = {}
     for section in sections:
         start = section.page_start or 0

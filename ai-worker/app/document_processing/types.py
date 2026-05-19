@@ -20,6 +20,8 @@ class ExtractedSection:
     html: str = ""
     text: str = ""
     sort_order: int = 0
+    parent_sort_order: int | None = None
+    breadcrumb: str = ""
 
 
 @dataclass
@@ -28,6 +30,7 @@ class ExtractedTable:
     page: int
     html: str
     data: list[list[Any]] = field(default_factory=list)
+    bbox: tuple[float, float, float, float] | None = None
 
 
 @dataclass

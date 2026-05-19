@@ -25,18 +25,19 @@ class GuidelineRepository:
             cur.execute("DELETE FROM guideline_sections WHERE version_id = %s", (version_id,))
             conn.commit()
 
-    def insert_section(self, version_id: str, section) -> str:
+    def insert_section(self, version_id: str, section, parent_id: str | None = None) -> str:
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO guideline_sections(version_id, title, slug, level, html, text, page_start, page_end, sort_order)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                INSERT INTO guideline_sections(version_id, parent_id, title, slug, level, html, text, page_start, page_end, sort_order)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
                 """,
                 (
                     version_id,
+                    parent_id,
                     section.title,
-                    self._slug(section.title),
+                    self._slug(section.breadcrumb or section.title),
                     section.level,
                     section.html,
                     section.text,

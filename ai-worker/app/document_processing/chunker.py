@@ -39,6 +39,7 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
         pieces = _split_words(section.text, settings.chunk_size, settings.chunk_overlap)
         if not pieces and section.title:
             pieces = [section.title]
+        chunk_title = section.breadcrumb or section.title
         for idx, piece in enumerate(pieces):
             if len(piece) < settings.min_chunk_chars and len(pieces) > 1:
                 log.warning(
@@ -52,7 +53,7 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
             html = f"<h{min(max(section.level, 1), 4)}>{section.title}</h{min(max(section.level, 1), 4)}><p>{piece}</p>"
             chunks.append(
                 Chunk(
-                    title=section.title,
+                    title=chunk_title,
                     content=piece,
                     html=html,
                     page_start=section.page_start,
@@ -62,4 +63,3 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
                 )
             )
     return chunks
-

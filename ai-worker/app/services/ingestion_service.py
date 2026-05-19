@@ -61,7 +61,8 @@ class IngestionService:
 
             section_id_by_order: dict[int, str] = {}
             for section in extracted.sections:
-                section_id_by_order[section.sort_order] = self.guidelines.insert_section(version_id, section)
+                parent_id = section_id_by_order.get(section.parent_sort_order) if section.parent_sort_order is not None else None
+                section_id_by_order[section.sort_order] = self.guidelines.insert_section(version_id, section, parent_id)
 
             for table in extracted.tables:
                 self.guidelines.insert_table(version_id, None, table)
