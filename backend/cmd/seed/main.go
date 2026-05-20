@@ -195,6 +195,28 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		return nil, nil, err
 	}
 
+	assistantHash, err := security.HashPassword("Assistant123!")
+	if err != nil {
+		return nil, nil, err
+	}
+	assistant := models.User{Email: "assistant@mediguide.local"}
+	assistantOrg := "MediGuide"
+	if err := database.Where(models.User{Email: assistant.Email}).Assign(models.User{
+		Name:         "MediGuide AI",
+		Email:        assistant.Email,
+		Phone:        "+256700000003",
+		PasswordHash: assistantHash,
+		IsActive:     true,
+		Verified:     true,
+		Status:       "active",
+		Organization: &assistantOrg,
+	}).FirstOrCreate(&assistant).Error; err != nil {
+		return nil, nil, err
+	}
+	if err := database.Model(&assistant).Association("Roles").Replace(&clinicianRole); err != nil {
+		return nil, nil, err
+	}
+
 	return &admin, &clinician, nil
 }
 

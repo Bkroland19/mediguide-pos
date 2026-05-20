@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"mediguide/internal/config"
 	"mediguide/internal/models"
+	"mediguide/internal/security"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -46,6 +48,8 @@ type AskResponse struct {
 	SessionID string     `json:"session_id"`
 }
 
+const assistantUserEmail = "assistant@mediguide.local"
+
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
 	session, err := s.getOrCreateSession(userID, req)
 	if err != nil {
@@ -61,6 +65,11 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	cjson, _ := json.Marshal(res.Citations)
 	s.DB.Create(&models.ChatMessage{SessionID: session.ID, Role: "user", Content: req.Question})
 	s.DB.Create(&models.ChatMessage{SessionID: session.ID, Role: "assistant", Content: res.Answer, CitationsJSON: string(cjson)})
+	if userID != nil && *userID != uuid.Nil {
+		if err := s.mirrorToLegacyConversation(*userID, req.Question, res.Answer); err != nil {
+			log.Warn().Err(err).Str("user_id", userID.String()).Msg("failed to mirror RAG exchange to legacy conversations")
+		}
+	}
 	return res, nil
 }
 
@@ -201,6 +210,131 @@ func (s RAGService) resolveChatSessionUserID(userID *uuid.UUID) *uuid.UUID {
 	}
 
 	return userID
+}
+
+func (s RAGService) mirrorToLegacyConversation(userID uuid.UUID, question, answer string) error {
+	assistantID, err := s.lookupAssistantUserID()
+	if err != nil {
+		return err
+	}
+
+	conversationID, err := s.findOrCreateLegacyConversation(userID, assistantID)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+	userReadBy := map[string]any{
+		userID.String(): now.Format(time.RFC3339),
+	}
+	assistantReadBy := map[string]any{
+		userID.String():      now.Format(time.RFC3339),
+		assistantID.String(): now.Format(time.RFC3339),
+	}
+
+	userMessage := map[string]any{
+		"id":               uuid.New(),
+		"conversation_id":  conversationID,
+		"sender_user_id":   userID,
+		"content":          strings.TrimSpace(question),
+		"message_type":     "text",
+		"read_by_json":     userReadBy,
+		"reactions_json":   map[string]any{},
+		"attachments_json": []any{},
+		"is_edited":        false,
+		"created_at":       now,
+		"updated_at":       now,
+	}
+	if err := s.DB.Table("messages").Create(&userMessage).Error; err != nil {
+		return err
+	}
+
+	assistantMessage := map[string]any{
+		"id":               uuid.New(),
+		"conversation_id":  conversationID,
+		"sender_user_id":   assistantID,
+		"content":          strings.TrimSpace(answer),
+		"message_type":     "text",
+		"read_by_json":     assistantReadBy,
+		"reactions_json":   map[string]any{},
+		"attachments_json": []any{},
+		"is_edited":        false,
+		"created_at":       now,
+		"updated_at":       now,
+	}
+	if err := s.DB.Table("messages").Create(&assistantMessage).Error; err != nil {
+		return err
+	}
+
+	return s.DB.Table("conversations").
+		Where("id = ?", conversationID).
+		Updates(map[string]any{
+			"last_activity": now.Format(time.RFC3339),
+			"updated_at":    now,
+		}).Error
+}
+
+func (s RAGService) lookupAssistantUserID() (uuid.UUID, error) {
+	var assistant models.User
+	if err := s.DB.Select("id").Where("email = ?", assistantUserEmail).First(&assistant).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			hash, hashErr := security.HashPassword("Assistant123!")
+			if hashErr != nil {
+				return uuid.Nil, hashErr
+			}
+			assistant = models.User{
+				Name:         "MediGuide AI",
+				Email:        assistantUserEmail,
+				Phone:        "+256700000003",
+				PasswordHash: hash,
+				IsActive:     true,
+				Verified:     true,
+				Status:       "active",
+			}
+			if createErr := s.DB.Create(&assistant).Error; createErr != nil {
+				return uuid.Nil, createErr
+			}
+			return assistant.ID, nil
+		}
+		return uuid.Nil, err
+	}
+	return assistant.ID, nil
+}
+
+func (s RAGService) findOrCreateLegacyConversation(userID, assistantID uuid.UUID) (uuid.UUID, error) {
+	var row struct {
+		ID uuid.UUID `gorm:"column:id"`
+	}
+	err := s.DB.Table("conversations").
+		Select("id").
+		Where(
+			"(participant1_user_id = ? AND participant2_user_id = ?) OR (participant1_user_id = ? AND participant2_user_id = ?)",
+			userID,
+			assistantID,
+			assistantID,
+			userID,
+		).
+		Where("deleted_at IS NULL").
+		Take(&row).Error
+	if err == nil {
+		return row.ID, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, err
+	}
+
+	createRow := map[string]any{
+		"id":                   uuid.New(),
+		"participant1_user_id": userID,
+		"participant2_user_id": assistantID,
+		"last_activity":        time.Now().UTC().Format(time.RFC3339),
+		"created_at":           time.Now().UTC(),
+		"updated_at":           time.Now().UTC(),
+	}
+	if err := s.DB.Table("conversations").Create(&createRow).Error; err != nil {
+		return uuid.Nil, err
+	}
+	return createRow["id"].(uuid.UUID), nil
 }
 
 // truncate shortens s to at most n Unicode code points (runes), not bytes,
