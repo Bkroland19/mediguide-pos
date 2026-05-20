@@ -1137,6 +1137,13 @@ class BackendService extends GetxService {
             normalized['participant2'] ??
             normalized['participant2_user_id'] ??
             '';
+        normalized['last_message_id'] = normalized['last_message_id'] ?? '';
+        normalized['last_message'] = normalized['last_message'] ?? '';
+        normalized['last_activity'] =
+            normalized['last_activity'] ??
+            normalized['updated_at'] ??
+            normalized['updated'] ??
+            '';
         _setRelatedUserExpand(
           normalized,
           fieldName: 'participant1',
@@ -1146,6 +1153,13 @@ class BackendService extends GetxService {
           normalized,
           fieldName: 'participant2',
           prefix: 'participant2',
+        );
+        _setSelfRelationExpand(
+          normalized,
+          fieldName: 'last_message',
+          collectionName: 'messages',
+          idKey: 'last_message_id',
+          displayKey: 'last_message',
         );
         break;
       case 'messages':

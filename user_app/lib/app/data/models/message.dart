@@ -1,6 +1,7 @@
 import 'backend_record.dart';
 import 'base_model.dart';
 import 'user.dart';
+import 'dart:convert';
 
 /// Enum for message types matching backend collection schema
 enum MessageType {
@@ -86,10 +87,7 @@ class Message extends BaseModel {
   late final String content = get<String>("content", "");
   late final String messageTypeString = get<String>("message_type", "text");
   late final String replyTo = get<String>("reply_to", "");
-  late final List<String> attachments = get<List<String>>(
-    "attachments",
-    <String>[],
-  );
+  late final List<String> attachments = _getStringListField("attachments");
   late final Map<String, dynamic> readBy = _getMapField("read_by");
   late final Map<String, dynamic> reactions = _getMapField("reactions");
   late final bool isEdited = get<bool>("is_edited", false);
@@ -132,6 +130,15 @@ class Message extends BaseModel {
       } else if (value is Map) {
         // Convert Map to Map<String, dynamic>
         return Map<String, dynamic>.from(value);
+      } else if (value is String && value.trim().startsWith('{')) {
+        final decoded = jsonDecode(value);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        return <String, dynamic>{};
       } else if (value is String && value.isEmpty) {
         return <String, dynamic>{};
       } else {
@@ -141,6 +148,30 @@ class Message extends BaseModel {
     } catch (e) {
       // If there's any casting error, return empty map
       return <String, dynamic>{};
+    }
+  }
+
+  List<String> _getStringListField(String fieldName) {
+    try {
+      final value = data[fieldName];
+      if (value == null) return <String>[];
+      if (value is List<String>) {
+        return value;
+      }
+      if (value is List) {
+        return value.map((entry) => entry.toString()).toList(growable: false);
+      }
+      if (value is String && value.trim().startsWith('[')) {
+        final decoded = jsonDecode(value);
+        if (decoded is List) {
+          return decoded
+              .map((entry) => entry.toString())
+              .toList(growable: false);
+        }
+      }
+      return <String>[];
+    } catch (_) {
+      return <String>[];
     }
   }
 

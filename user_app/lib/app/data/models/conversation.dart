@@ -55,6 +55,7 @@ class Conversation extends BaseModel {
   // Direct properties - late final for performance
   late final String participant1 = get<String>("participant1", "");
   late final String participant2 = get<String>("participant2", "");
+  late final String lastMessageId = get<String>("last_message_id", "");
   late final String lastMessage = get<String>("last_message", "");
   late final String lastActivity = get<String>("last_activity", "");
 
@@ -111,9 +112,15 @@ class Conversation extends BaseModel {
   /// Get conversation avatar for the current user (other participant's avatar)
   String getAvatarUrl(String currentUserId, String baseUrl) {
     final otherParticipant = getOtherParticipant(currentUserId);
-    if (otherParticipant?.get<String>('avatar', '').isNotEmpty == true) {
-      final avatar = otherParticipant!.get<String>('avatar', '');
-      return '$baseUrl/api/files/${otherParticipant.collectionName}/${otherParticipant.id}/$avatar';
+    final avatar = otherParticipant?.get<String>('avatar', '') ?? '';
+    if (avatar.isNotEmpty) {
+      if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+        return avatar;
+      }
+      if (avatar.startsWith('/')) {
+        return '$baseUrl$avatar';
+      }
+      return '$baseUrl/$avatar';
     }
     return '';
   }
