@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8090, validation_alias=AliasChoices("API_PORT", "HTTP_PORT"))
+    grpc_host: str = Field(default="0.0.0.0", validation_alias=AliasChoices("GRPC_HOST"))
+    grpc_port: int = Field(default=50051, validation_alias=AliasChoices("GRPC_PORT", "WORKER_GRPC_PORT"))
 
     # Comma-separated list of allowed CORS origins. Use "*" only for local dev.
     allowed_origins: str = Field(

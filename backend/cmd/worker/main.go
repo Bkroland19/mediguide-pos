@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 
+	"mediguide/internal/aiworkergrpc"
 	"mediguide/internal/config"
 	"mediguide/internal/db"
 	"mediguide/internal/models"
@@ -22,13 +22,12 @@ func main() {
 		log.Fatal().Err(err).Msg("db connect failed")
 	}
 
-	baseURL := strings.TrimSpace(cfg.AIWorkerWebhook)
-	if baseURL == "" {
-		log.Fatal().Msg("AI worker URL is not configured")
+	grpcAddr := strings.TrimSpace(cfg.AIWorkerGRPCAddr)
+	if grpcAddr == "" {
+		log.Fatal().Msg("AI worker gRPC address is not configured")
 	}
 
-	client := &http.Client{Timeout: 15 * time.Minute}
-	log.Info().Str("worker_url", baseURL).Msg("ingestion dispatcher started")
+	log.Info().Str("worker_grpc_addr", grpcAddr).Msg("ingestion dispatcher started")
 
 	for {
 		job, claimed, err := claimQueuedJob(database)
@@ -43,7 +42,7 @@ func main() {
 		}
 
 		log.Info().Str("job_id", job.ID.String()).Msg("dispatching ingestion job to ai-worker")
-		if err := dispatchIngestionJob(client, baseURL, job.ID.String()); err != nil {
+		if err := dispatchIngestionJob(grpcAddr, cfg.AIWorkerSecret, job.ID.String()); err != nil {
 			log.Error().Err(err).Str("job_id", job.ID.String()).Msg("ai-worker dispatch failed")
 			markJobFailed(database, job.ID.String(), err.Error())
 		}
@@ -74,25 +73,25 @@ func claimQueuedJob(database *gorm.DB) (*models.IngestionJob, bool, error) {
 	return &job, true, nil
 }
 
-func dispatchIngestionJob(client *http.Client, baseURL, jobID string) error {
-	url := strings.TrimRight(baseURL, "/")
-	if !strings.HasSuffix(url, "/api/v1/ingestion/jobs/"+jobID+"/run") {
-		url += "/api/v1/ingestion/jobs/" + jobID + "/run"
-	}
+func dispatchIngestionJob(grpcAddr, secret, jobID string) error {
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer dialCancel()
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	client, err := aiworkergrpc.NewClient(dialCtx, grpcAddr, secret)
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	defer client.Close()
+
+	callCtx, callCancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer callCancel()
+
+	resp, err := client.RunIngestionJob(callCtx, jobID)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("AI worker request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	if strings.TrimSpace(resp.Status) == "" {
+		return fmt.Errorf("AI worker returned an empty status for job %s", jobID)
 	}
 	return nil
 }

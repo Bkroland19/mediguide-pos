@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package mediguide.aiworker.v1;
+
+option go_package = "mediguide/internal/aiworkerpb;aiworkerpb";
+
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message AskRAGRequest {
+  string question = 1;
+  string language = 2;
+  string country = 3;
+  string program_area = 4;
+  string history_summary = 5;
+  repeated ChatMessage recent_messages = 6;
+  int32 top_k = 7;
+}
+
+message Citation {
+  string chunk_id = 1;
+  string title = 2;
+  string country = 3;
+  string source_name = 4;
+  string source_version = 5;
+  int32 page_start = 6;
+  int32 page_end = 7;
+  float similarity = 8;
+}
+
+message RetrievedChunk {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  int32 page_start = 4;
+  int32 page_end = 5;
+  string language = 6;
+  string program_area = 7;
+  string country = 8;
+  string source_name = 9;
+  string source_version = 10;
+  float similarity = 11;
+}
+
+message Safety {
+  bool grounded = 1;
+  string provider = 2;
+  string reason = 3;
+  string standalone_question = 4;
+  string generation_error = 5;
+}
+
+message AskRAGResponse {
+  string answer = 1;
+  repeated Citation citations = 2;
+  repeated RetrievedChunk retrieved = 3;
+  Safety safety = 4;
+}
+
+message RunIngestionJobRequest {
+  string job_id = 1;
+}
+
+message RunIngestionJobResponse {
+  string job_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+service AIWorkerService {
+  rpc AskRAG(AskRAGRequest) returns (AskRAGResponse);
+  rpc RunIngestionJob(RunIngestionJobRequest) returns (RunIngestionJobResponse);
+}

@@ -1,16 +1,16 @@
 package services
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"mediguide/internal/aiworkergrpc"
+	"mediguide/internal/aiworkerpb"
 	"mediguide/internal/config"
 	"mediguide/internal/models"
 	"mediguide/internal/security"
@@ -21,10 +21,9 @@ import (
 )
 
 type RAGService struct {
-	DB         *gorm.DB
-	Search     SearchService
-	Cfg        config.Config
-	HTTPClient *http.Client
+	DB     *gorm.DB
+	Search SearchService
+	Cfg    config.Config
 }
 
 type AskRequest struct {
@@ -106,72 +105,67 @@ func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskRespons
 }
 
 func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
-	baseURL := strings.TrimSpace(s.Cfg.AIWorkerWebhook)
-	if baseURL == "" {
-		return nil, fmt.Errorf("AI worker URL is not configured")
-	}
-	url := strings.TrimRight(baseURL, "/")
-	if !strings.HasSuffix(url, "/api/v1/rag/ask") {
-		url += "/api/v1/rag/ask"
-	}
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer dialCancel()
 
-	payload, err := json.Marshal(req)
+	client, err := aiworkergrpc.NewClient(dialCtx, s.Cfg.AIWorkerGRPCAddr, s.Cfg.AIWorkerSecret)
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
-	httpClient := s.HTTPClient
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 45 * time.Second}
-	}
+	callCtx, callCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer callCancel()
 
-	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	workerResp, err := client.AskRAG(
+		callCtx,
+		&aiworkerpb.AskRAGRequest{
+			Question:       req.Question,
+			Language:       req.Language,
+			Country:        req.Country,
+			ProgramArea:    req.ProgramArea,
+			HistorySummary: req.HistorySummary,
+			RecentMessages: toGRPCChatMessages(req.RecentMessages),
+		},
+	)
 	if err != nil {
-		return nil, err
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	if secret := strings.TrimSpace(s.Cfg.AIWorkerSecret); secret != "" {
-		httpReq.Header.Set("X-Worker-Secret", secret)
-	}
-
-	resp, err := httpClient.Do(httpReq)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("AI worker request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
-	}
-
-	var workerResp struct {
-		Answer    string `json:"answer"`
-		Citations []struct {
-			ChunkID       string `json:"chunk_id"`
-			Title         string `json:"title"`
-			SourceName    string `json:"source_name"`
-			SourceVersion string `json:"source_version"`
-			PageStart     *int   `json:"page_start"`
-			PageEnd       *int   `json:"page_end"`
-		} `json:"citations"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&workerResp); err != nil {
 		return nil, err
 	}
 
 	citations := make([]Citation, 0, len(workerResp.Citations))
 	for _, c := range workerResp.Citations {
 		citations = append(citations, Citation{
-			ChunkID:       c.ChunkID,
+			ChunkID:       c.ChunkId,
 			Title:         c.Title,
 			SourceName:    c.SourceName,
 			SourceVersion: c.SourceVersion,
-			PageStart:     c.PageStart,
-			PageEnd:       c.PageEnd,
+			PageStart:     protoPage(c.PageStart),
+			PageEnd:       protoPage(c.PageEnd),
 		})
 	}
 	return &AskResponse{Answer: workerResp.Answer, Citations: citations}, nil
+}
+
+func protoPage(value int32) *int {
+	if value <= 0 {
+		return nil
+	}
+	page := int(value)
+	return &page
+}
+
+func toGRPCChatMessages(messages []workerChatMessage) []*aiworkerpb.ChatMessage {
+	if len(messages) == 0 {
+		return nil
+	}
+	out := make([]*aiworkerpb.ChatMessage, 0, len(messages))
+	for _, message := range messages {
+		out = append(out, &aiworkerpb.ChatMessage{
+			Role:    message.Role,
+			Content: message.Content,
+		})
+	}
+	return out
 }
 
 func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {

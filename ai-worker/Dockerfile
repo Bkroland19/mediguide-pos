@@ -22,9 +22,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
 COPY app ./app
+COPY mediguide ./mediguide
 COPY notebooks ./notebooks
 COPY scripts ./scripts
 
 EXPOSE 8090
+EXPOSE 50051
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8090"]

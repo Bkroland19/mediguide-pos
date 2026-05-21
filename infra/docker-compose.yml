@@ -63,6 +63,7 @@ services:
       S3_USE_SSL: "false"
       AI_RAG_PROVIDER: worker
       AI_WORKER_URL: http://ai-worker:8090
+      AI_WORKER_GRPC_ADDR: ai-worker:50051
       DEFAULT_ADMIN_EMAIL: admin@mediguide.local
       DEFAULT_ADMIN_PASSWORD: Admin123!
     ports:
@@ -83,6 +84,7 @@ services:
       APP_NAME: mediguide-ai-worker
       APP_ENV: development
       HTTP_PORT: 8090
+      WORKER_GRPC_PORT: 50051
       DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: minio:9000
@@ -97,11 +99,12 @@ services:
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
       LLM_PROVIDER: ollama
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
     ports:
       - "8090:8090"
+      - "50051:50051"
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,8 +112,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      ollama:
+        condition: service_healthy
+      ollama-pull-models:
+        condition: service_completed_successfully
 
   ai-worker-loop:
     build:
@@ -120,6 +125,7 @@ services:
     environment:
       APP_NAME: mediguide-ai-worker
       APP_ENV: development
+      WORKER_GRPC_PORT: 50051
       DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: minio:9000
@@ -134,9 +140,9 @@ services:
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
       LLM_PROVIDER: ollama
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
     depends_on:
       postgres:
         condition: service_healthy
@@ -144,16 +150,39 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      ollama:
+        condition: service_healthy
+      ollama-pull-models:
+        condition: service_completed_successfully
 
   ollama:
-    profiles: ["docker-ollama"]
     image: ollama/ollama:latest
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  ollama-pull-models:
+    image: ollama/ollama:latest
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      ollama pull "$$OLLAMA_MODEL" &&
+      ollama pull "$$OLLAMA_EMBEDDING_MODEL"
 
 volumes:
   postgres_data:

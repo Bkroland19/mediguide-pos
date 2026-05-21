@@ -6,6 +6,7 @@ from app.api.routes import router
 from app.core.config import get_settings
 from app.core.db import get_pool
 from app.core.logging import configure_logging
+from app.grpc_server import build_grpc_server
 
 configure_logging()
 settings = get_settings()
@@ -15,7 +16,10 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Initialise the connection pool at startup so all requests share one pool.
     get_pool()
+    grpc_server = build_grpc_server()
+    grpc_server.start()
     yield
+    grpc_server.stop(grace=5)
     # Gracefully close the pool on shutdown.
     from app.core import db as _db
     if _db._pool is not None:
@@ -32,4 +36,3 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Worker-Secret"],
 )
 app.include_router(router)
-

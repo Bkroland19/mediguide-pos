@@ -72,7 +72,7 @@ func New(cfg config.Config) (*App, error) {
 	authSvc := services.AuthService{DB: database, Cfg: cfg}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store}
 	searchSvc := services.SearchService{DB: database}
-	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg, HTTPClient: nil}
+	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}

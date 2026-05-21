@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: run build test tidy migrate-up migrate-down migrate-status seed docker-up docker-down swagger
+.PHONY: run build test tidy migrate-up migrate-down migrate-status seed docker-up docker-down swagger proto
 
 run:
 	go run ./cmd/api
@@ -33,6 +33,9 @@ seed:
 
 swagger:
 	swag init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes go,json,yaml --generatedTime=false --parseInternal
+
+proto:
+	sh ../scripts/generate_proto.sh
 
 docker-up:
 	docker compose up --build
