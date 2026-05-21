@@ -170,19 +170,23 @@ services:
       retries: 20
 
   ollama-pull-models:
-    image: ollama/ollama:latest
+    image: curlimages/curl:8.14.1
     restart: "no"
     environment:
-      OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
     depends_on:
       ollama:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
-    command: >
-      ollama pull "$$OLLAMA_MODEL" &&
-      ollama pull "$$OLLAMA_EMBEDDING_MODEL"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        curl -fsS -X POST http://ollama:11434/api/pull \
+          -H 'Content-Type: application/json' \
+          -d "{\"name\":\"$$OLLAMA_MODEL\",\"stream\":false}"
+        curl -fsS -X POST http://ollama:11434/api/pull \
+          -H 'Content-Type: application/json' \
+          -d "{\"name\":\"$$OLLAMA_EMBEDDING_MODEL\",\"stream\":false}"
 
 volumes:
   postgres_data:
