@@ -82,8 +82,22 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 
 	res.SessionID = session.ID.String()
 	cjson, _ := json.Marshal(res.Citations)
-	s.DB.Create(&models.ChatMessage{SessionID: session.ID, Role: "user", Content: req.Question})
-	s.DB.Create(&models.ChatMessage{SessionID: session.ID, Role: "assistant", Content: res.Answer, CitationsJSON: string(cjson)})
+	if err := s.DB.Create(&models.ChatMessage{
+		SessionID:     session.ID,
+		Role:          "user",
+		Content:       req.Question,
+		CitationsJSON: "[]",
+	}).Error; err != nil {
+		log.Warn().Err(err).Str("session_id", session.ID.String()).Msg("failed to persist user chat message")
+	}
+	if err := s.DB.Create(&models.ChatMessage{
+		SessionID:     session.ID,
+		Role:          "assistant",
+		Content:       res.Answer,
+		CitationsJSON: string(cjson),
+	}).Error; err != nil {
+		log.Warn().Err(err).Str("session_id", session.ID.String()).Msg("failed to persist assistant chat message")
+	}
 	if userID != nil && *userID != uuid.Nil {
 		if err := s.mirrorToLegacyConversation(*userID, req.Question, res.Answer); err != nil {
 			log.Warn().Err(err).Str("user_id", userID.String()).Msg("failed to mirror RAG exchange to legacy conversations")
@@ -105,7 +119,9 @@ func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskRespons
 }
 
 func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
-	dialCtx, dialCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	timeout := time.Duration(s.workerTimeoutSeconds()) * time.Second
+
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), timeout)
 	defer dialCancel()
 
 	client, err := aiworkergrpc.NewClient(dialCtx, s.Cfg.AIWorkerGRPCAddr, s.Cfg.AIWorkerSecret)
@@ -114,7 +130,7 @@ func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
 	}
 	defer client.Close()
 
-	callCtx, callCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	callCtx, callCancel := context.WithTimeout(context.Background(), timeout)
 	defer callCancel()
 
 	workerResp, err := client.AskRAG(
@@ -144,6 +160,13 @@ func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
 		})
 	}
 	return &AskResponse{Answer: workerResp.Answer, Citations: citations}, nil
+}
+
+func (s RAGService) workerTimeoutSeconds() int {
+	if s.Cfg.AIWorkerTimeoutSecs > 0 {
+		return s.Cfg.AIWorkerTimeoutSecs
+	}
+	return 120
 }
 
 func protoPage(value int32) *int {

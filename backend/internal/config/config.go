@@ -27,6 +27,7 @@ type Config struct {
 	AIRAGProvider        string
 	AIWorkerWebhook      string
 	AIWorkerGRPCAddr     string
+	AIWorkerTimeoutSecs  int
 	// Shared secret sent as X-Worker-Secret to the ai-worker API.
 	AIWorkerSecret string
 	// Comma-separated list of allowed CORS origins (use "*" for local dev only).
@@ -55,6 +56,7 @@ func Load() Config {
 		AIRAGProvider:        get("AI_RAG_PROVIDER", "local"),
 		AIWorkerWebhook:      getAny([]string{"AI_WORKER_WEBHOOK_URL", "AI_WORKER_URL"}, ""),
 		AIWorkerGRPCAddr:     get("AI_WORKER_GRPC_ADDR", ""),
+		AIWorkerTimeoutSecs:  getInt("AI_WORKER_TIMEOUT_SECONDS", 120),
 		AIWorkerSecret:       get("AI_WORKER_SECRET", ""),
 		AllowedOrigins:       get("ALLOWED_ORIGINS", "http://localhost:3000"),
 	}

@@ -29,6 +29,12 @@ FOLLOW_UP_PATTERN = re.compile(
     re.I,
 )
 PRONOUN_PATTERN = re.compile(r"\b(it|that|those|they|them|this|these|he|she|there|the other)\b", re.I)
+PLAN_REFERENCE_PATTERN = re.compile(r"\bplan\s*[abc]\b", re.I)
+PEDIATRIC_PATTERN = re.compile(
+    r"\b(child|children|under\s*5|under-five|infant|infants|baby|babies|pediatric|paediatric)\b",
+    re.I,
+)
+ADULT_PATTERN = re.compile(r"\b(adult|adults|older child|older children)\b", re.I)
 WORD_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{2,}")
 SOURCE_NUMBER_PATTERN = re.compile(r"\[(\d+)\]")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+|\n+")
@@ -78,25 +84,14 @@ class RagService:
             }
 
         q_emb = self.embedder.embed([standalone_question])[0]
-        vector_hits = self.search.vector_search(
-            q_emb,
+        hits = self._retrieve_hits(
+            standalone_question=standalone_question,
+            query_embedding=q_emb,
             top_k=top_k,
             program_area=program_area,
             language=language,
             country=country,
-            national_first=self.settings.rag_national_first,
         )
-        vector_hits = [dict(hit, retrieval_method="vector") for hit in vector_hits]
-        keyword_hits = self.search.keyword_search(
-            standalone_question,
-            top_k=max(3, top_k // 2),
-            program_area=program_area,
-            language=language,
-            country=country,
-            national_first=self.settings.rag_national_first,
-        )
-        keyword_hits = [dict(hit, retrieval_method="keyword") for hit in keyword_hits]
-        hits = self._merge_hits(vector_hits, keyword_hits, top_k=top_k)
         hits = self._filter_hits(hits, standalone_question)
         if hits and not self._has_sufficient_grounding(standalone_question, hits):
             return {
@@ -167,6 +162,66 @@ class RagService:
                 "generation_error": generation_error,
             },
         }
+
+    def _retrieve_hits(
+        self,
+        *,
+        standalone_question: str,
+        query_embedding: list[float],
+        top_k: int,
+        program_area: str | None,
+        language: str,
+        country: str | None,
+    ) -> list[dict]:
+        hits = self._search_hits(
+            standalone_question=standalone_question,
+            query_embedding=query_embedding,
+            top_k=top_k,
+            program_area=program_area,
+            language=language,
+            country=country,
+        )
+        if hits or not program_area:
+            return hits
+
+        return self._search_hits(
+            standalone_question=standalone_question,
+            query_embedding=query_embedding,
+            top_k=top_k,
+            program_area=None,
+            language=language,
+            country=country,
+        )
+
+    def _search_hits(
+        self,
+        *,
+        standalone_question: str,
+        query_embedding: list[float],
+        top_k: int,
+        program_area: str | None,
+        language: str,
+        country: str | None,
+    ) -> list[dict]:
+        vector_hits = self.search.vector_search(
+            query_embedding,
+            top_k=top_k,
+            program_area=program_area,
+            language=language,
+            country=country,
+            national_first=self.settings.rag_national_first,
+        )
+        vector_hits = [dict(hit, retrieval_method="vector") for hit in vector_hits]
+        keyword_hits = self.search.keyword_search(
+            standalone_question,
+            top_k=max(3, top_k // 2),
+            program_area=program_area,
+            language=language,
+            country=country,
+            national_first=self.settings.rag_national_first,
+        )
+        keyword_hits = [dict(hit, retrieval_method="keyword") for hit in keyword_hits]
+        return self._merge_hits(vector_hits, keyword_hits, top_k=top_k)
 
     def _merge_hits(self, vector_hits: list[dict], keyword_hits: list[dict], top_k: int) -> list[dict]:
         """Reciprocal Rank Fusion (RRF) — merges ranked lists without relying on
@@ -300,8 +355,13 @@ class RagService:
     def _rank_extractive_passages(self, question: str, hits: list[dict]) -> list[tuple[int, str]]:
         ranked: list[tuple[int, int, str]] = []
         question_terms = set(self._important_terms(question))
+        profile = self._question_profile(question)
         for idx, hit in enumerate(hits[:3], start=1):
+            hit_context = " ".join(((hit.get("title") or "") + " " + (hit.get("content") or "")).split())
+            if self._is_age_mismatch_hit(hit_context, profile):
+                continue
             content = " ".join((hit.get("content") or "").split())
+            title = " ".join((hit.get("title") or "").split())
             if not content:
                 continue
             for segment in SENTENCE_SPLIT_PATTERN.split(content):
@@ -309,7 +369,28 @@ class RagService:
                 if len(passage) < 30:
                     continue
                 overlap = len(question_terms & set(self._important_terms(passage)))
-                score = overlap * 10 + min(len(passage), 240) // 80
+                title_overlap = len(question_terms & set(self._important_terms(title)))
+                score = overlap * 10 + title_overlap * 4 + max(0, 4 - idx) * 2
+                lowered_passage = passage.lower()
+                if profile["signs"]:
+                    if any(term in lowered_passage for term in (
+                        "sunken eyes",
+                        "letharg",
+                        "drinks poorly",
+                        "unable to drink",
+                        "skin",
+                        "restless",
+                        "irritable",
+                    )):
+                        score += 6
+                    if "rehydration" in lowered_passage and "dehydration" not in lowered_passage:
+                        score -= 6
+                if profile["dosing"] or profile["ors"]:
+                    if "ors" in lowered_passage:
+                        score += 4
+                    if any(token in lowered_passage for token in ("ml", "packet", "packets", "4-hour", "4 hour", "75 ml")):
+                        score += 5
+                score += min(len(passage), 240) // 80
                 ranked.append((score, idx, passage[:280] + ("..." if len(passage) > 280 else "")))
         ranked.sort(key=lambda item: (item[0], -item[1]), reverse=True)
 
@@ -429,6 +510,8 @@ class RagService:
             return True
         if FOLLOW_UP_PATTERN.search(normalized):
             return False
+        if PLAN_REFERENCE_PATTERN.search(normalized):
+            return False
         return PRONOUN_PATTERN.search(normalized) is None
 
     def _is_out_of_scope(self, question: str, standalone_question: str, recent_messages: list[dict]) -> bool:
@@ -437,9 +520,10 @@ class RagService:
         return MEDICAL_HINT_PATTERN.search(standalone_question) is None
 
     def _filter_hits(self, hits: list[dict], question: str) -> list[dict]:
+        profile = self._question_profile(question)
         filtered: list[dict] = []
         for hit in hits:
-            if self._is_hit_relevant(hit, question):
+            if self._is_hit_relevant(hit, question, profile):
                 filtered.append(hit)
         return filtered
 
@@ -470,19 +554,48 @@ class RagService:
             return True
         return False
 
-    def _is_hit_relevant(self, hit: dict, question: str) -> bool:
-        content = " ".join(((hit.get("title") or "") + " " + (hit.get("content") or "")).split())
+    def _is_hit_relevant(self, hit: dict, question: str, profile: dict | None = None) -> bool:
+        profile = profile or self._question_profile(question)
+        title = " ".join((hit.get("title") or "").split())
+        content = " ".join((title + " " + (hit.get("content") or "")).split())
         if not content:
+            return False
+
+        if self._is_age_mismatch_hit(content, profile):
             return False
 
         vector_similarity = hit.get("vector_similarity")
         keyword_similarity = hit.get("keyword_similarity")
         overlap = self._term_overlap(question, content)
+        title_overlap = self._term_overlap(question, title)
         if vector_similarity is not None and float(vector_similarity) >= self.settings.rag_min_similarity:
+            if overlap == 0 and title_overlap == 0:
+                return False
             return True
         if keyword_similarity is not None and float(keyword_similarity) > 0:
             return True
-        return overlap >= 2
+        return overlap >= 2 or title_overlap >= 1
+
+    def _question_profile(self, question: str) -> dict[str, bool]:
+        normalized = " ".join(question.split())
+        lowered = normalized.lower()
+        return {
+            "pediatric": bool(PEDIATRIC_PATTERN.search(normalized)),
+            "adult": bool(ADULT_PATTERN.search(normalized)),
+            "under_five": "under 5" in lowered or "under-five" in lowered,
+            "signs": any(token in lowered for token in (" signs", "signs ", "symptom", "feature")),
+            "dosing": "how much" in lowered or "dose" in lowered or "dosage" in lowered,
+            "ors": "ors" in lowered or "oral rehydration" in lowered,
+        }
+
+    def _is_adult_only_hit(self, content: str) -> bool:
+        return bool(ADULT_PATTERN.search(content)) and not PEDIATRIC_PATTERN.search(content)
+
+    def _is_age_mismatch_hit(self, content: str, profile: dict[str, bool]) -> bool:
+        lowered = content.lower()
+        if profile["under_five"] and ("older children" in lowered or "adults" in lowered):
+            return True
+        return profile["pediatric"] and self._is_adult_only_hit(content)
 
     def _term_overlap(self, left: str, right: str) -> int:
         left_terms = set(self._important_terms(left))

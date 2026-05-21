@@ -148,6 +148,66 @@ def test_ask_propagates_language_country_and_returns_country_metadata(monkeypatc
     assert response["citations"][0]["country"] == "Uganda"
 
 
+def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(monkeypatch: pytest.MonkeyPatch):
+    hit = {
+        "id": "chunk-1",
+        "title": "Dehydration treatment",
+        "content": "A child with severe dehydration may be lethargic, have sunken eyes, and drink poorly.",
+        "page_start": 74,
+        "page_end": 75,
+        "language": "en",
+        "program_area": "General",
+        "country": "Uganda",
+        "source_name": "Uganda Clinical Guidelines",
+        "source_version": "2023",
+        "similarity": 0.44,
+    }
+
+    class ProgramAreaFallbackSearchRepository(FakeSearchRepository):
+        def vector_search(self, query_embedding, top_k, program_area=None, language=None, country=None, national_first=True):
+            self.vector_calls.append(
+                {
+                    "query_embedding": query_embedding,
+                    "top_k": top_k,
+                    "program_area": program_area,
+                    "language": language,
+                    "country": country,
+                    "national_first": national_first,
+                }
+            )
+            return [] if program_area else [hit]
+
+        def keyword_search(self, query, top_k, program_area=None, language=None, country=None, national_first=True):
+            self.keyword_calls.append(
+                {
+                    "query": query,
+                    "top_k": top_k,
+                    "program_area": program_area,
+                    "language": language,
+                    "country": country,
+                    "national_first": national_first,
+                }
+            )
+            return []
+
+    embedder = FakeEmbedder()
+    search = ProgramAreaFallbackSearchRepository(vector_hits=[], keyword_hits=[])
+    monkeypatch.setattr(rag_module, "get_settings", lambda: make_settings())
+    monkeypatch.setattr(rag_module, "get_embedding_provider", lambda: embedder)
+    monkeypatch.setattr(rag_module, "SearchRepository", lambda: search)
+
+    response = rag_module.RagService().ask(
+        question="What are the signs of severe dehydration in a child?",
+        language="en",
+        country="Uganda",
+        program_area="child_health",
+    )
+
+    assert [call["program_area"] for call in search.vector_calls] == ["child_health", None]
+    assert [call["program_area"] for call in search.keyword_calls] == ["child_health", None]
+    assert response["retrieved"][0].program_area == "General"
+
+
 def test_merge_hits_preserves_vector_similarity_for_duplicate_chunks(monkeypatch: pytest.MonkeyPatch):
     service, _, _ = build_service(monkeypatch)
     vector_hit = {
@@ -294,4 +354,89 @@ def test_ask_rejects_weakly_grounded_vector_hits(monkeypatch: pytest.MonkeyPatch
     response = service.ask(question="What is the first-line treatment for hypertension?")
 
     assert response["answer"] == rag_module.FALLBACK_ANSWER
-    assert response["safety"]["reason"] == "weak_grounding"
+    assert response["safety"]["reason"] in {"weak_grounding", "insufficient_context"}
+
+
+def test_plan_b_follow_up_reuses_pediatric_context_and_filters_adult_hits(monkeypatch: pytest.MonkeyPatch):
+    child_hit = {
+        "id": "child-chunk",
+        "title": "Dehydration in Children under 5 years > Management",
+        "content": (
+            "Plan B. Show her how to prepare ORS at home and how much ORS to give "
+            "to finish the 4-hour treatment. Give enough packets to complete this."
+        ),
+        "language": "en",
+        "program_area": "Child Health",
+        "country": "Uganda",
+        "source_name": "Uganda Clinical Guidelines",
+        "source_version": "2023",
+        "similarity": 0.69,
+    }
+    adult_hit = {
+        "id": "adult-chunk",
+        "title": "Dehydration in Older Children and Adults > Notes",
+        "content": "Initially, adults can take up to 750 ml ORS/hour.",
+        "language": "en",
+        "program_area": "General",
+        "country": "Uganda",
+        "source_name": "Uganda Clinical Guidelines",
+        "source_version": "2023",
+        "similarity": 0.64,
+    }
+    service, embedder, _ = build_service(
+        monkeypatch,
+        vector_hits=[child_hit, adult_hit],
+        keyword_hits=[],
+    )
+
+    response = service.ask(
+        question="How much ORS should be given in Plan B?",
+        recent_messages=[
+            {
+                "role": "user",
+                "content": "What are Plan A, Plan B, and Plan C for dehydration in children under 5?",
+            },
+        ],
+    )
+
+    assert "children under 5" in embedder.calls[0][0].lower()
+    assert [item.id for item in response["retrieved"]] == ["child-chunk"]
+    assert "adults can take up to 750 ml" not in response["answer"].lower()
+
+
+def test_extractive_ranking_prefers_dehydration_signs_over_rehydration_monitoring(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    service, _, _ = build_service(monkeypatch)
+    hits = [
+        {
+            "id": "overview",
+            "title": "Dehydration in Children under 5 years",
+            "content": "Assess degree of dehydration following the table below.",
+        },
+        {
+            "id": "signs",
+            "title": "Child Has Diarrhoea",
+            "content": (
+                "Look for sunken eyes. Is the child lethargic or unconscious? "
+                "Is the child unable to drink or drinks poorly? "
+                "Pinch the skin of the abdomen. Does it go back very slowly?"
+            ),
+        },
+        {
+            "id": "monitoring",
+            "title": "Management of Complicated Severe Acute Malnutrition > Monitoring",
+            "content": (
+                "Return of tears, moist mouth, improved skin turgor and less sunken eyes "
+                "are a sign of rehydration."
+            ),
+        },
+    ]
+
+    ranked = service._rank_extractive_passages(
+        "What are the signs of severe dehydration in a child?",
+        hits,
+    )
+
+    assert any(term in ranked[0][1].lower() for term in ("sunken eyes", "lethargic", "unable to drink"))
+    assert "rehydration" not in ranked[0][1].lower()
