@@ -246,3 +246,52 @@ def test_ask_rewrites_follow_up_questions_with_recent_context(monkeypatch: pytes
     assert "uncomplicated malaria in children" in standalone_question
     assert "Previous assistant answer:" in standalone_question
     assert embedder.calls[0][0] == standalone_question
+
+
+def test_ask_rejects_out_of_scope_question_before_retrieval(monkeypatch: pytest.MonkeyPatch):
+    service, embedder, search = build_service(
+        monkeypatch,
+        vector_hits=[
+            {
+                "id": "chunk-1",
+                "title": "Uganda location",
+                "content": "Kampala Road office, Uganda.",
+                "similarity": 0.8,
+            }
+        ],
+        keyword_hits=[],
+    )
+
+    response = service.ask(question="What is the capital of Uganda?")
+
+    assert response["answer"] == rag_module.FALLBACK_ANSWER
+    assert response["safety"]["reason"] == "out_of_scope"
+    assert response["retrieved"] == []
+    assert embedder.calls == []
+    assert search.vector_calls == []
+    assert search.keyword_calls == []
+
+
+def test_ask_rejects_weakly_grounded_vector_hits(monkeypatch: pytest.MonkeyPatch):
+    service, _, _ = build_service(
+        monkeypatch,
+        vector_hits=[
+            {
+                "id": "chunk-1",
+                "title": "General dehydration notes",
+                "content": "Use ORS and continue feeding during diarrhoea management.",
+                "language": "en",
+                "program_area": "General Medicine",
+                "country": "Uganda",
+                "source_name": "Ministry of Health Uganda",
+                "source_version": "2023",
+                "similarity": 0.38,
+            }
+        ],
+        keyword_hits=[],
+    )
+
+    response = service.ask(question="What is the first-line treatment for hypertension?")
+
+    assert response["answer"] == rag_module.FALLBACK_ANSWER
+    assert response["safety"]["reason"] == "weak_grounding"

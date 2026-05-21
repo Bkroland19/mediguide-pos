@@ -759,6 +759,8 @@ definitions:
     type: object
   services.AskRequest:
     properties:
+      country:
+        type: string
       language:
         type: string
       program_area:

@@ -32,6 +32,17 @@ PRONOUN_PATTERN = re.compile(r"\b(it|that|those|they|them|this|these|he|she|ther
 WORD_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{2,}")
 SOURCE_NUMBER_PATTERN = re.compile(r"\[(\d+)\]")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+|\n+")
+MEDICAL_HINT_PATTERN = re.compile(
+    r"\b("
+    r"adult|adults|age|airway|anaemia|antibiotic\w*|artemether|assessment|asthma|baby|bleeding|blood|breath\w*|"
+    r"care|child|children|clinic\w*|clinical|convulsion\w*|cough|danger|dehydrat\w*|diagnos\w*|diarrh\w*|disease\w*|dose|dosage|"
+    r"drug\w*|fever|fluid\w*|guideline\w*|heart|hospital|hydration|infection\w*|injur\w*|iv|labour|malaria|manage\w*|"
+    r"medicine\w*|monitor\w*|nutrition\w*|oedema|oral|ors|pain|patient\w*|pneumonia|pregnan\w*|pressure|protocol\w*|pulse|"
+    r"rash|referral|rehydrat\w*|respirat\w*|sam|seizure\w*|sepsis|severe|shock|sign\w*|stool|symptom\w*|temperature|"
+    r"therapy|treat\w*|triage|ulcer\w*|urine|vomit\w*|weight|wound\w*"
+    r")\b",
+    re.I,
+)
 
 
 class RagService:
@@ -54,6 +65,17 @@ class RagService:
         recent_messages = recent_messages or []
         conversation_summary = self._build_conversation_summary(history_summary, recent_messages)
         standalone_question = self._rewrite_question(question, conversation_summary, recent_messages)
+        if self._is_out_of_scope(question, standalone_question, recent_messages):
+            return {
+                "answer": FALLBACK_ANSWER,
+                "citations": [],
+                "retrieved": [],
+                "safety": {
+                    "grounded": False,
+                    "reason": "out_of_scope",
+                    "standalone_question": standalone_question,
+                },
+            }
 
         q_emb = self.embedder.embed([standalone_question])[0]
         vector_hits = self.search.vector_search(
@@ -76,6 +98,17 @@ class RagService:
         keyword_hits = [dict(hit, retrieval_method="keyword") for hit in keyword_hits]
         hits = self._merge_hits(vector_hits, keyword_hits, top_k=top_k)
         hits = self._filter_hits(hits, standalone_question)
+        if hits and not self._has_sufficient_grounding(standalone_question, hits):
+            return {
+                "answer": FALLBACK_ANSWER,
+                "citations": [],
+                "retrieved": [],
+                "safety": {
+                    "grounded": False,
+                    "reason": "weak_grounding",
+                    "standalone_question": standalone_question,
+                },
+            }
 
         if not hits:
             return {
@@ -398,12 +431,44 @@ class RagService:
             return False
         return PRONOUN_PATTERN.search(normalized) is None
 
+    def _is_out_of_scope(self, question: str, standalone_question: str, recent_messages: list[dict]) -> bool:
+        if recent_messages and not self._looks_standalone(question):
+            return False
+        return MEDICAL_HINT_PATTERN.search(standalone_question) is None
+
     def _filter_hits(self, hits: list[dict], question: str) -> list[dict]:
         filtered: list[dict] = []
         for hit in hits:
             if self._is_hit_relevant(hit, question):
                 filtered.append(hit)
         return filtered
+
+    def _has_sufficient_grounding(self, question: str, hits: list[dict]) -> bool:
+        query_terms = set(self._important_terms(question))
+        if not query_terms:
+            return False
+
+        top_hits = hits[:3]
+        combined = " ".join(
+            " ".join(((hit.get("title") or "") + " " + (hit.get("content") or "")).split())
+            for hit in top_hits
+        )
+        combined_terms = set(self._important_terms(combined))
+        overlap_terms = query_terms & combined_terms
+        overlap_ratio = len(overlap_terms) / max(len(query_terms), 1)
+        keyword_supported = any(float(hit.get("keyword_similarity") or 0) > 0 for hit in top_hits)
+        max_vector_similarity = max(
+            float(hit.get("vector_similarity") or hit.get("similarity") or 0)
+            for hit in top_hits
+        )
+
+        if keyword_supported and overlap_ratio >= 0.34:
+            return True
+        if len(overlap_terms) >= 2 and max_vector_similarity >= self.settings.rag_min_similarity:
+            return True
+        if len(query_terms) == 1 and (keyword_supported or max_vector_similarity >= 0.35):
+            return True
+        return False
 
     def _is_hit_relevant(self, hit: dict, question: str) -> bool:
         content = " ".join(((hit.get("title") or "") + " " + (hit.get("content") or "")).split())

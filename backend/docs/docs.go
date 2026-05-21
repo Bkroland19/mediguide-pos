@@ -3369,6 +3369,9 @@ const docTemplate = `{
         "services.AskRequest": {
             "type": "object",
             "properties": {
+                "country": {
+                    "type": "string"
+                },
                 "language": {
                     "type": "string"
                 },

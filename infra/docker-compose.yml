@@ -96,7 +96,7 @@ services:
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
-      LLM_PROVIDER: extractive
+      LLM_PROVIDER: ollama
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
@@ -133,7 +133,7 @@ services:
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
-      LLM_PROVIDER: extractive
+      LLM_PROVIDER: ollama
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_EMBEDDING_MODEL: mxbai-embed-large:latest
