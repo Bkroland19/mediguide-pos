@@ -155,5 +155,6 @@ def ask(
         language=request.language,
         program_area=request.program_area,
         top_k=request.top_k,
+        history_summary=request.history_summary,
+        recent_messages=[message.model_dump() for message in request.recent_messages],
     )
-

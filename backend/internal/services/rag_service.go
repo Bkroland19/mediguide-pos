@@ -34,6 +34,19 @@ type AskRequest struct {
 	SessionID   string `json:"session_id"`
 }
 
+type workerAskRequest struct {
+	Question       string              `json:"question"`
+	Language       string              `json:"language"`
+	ProgramArea    string              `json:"program_area"`
+	HistorySummary string              `json:"history_summary,omitempty"`
+	RecentMessages []workerChatMessage `json:"recent_messages,omitempty"`
+}
+
+type workerChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 type Citation struct {
 	ChunkID       string `json:"chunk_id"`
 	Title         string `json:"title"`
@@ -56,7 +69,12 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 		return nil, err
 	}
 
-	res, err := s.askWithConfiguredProvider(req)
+	workerReq, err := s.buildWorkerAskRequest(session.ID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := s.askWithConfiguredProvider(workerReq)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +91,7 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	return res, nil
 }
 
-func (s RAGService) askWithConfiguredProvider(req AskRequest) (*AskResponse, error) {
+func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskResponse, error) {
 	provider := strings.ToLower(strings.TrimSpace(s.Cfg.AIRAGProvider))
 	if provider == "worker" || provider == "ai-worker" {
 		if res, err := s.askWorker(req); err == nil {
@@ -85,7 +103,7 @@ func (s RAGService) askWithConfiguredProvider(req AskRequest) (*AskResponse, err
 	return s.askLocal(req)
 }
 
-func (s RAGService) askWorker(req AskRequest) (*AskResponse, error) {
+func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
 	baseURL := strings.TrimSpace(s.Cfg.AIWorkerWebhook)
 	if baseURL == "" {
 		return nil, fmt.Errorf("AI worker URL is not configured")
@@ -95,11 +113,7 @@ func (s RAGService) askWorker(req AskRequest) (*AskResponse, error) {
 		url += "/api/v1/rag/ask"
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"question":     req.Question,
-		"language":     req.Language,
-		"program_area": req.ProgramArea,
-	})
+	payload, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
@@ -158,8 +172,8 @@ func (s RAGService) askWorker(req AskRequest) (*AskResponse, error) {
 	return &AskResponse{Answer: workerResp.Answer, Citations: citations}, nil
 }
 
-func (s RAGService) askLocal(req AskRequest) (*AskResponse, error) {
-	results, err := s.Search.Search(req.Question, req.ProgramArea, 5)
+func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {
+	results, err := s.Search.Search(s.buildLocalSearchQuestion(req), req.ProgramArea, 5)
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +206,109 @@ func (s RAGService) getOrCreateSession(userID *uuid.UUID, req AskRequest) (*mode
 		}
 	}
 	return &session, nil
+}
+
+func (s RAGService) buildWorkerAskRequest(sessionID uuid.UUID, req AskRequest) (workerAskRequest, error) {
+	historySummary, recentMessages, err := s.loadConversationContext(sessionID)
+	if err != nil {
+		return workerAskRequest{}, err
+	}
+
+	return workerAskRequest{
+		Question:       req.Question,
+		Language:       req.Language,
+		ProgramArea:    req.ProgramArea,
+		HistorySummary: historySummary,
+		RecentMessages: recentMessages,
+	}, nil
+}
+
+func (s RAGService) loadConversationContext(sessionID uuid.UUID) (string, []workerChatMessage, error) {
+	var messages []models.ChatMessage
+	if err := s.DB.
+		Where("session_id = ?", sessionID).
+		Order("created_at desc").
+		Limit(8).
+		Find(&messages).Error; err != nil {
+		return "", nil, err
+	}
+	if len(messages) == 0 {
+		return "", nil, nil
+	}
+
+	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
+		messages[left], messages[right] = messages[right], messages[left]
+	}
+
+	summaryMessages := messages
+	if len(summaryMessages) > 4 {
+		summaryMessages = summaryMessages[:len(summaryMessages)-4]
+	} else {
+		summaryMessages = nil
+	}
+
+	recentMessages := messages
+	if len(recentMessages) > 4 {
+		recentMessages = recentMessages[len(recentMessages)-4:]
+	}
+
+	recent := make([]workerChatMessage, 0, len(recentMessages))
+	for _, message := range recentMessages {
+		content := strings.TrimSpace(message.Content)
+		if content == "" {
+			continue
+		}
+		recent = append(recent, workerChatMessage{
+			Role:    message.Role,
+			Content: truncate(content, 320),
+		})
+	}
+
+	return s.summarizeMessages(summaryMessages), recent, nil
+}
+
+func (s RAGService) summarizeMessages(messages []models.ChatMessage) string {
+	if len(messages) == 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, len(messages))
+	for _, message := range messages {
+		content := strings.TrimSpace(message.Content)
+		if content == "" {
+			continue
+		}
+
+		role := "Assistant"
+		if strings.EqualFold(message.Role, "user") {
+			role = "User"
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", role, truncate(content, 220)))
+	}
+
+	return truncate(strings.Join(parts, " | "), 1200)
+}
+
+func (s RAGService) buildLocalSearchQuestion(req workerAskRequest) string {
+	question := strings.TrimSpace(req.Question)
+	if question == "" {
+		return question
+	}
+	if len(req.RecentMessages) == 0 || looksStandalone(question) {
+		return question
+	}
+
+	for index := len(req.RecentMessages) - 1; index >= 0; index-- {
+		message := req.RecentMessages[index]
+		if strings.EqualFold(message.Role, "user") && strings.TrimSpace(message.Content) != "" {
+			return question + " Related prior question: " + strings.TrimSpace(message.Content)
+		}
+	}
+
+	if strings.TrimSpace(req.HistorySummary) != "" {
+		return question + " Related prior context: " + strings.TrimSpace(req.HistorySummary)
+	}
+	return question
 }
 
 func (s RAGService) resolveChatSessionUserID(userID *uuid.UUID) *uuid.UUID {
@@ -345,4 +462,52 @@ func truncate(s string, n int) string {
 	}
 	runes := []rune(s)
 	return string(runes[:n])
+}
+
+func looksStandalone(question string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(question))
+	if normalized == "" {
+		return true
+	}
+
+	followUps := []string{
+		"what about",
+		"how about",
+		"and what about",
+		"what if",
+		"does that",
+		"is that",
+		"is it",
+		"can it",
+		"can they",
+		"can we",
+		"what are they",
+		"what are those",
+		"why is that",
+		"when should that",
+		"when should it",
+	}
+	for _, prefix := range followUps {
+		if strings.HasPrefix(normalized, prefix) {
+			return false
+		}
+	}
+
+	pronouns := []string{
+		" it ",
+		" that ",
+		" those ",
+		" they ",
+		" them ",
+		" this ",
+		" these ",
+		" the other ",
+	}
+	padded := " " + normalized + " "
+	for _, pronoun := range pronouns {
+		if strings.Contains(padded, pronoun) {
+			return false
+		}
+	}
+	return true
 }

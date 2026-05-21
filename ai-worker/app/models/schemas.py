@@ -22,12 +22,19 @@ class RunJobResponse(BaseModel):
     message: str
 
 
+class RagChatMessage(BaseModel):
+    role: str
+    content: str
+
+
 class RagAskRequest(BaseModel):
     question: str = Field(min_length=3)
     language: str = "en"
     program_area: str | None = None
     country: str | None = None
     top_k: int | None = None
+    history_summary: str | None = None
+    recent_messages: list[RagChatMessage] = Field(default_factory=list)
 
 
 class Citation(BaseModel):
@@ -63,6 +70,5 @@ class ReadinessResponse(BaseModel):
 class RagAskResponse(BaseModel):
     answer: str
     citations: list[Citation]
-    retrieved: list[RetrievedChunk] = []
-    safety: dict[str, Any] = {}
-
+    retrieved: list[RetrievedChunk] = Field(default_factory=list)
+    safety: dict[str, Any] = Field(default_factory=dict)

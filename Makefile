@@ -3,6 +3,8 @@ AI_WORKER_DIR := ai-worker
 COMPOSE_FILE := infra/docker-compose.yml
 DOCKER_COMPOSE := docker compose -f $(COMPOSE_FILE)
 PYTHON ?= python3
+AI_REQUIREMENTS_FILE := $(AI_WORKER_DIR)/requirements.txt
+AI_REQUIREMENTS_STAMP := $(AI_WORKER_DIR)/.requirements.sha256
 
 .DEFAULT_GOAL := help
 
@@ -94,13 +96,26 @@ seed:
 	$(MAKE) -C $(BACKEND_DIR) seed
 
 .PHONY: ai-test
-ai-test:
+ai-test: ai-deps
 	cd $(AI_WORKER_DIR) && $(PYTHON) -m pytest
 
+.PHONY: ai-deps
+ai-deps:
+	@REQ_HASH=`$(PYTHON) - <<'PY'\nimport hashlib\nfrom pathlib import Path\nprint(hashlib.sha256(Path('$(AI_REQUIREMENTS_FILE)').read_bytes()).hexdigest())\nPY`; \
+	STORED_HASH=""; \
+	if [ -f "$(AI_REQUIREMENTS_STAMP)" ]; then STORED_HASH=`cat "$(AI_REQUIREMENTS_STAMP)"`; fi; \
+	if [ "$$REQ_HASH" != "$$STORED_HASH" ]; then \
+		echo "Installing ai-worker requirements"; \
+		cd $(AI_WORKER_DIR) && $(PYTHON) -m pip install -r requirements.txt; \
+		printf "%s" "$$REQ_HASH" > "$(AI_REQUIREMENTS_STAMP)"; \
+	else \
+		echo "ai-worker requirements unchanged"; \
+	fi
+
 .PHONY: ai-api
-ai-api:
+ai-api: ai-deps
 	cd $(AI_WORKER_DIR) && uvicorn app.main:app --reload --host 0.0.0.0 --port 8090
 
 .PHONY: ai-worker
-ai-worker:
+ai-worker: ai-deps
 	cd $(AI_WORKER_DIR) && $(PYTHON) -m app.worker
