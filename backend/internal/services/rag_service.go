@@ -30,6 +30,7 @@ type RAGService struct {
 type AskRequest struct {
 	Question    string `json:"question"`
 	Language    string `json:"language"`
+	Country     string `json:"country"`
 	ProgramArea string `json:"program_area"`
 	SessionID   string `json:"session_id"`
 }
@@ -37,6 +38,7 @@ type AskRequest struct {
 type workerAskRequest struct {
 	Question       string              `json:"question"`
 	Language       string              `json:"language"`
+	Country        string              `json:"country,omitempty"`
 	ProgramArea    string              `json:"program_area"`
 	HistorySummary string              `json:"history_summary,omitempty"`
 	RecentMessages []workerChatMessage `json:"recent_messages,omitempty"`
@@ -217,6 +219,7 @@ func (s RAGService) buildWorkerAskRequest(sessionID uuid.UUID, req AskRequest) (
 	return workerAskRequest{
 		Question:       req.Question,
 		Language:       req.Language,
+		Country:        req.Country,
 		ProgramArea:    req.ProgramArea,
 		HistorySummary: historySummary,
 		RecentMessages: recentMessages,

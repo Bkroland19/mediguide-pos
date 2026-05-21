@@ -89,7 +89,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OPENAI_EMBEDDING_MODEL"),
     )
 
-    llm_provider: str = "extractive"  # extractive, ollama, openai
+    llm_provider: str = "ollama"  # extractive, ollama, openai
     openai_chat_model: str = "gpt-4o-mini"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b-instruct"

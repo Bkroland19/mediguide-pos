@@ -9,7 +9,7 @@ from markdownify import markdownify as md
 from slugify import slugify
 from app.document_processing.types import ExtractedDocument, ExtractedSection, ExtractedTable
 
-_BULLET_RE = re.compile(r"^[~•●○▪■□◦]+\s*")
+_BULLET_RE = re.compile(r"^(?:[-*]\s+|[~•●○▪■□◦]+\s*)")
 _LOC_CODE_RE = re.compile(r"^(?:HC ?[1-4IVX]+|RRH?|NRH|H|NA)$", re.I)
 _COMMON_SUBHEADINGS = {
     "assessment",
@@ -720,9 +720,14 @@ def _table_anchor_phrases(rows: list[list[str]]) -> list[str]:
                 continue
             if _LOC_CODE_RE.fullmatch(normalized.upper().replace(" ", "")):
                 continue
+            is_first_column_label = (
+                cell_index == 0
+                and len(normalized) >= 4
+                and any(ch.isalpha() for ch in normalized)
+            )
             if (
                 len(normalized) >= 18
-                or (row_index > 0 and cell_index == 0 and len(normalized) >= 8)
+                or is_first_column_label
                 or any(ch.isdigit() for ch in normalized)
             ) and normalized not in anchors:
                 anchors.append(normalized)

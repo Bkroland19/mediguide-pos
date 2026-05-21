@@ -1,6 +1,7 @@
 from __future__ import annotations
 import httpx
 import re
+from collections.abc import Iterable
 from app.core.config import get_settings
 from app.embeddings.factory import get_embedding_provider
 from app.models.schemas import RetrievedChunk
@@ -30,6 +31,7 @@ FOLLOW_UP_PATTERN = re.compile(
 PRONOUN_PATTERN = re.compile(r"\b(it|that|those|they|them|this|these|he|she|there|the other)\b", re.I)
 WORD_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{2,}")
 SOURCE_NUMBER_PATTERN = re.compile(r"\[(\d+)\]")
+SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
 class RagService:
@@ -43,6 +45,7 @@ class RagService:
         question: str,
         language: str = "en",
         program_area: str | None = None,
+        country: str | None = None,
         top_k: int | None = None,
         history_summary: str | None = None,
         recent_messages: list[dict] | None = None,
@@ -53,9 +56,23 @@ class RagService:
         standalone_question = self._rewrite_question(question, conversation_summary, recent_messages)
 
         q_emb = self.embedder.embed([standalone_question])[0]
-        vector_hits = self.search.vector_search(q_emb, top_k=top_k, program_area=program_area, language=language)
+        vector_hits = self.search.vector_search(
+            q_emb,
+            top_k=top_k,
+            program_area=program_area,
+            language=language,
+            country=country,
+            national_first=self.settings.rag_national_first,
+        )
         vector_hits = [dict(hit, retrieval_method="vector") for hit in vector_hits]
-        keyword_hits = self.search.keyword_search(standalone_question, top_k=max(3, top_k // 2), program_area=program_area)
+        keyword_hits = self.search.keyword_search(
+            standalone_question,
+            top_k=max(3, top_k // 2),
+            program_area=program_area,
+            language=language,
+            country=country,
+            national_first=self.settings.rag_national_first,
+        )
         keyword_hits = [dict(hit, retrieval_method="keyword") for hit in keyword_hits]
         hits = self._merge_hits(vector_hits, keyword_hits, top_k=top_k)
         hits = self._filter_hits(hits, standalone_question)
@@ -74,14 +91,21 @@ class RagService:
 
         used_hits = hits[: min(3, len(hits))]
         context = self._format_context(used_hits)
-        answer = self._generate_answer(
-            question=question,
-            standalone_question=standalone_question,
-            context=context,
-            hits=used_hits,
-            history_summary=conversation_summary,
-            recent_messages=recent_messages,
-        )
+        provider_used = self.settings.llm_provider
+        generation_error: str | None = None
+        try:
+            answer = self._generate_answer(
+                question=question,
+                standalone_question=standalone_question,
+                context=context,
+                hits=used_hits,
+                history_summary=conversation_summary,
+                recent_messages=recent_messages,
+            )
+        except Exception as exc:
+            provider_used = "extractive"
+            generation_error = f"{type(exc).__name__}: {exc}"
+            answer = self._extractive_answer(question, used_hits)
         answer, citations = self._finalize_answer(answer, used_hits)
         retrieved = [
             RetrievedChunk(
@@ -92,6 +116,7 @@ class RagService:
                 page_end=h.get("page_end"),
                 language=h.get("language"),
                 program_area=h.get("program_area"),
+                country=h.get("country"),
                 source_name=h.get("source_name"),
                 source_version=h.get("source_version"),
                 similarity=float(h.get("similarity") or 0),
@@ -104,8 +129,9 @@ class RagService:
             "retrieved": retrieved,
             "safety": {
                 "grounded": True,
-                "provider": self.settings.llm_provider,
+                "provider": provider_used,
                 "standalone_question": standalone_question,
+                "generation_error": generation_error,
             },
         }
 
@@ -119,12 +145,12 @@ class RagService:
         for rank, hit in enumerate(vector_hits, start=1):
             key = str(hit["id"])
             scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank)
-            index[key] = hit
+            index[key] = self._merge_hit_metadata(index.get(key), hit)
 
         for rank, hit in enumerate(keyword_hits, start=1):
             key = str(hit["id"])
             scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank)
-            index[key] = hit
+            index[key] = self._merge_hit_metadata(index.get(key), hit)
 
         sorted_keys = sorted(scores, key=lambda k: scores[k], reverse=True)[:top_k]
         merged = []
@@ -133,6 +159,49 @@ class RagService:
             hit["rrf_score"] = scores[key]
             merged.append(hit)
         return merged
+
+    def _merge_hit_metadata(self, existing: dict | None, candidate: dict) -> dict:
+        merged = dict(existing or {})
+        merged.update({k: v for k, v in candidate.items() if v is not None})
+        methods = self._normalize_methods(existing, candidate)
+        merged["retrieval_methods"] = methods
+        merged["retrieval_method"] = "hybrid" if len(methods) > 1 else methods[0]
+
+        if (candidate.get("retrieval_method") or "").lower() == "vector":
+            merged["vector_similarity"] = float(candidate.get("similarity") or 0)
+        if (candidate.get("retrieval_method") or "").lower() == "keyword":
+            merged["keyword_similarity"] = float(candidate.get("similarity") or 0)
+
+        merged["similarity"] = (
+            merged.get("vector_similarity")
+            if merged.get("vector_similarity") is not None
+            else merged.get("keyword_similarity")
+        )
+        return merged
+
+    @staticmethod
+    def _normalize_methods(existing: dict | None, candidate: dict) -> list[str]:
+        methods: list[str] = []
+        for item in (existing, candidate):
+            if not item:
+                continue
+            for method in RagService._iter_methods(item):
+                if method not in methods:
+                    methods.append(method)
+        return methods or ["vector"]
+
+    @staticmethod
+    def _iter_methods(hit: dict) -> Iterable[str]:
+        methods = hit.get("retrieval_methods")
+        if isinstance(methods, list):
+            for method in methods:
+                normalized = str(method or "").strip().lower()
+                if normalized:
+                    yield normalized
+            return
+        normalized = str(hit.get("retrieval_method") or "").strip().lower()
+        if normalized:
+            yield normalized
 
     def _format_context(self, hits: list[dict]) -> str:
         blocks = []
@@ -170,7 +239,21 @@ class RagService:
         return self._extractive_answer(question, hits)
 
     def _extractive_answer(self, question: str, hits: list[dict]) -> str:
+        ranked_passages = self._rank_extractive_passages(question, hits)
         lines = []
+        if ranked_passages:
+            first_source, first_passage = ranked_passages[0]
+            lines.append(first_passage)
+            used_sources = [first_source]
+            for source_index, passage in ranked_passages[1:3]:
+                if passage == first_passage:
+                    continue
+                lines.append(f"Relevant detail: {passage}")
+                if source_index not in used_sources:
+                    used_sources.append(source_index)
+            lines.append(f"Sources: {', '.join(f'[{i}]' for i in used_sources)}")
+            return "\n".join(lines)
+
         for idx, h in enumerate(hits[:2], start=1):
             content = " ".join((h.get("content") or "").split())
             excerpt = content[:420] + ("..." if len(content) > 420 else "")
@@ -180,6 +263,31 @@ class RagService:
                 lines.append(f"Additional relevant guidance: {excerpt}")
         lines.append(f"Sources: {', '.join(f'[{i}]' for i in range(1, len(hits[:2]) + 1))}")
         return "\n".join(lines)
+
+    def _rank_extractive_passages(self, question: str, hits: list[dict]) -> list[tuple[int, str]]:
+        ranked: list[tuple[int, int, str]] = []
+        question_terms = set(self._important_terms(question))
+        for idx, hit in enumerate(hits[:3], start=1):
+            content = " ".join((hit.get("content") or "").split())
+            if not content:
+                continue
+            for segment in SENTENCE_SPLIT_PATTERN.split(content):
+                passage = " ".join(segment.split()).strip()
+                if len(passage) < 30:
+                    continue
+                overlap = len(question_terms & set(self._important_terms(passage)))
+                score = overlap * 10 + min(len(passage), 240) // 80
+                ranked.append((score, idx, passage[:280] + ("..." if len(passage) > 280 else "")))
+        ranked.sort(key=lambda item: (item[0], -item[1]), reverse=True)
+
+        seen: set[str] = set()
+        collapsed: list[tuple[int, str]] = []
+        for _, idx, passage in ranked:
+            if passage in seen:
+                continue
+            seen.add(passage)
+            collapsed.append((idx, passage))
+        return collapsed
 
     def _ollama_answer(
         self,
@@ -302,14 +410,14 @@ class RagService:
         if not content:
             return False
 
-        similarity = float(hit.get("similarity") or 0)
-        retrieval_method = hit.get("retrieval_method") or ""
+        vector_similarity = hit.get("vector_similarity")
+        keyword_similarity = hit.get("keyword_similarity")
         overlap = self._term_overlap(question, content)
-        if retrieval_method == "vector":
-            return similarity >= self.settings.rag_min_similarity or overlap >= 2
-        if retrieval_method == "keyword":
-            return similarity > 0 or overlap >= 2
-        return overlap >= 2 or similarity >= self.settings.rag_min_similarity
+        if vector_similarity is not None and float(vector_similarity) >= self.settings.rag_min_similarity:
+            return True
+        if keyword_similarity is not None and float(keyword_similarity) > 0:
+            return True
+        return overlap >= 2
 
     def _term_overlap(self, left: str, right: str) -> int:
         left_terms = set(self._important_terms(left))
@@ -373,6 +481,7 @@ class RagService:
                 "index": idx,
                 "chunk_id": str(hit["id"]),
                 "title": hit.get("title"),
+                "country": hit.get("country"),
                 "source_name": hit.get("source_name"),
                 "source_version": hit.get("source_version"),
                 "page_start": hit.get("page_start"),

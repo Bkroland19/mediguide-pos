@@ -40,6 +40,7 @@ class RagAskRequest(BaseModel):
 class Citation(BaseModel):
     chunk_id: str
     title: str | None = None
+    country: str | None = None
     source_name: str | None = None
     source_version: str | None = None
     page_start: int | None = None
@@ -57,6 +58,7 @@ class RetrievedChunk(BaseModel):
     page_end: int | None = None
     language: str | None = None
     program_area: str | None = None
+    country: str | None = None
     source_name: str | None = None
     source_version: str | None = None
     similarity: float | None = None
