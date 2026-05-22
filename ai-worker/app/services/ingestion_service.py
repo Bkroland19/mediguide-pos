@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import tempfile
+import time
 import uuid
 import structlog
 from app.core.config import get_settings
@@ -48,36 +49,97 @@ class IngestionService:
         with tempfile.TemporaryDirectory(prefix="mediguide-ingest-") as tmp:
             tmp_path = Path(tmp)
             pdf_path = tmp_path / "source.pdf"
+
+            started = time.perf_counter()
             self.storage.download_file(original_key, pdf_path)
+            log.info(
+                "ingestion_download_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+                file_key=original_key,
+            )
+
+            started = time.perf_counter()
             extracted = extract_pdf(pdf_path)
+            log.info(
+                "ingestion_extract_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+                pages=extracted.pages,
+                sections=len(extracted.sections),
+                tables=len(extracted.tables),
+            )
+
+            started = time.perf_counter()
             chunks = chunk_sections(extracted.sections)
+            log.info(
+                "ingestion_chunking_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+                chunks=len(chunks),
+            )
 
             html_key = f"guidelines/{version_id}/extracted/{uuid.uuid4()}.html"
             markdown_key = f"guidelines/{version_id}/extracted/{uuid.uuid4()}.md"
+
+            started = time.perf_counter()
             self.storage.upload_bytes(extracted.html.encode("utf-8"), html_key, "text/html; charset=utf-8")
             self.storage.upload_bytes(extracted.markdown.encode("utf-8"), markdown_key, "text/markdown; charset=utf-8")
-
-            self.guidelines.clear_existing_extraction(version_id)
-
-            section_id_by_order: dict[int, str] = {}
-            for section in extracted.sections:
-                parent_id = section_id_by_order.get(section.parent_sort_order) if section.parent_sort_order is not None else None
-                section_id_by_order[section.sort_order] = self.guidelines.insert_section(version_id, section, parent_id)
-
-            for table in extracted.tables:
-                self.guidelines.insert_table(version_id, None, table)
+            log.info(
+                "ingestion_asset_upload_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+            )
 
             texts = [c.content for c in chunks]
             embeddings = []
             batch_size = max(1, self.settings.embedding_request_batch_size)
+            started = time.perf_counter()
             for i in range(0, len(texts), batch_size):
-                embeddings.extend(self.embedder.embed(texts[i:i + batch_size]))
+                batch_started = time.perf_counter()
+                batch = texts[i:i + batch_size]
+                embeddings.extend(self.embedder.embed(batch))
+                log.info(
+                    "ingestion_embedding_batch_completed",
+                    job_id=str(job["id"]),
+                    version_id=version_id,
+                    batch_index=(i // batch_size) + 1,
+                    batch_count=((len(texts) + batch_size - 1) // batch_size) if texts else 0,
+                    batch_size=len(batch),
+                    seconds=round(time.perf_counter() - batch_started, 2),
+                )
+            log.info(
+                "ingestion_embedding_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+                chunks=len(chunks),
+            )
 
-            for chunk, embedding in zip(chunks, embeddings):
-                section_id = section_id_by_order.get(chunk.section_order)
-                self.guidelines.insert_chunk(version=version, section_id=section_id, chunk=chunk, embedding=embedding)
-
-            self.guidelines.update_version_assets(version_id, html_key, markdown_key)
+            started = time.perf_counter()
+            self.guidelines.replace_extraction(
+                version_id=version_id,
+                version=version,
+                sections=extracted.sections,
+                tables=extracted.tables,
+                chunks=chunks,
+                embeddings=embeddings,
+                html_key=html_key,
+                markdown_key=markdown_key,
+            )
+            log.info(
+                "ingestion_persist_completed",
+                job_id=str(job["id"]),
+                version_id=version_id,
+                seconds=round(time.perf_counter() - started, 2),
+                sections=len(extracted.sections),
+                chunks=len(chunks),
+                tables=len(extracted.tables),
+            )
             log.info(
                 "ingestion_job_completed",
                 job_id=str(job["id"]),

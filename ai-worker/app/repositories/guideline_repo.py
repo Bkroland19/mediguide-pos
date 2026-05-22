@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Any
 from app.core.db import db_conn
 from app.embeddings.factory import to_pgvector
@@ -100,6 +101,128 @@ class GuidelineRepository:
 
     def update_version_assets(self, version_id: str, html_key: str, markdown_key: str, status: str = "extracted") -> None:
         with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE guideline_versions
+                SET html_file_key=%s, markdown_file_key=%s, status=%s, updated_at=now()
+                WHERE id=%s
+                """,
+                (html_key, markdown_key, status, version_id),
+            )
+            conn.commit()
+
+    def replace_extraction(
+        self,
+        *,
+        version_id: str,
+        version: dict[str, Any],
+        sections: list[Any],
+        tables: list[Any],
+        chunks: list[Any],
+        embeddings: list[list[float]],
+        html_key: str,
+        markdown_key: str,
+        status: str = "extracted",
+    ) -> None:
+        review_status = self._chunk_review_status(version.get("status"))
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
+            cur.execute("DELETE FROM guideline_tables WHERE version_id = %s", (version_id,))
+            cur.execute("DELETE FROM guideline_sections WHERE version_id = %s", (version_id,))
+
+            section_id_by_order: dict[int, str] = {}
+            section_rows: list[tuple[Any, ...]] = []
+            for section in sections:
+                section_id = str(uuid.uuid4())
+                section_id_by_order[section.sort_order] = section_id
+                parent_id = (
+                    section_id_by_order.get(section.parent_sort_order)
+                    if section.parent_sort_order is not None
+                    else None
+                )
+                section_rows.append(
+                    (
+                        section_id,
+                        version_id,
+                        parent_id,
+                        section.title,
+                        self._slug(section.breadcrumb or section.title),
+                        section.level,
+                        section.html,
+                        section.text,
+                        section.page_start,
+                        section.page_end,
+                        section.sort_order,
+                    )
+                )
+            if section_rows:
+                cur.executemany(
+                    """
+                    INSERT INTO guideline_sections(
+                      id, version_id, parent_id, title, slug, level, html, text, page_start, page_end, sort_order
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    """,
+                    section_rows,
+                )
+
+            table_rows: list[tuple[Any, ...]] = []
+            for table in tables:
+                table_rows.append(
+                    (
+                        str(uuid.uuid4()),
+                        version_id,
+                        None,
+                        table.title,
+                        table.html,
+                        json.dumps(table.data),
+                        table.page,
+                    )
+                )
+            if table_rows:
+                cur.executemany(
+                    """
+                    INSERT INTO guideline_tables(id, version_id, section_id, title, html, data_json, page)
+                    VALUES (%s,%s,%s,%s,%s,%s::jsonb,%s)
+                    """,
+                    table_rows,
+                )
+
+            chunk_rows: list[tuple[Any, ...]] = []
+            for chunk, embedding in zip(chunks, embeddings):
+                section_id = section_id_by_order.get(chunk.section_order)
+                chunk_rows.append(
+                    (
+                        str(uuid.uuid4()),
+                        version["id"],
+                        section_id,
+                        chunk.title,
+                        chunk.content,
+                        chunk.html,
+                        chunk.page_start,
+                        chunk.page_end,
+                        version.get("document_language") or "en",
+                        version.get("program_area"),
+                        version.get("source_org") or version.get("document_title"),
+                        version.get("version"),
+                        review_status,
+                        chunk.content,
+                        to_pgvector(embedding),
+                    )
+                )
+            if chunk_rows:
+                cur.executemany(
+                    """
+                    INSERT INTO guideline_chunks(
+                      id, version_id, section_id, title, content, html, page_start, page_end,
+                      language, program_area, source_name, source_version, review_status,
+                      embedding_text, embedding
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)
+                    """,
+                    chunk_rows,
+                )
+
             cur.execute(
                 """
                 UPDATE guideline_versions
