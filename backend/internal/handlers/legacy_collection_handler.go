@@ -25,6 +25,7 @@ type LegacyCollectionHandler struct {
 // @Description Legacy v1 collection listing endpoint. Some collections are public while others require authentication depending on the collection name.
 // @Tags legacy-v1
 // @Produce json
+// @Security BearerAuth
 // @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,calculators,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param page query int false "Page number" minimum(1)
 // @Param per_page query int false "Page size" minimum(1) maximum(100)
@@ -35,7 +36,7 @@ type LegacyCollectionHandler struct {
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/{collection} [get]
+// @Router /api/v1/collections/{collection}/records [get]
 func (h LegacyCollectionHandler) List(c *gin.Context) {
 	page, err := legacyIntQuery(c, "page", 1)
 	if err != nil {
@@ -71,13 +72,14 @@ func (h LegacyCollectionHandler) List(c *gin.Context) {
 // @Description Legacy v1 collection detail endpoint. Some collections are public while others require authentication depending on the collection name.
 // @Tags legacy-v1
 // @Produce json
+// @Security BearerAuth
 // @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,calculators,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param id path string true "Record ID"
 // @Success 200 {object} handlers.LegacyCollectionItemResult
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/{collection}/{id} [get]
+// @Router /api/v1/collections/{collection}/records/{id} [get]
 func (h LegacyCollectionHandler) Get(c *gin.Context) {
 	userID := ""
 	if claims := h.optionalClaims(c.GetHeader("Authorization")); claims != nil {
@@ -98,6 +100,7 @@ func (h LegacyCollectionHandler) Get(c *gin.Context) {
 // @Tags legacy-v1
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param collection path string true "Legacy collection name" Enums(support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param payload body map[string]interface{} true "Legacy collection payload"
 // @Success 200 {object} handlers.LegacyCollectionItemResult
@@ -106,7 +109,7 @@ func (h LegacyCollectionHandler) Get(c *gin.Context) {
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/{collection} [post]
+// @Router /api/v1/collections/{collection}/records [post]
 func (h LegacyCollectionHandler) Create(c *gin.Context) {
 	var payload map[string]any
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -132,6 +135,7 @@ func (h LegacyCollectionHandler) Create(c *gin.Context) {
 // @Tags legacy-v1
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param collection path string true "Legacy collection name" Enums(users,conversations,messages,reading_progress,calculator_usage_logs)
 // @Param id path string true "Record ID"
 // @Param payload body map[string]interface{} true "Legacy collection payload"
@@ -141,7 +145,7 @@ func (h LegacyCollectionHandler) Create(c *gin.Context) {
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
-// @Router /api/v1/{collection}/{id} [patch]
+// @Router /api/v1/collections/{collection}/records/{id} [patch]
 func (h LegacyCollectionHandler) Update(c *gin.Context) {
 	var payload map[string]any
 	if err := c.ShouldBindJSON(&payload); err != nil {

@@ -280,3 +280,49 @@ def test_split_sections_does_not_treat_large_numeric_table_values_as_headings():
 
     assert [section.title for section in sections] == ["1 EMERGENCIES AND TRAUMA"]
     assert sections[0].text == "Overview text"
+
+
+def test_split_sections_accepts_trailing_dot_numbered_headings():
+    sections = _split_sections(
+        [
+            (
+                1,
+                "\n".join(
+                    [
+                        "1. SOPs FOR INDIVIDUAL LEVEL",
+                        "Purpose",
+                        "To provide guidance to individuals and households.",
+                        "2. SOPs FOR MASS GATHERINGS",
+                        "To provide guidance to organizers of public events.",
+                    ]
+                ),
+            )
+        ]
+    )
+
+    assert [section.title for section in sections] == [
+        "1 SOPs FOR INDIVIDUAL LEVEL",
+        "2 SOPs FOR MASS GATHERINGS",
+    ]
+    assert sections[0].text == "Purpose\nTo provide guidance to individuals and households."
+    assert sections[1].text == "To provide guidance to organizers of public events."
+
+
+def test_split_sections_falls_back_to_introduction_when_no_headings_exist():
+    sections = _split_sections(
+        [
+            (
+                1,
+                "\n".join(
+                    [
+                        "This guidance provides detailed operational steps for outbreak response.",
+                        "Health workers should isolate suspected cases and notify district surveillance teams.",
+                        "Community members should avoid direct contact with body fluids.",
+                    ]
+                ),
+            )
+        ]
+    )
+
+    assert [section.title for section in sections] == ["Introduction"]
+    assert sections[0].text.startswith("This guidance provides detailed operational steps")

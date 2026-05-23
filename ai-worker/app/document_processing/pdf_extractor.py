@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import html
 import re
+import subprocess
+import tempfile
 import fitz
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
@@ -48,7 +50,7 @@ _GENERIC_TABLE_TERMS = {
     "treatment",
 }
 _CHAPTER_HEADING_RE = re.compile(r"^CHAPTER\s+(\d+)\s*:?\s+(.+)$", re.I)
-_NUMBERED_HEADING_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){0,5})\s+(.+)$")
+_NUMBERED_HEADING_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){0,5}\.?)\s+(.+)$")
 _TOC_DOT_LEADER_RE = re.compile(r"\.{4,}\s*\d+\s*$")
 _TRAILING_PAGE_RE = re.compile(r"(?:\s+|\.{1,})\d{1,4}\s*$")
 _DOT_LEADER_ONLY_RE = re.compile(r"\.{6,}\s*$")
@@ -70,6 +72,19 @@ def _clean_text(text: str) -> str:
 
 def _clean_line(text: str) -> str:
     return _clean_text(text).replace("­", "").strip()
+
+
+def _alpha_words(text: str) -> list[str]:
+    return re.findall(r"[A-Za-z]{3,}", text)
+
+
+def _has_meaningful_content(text: str) -> bool:
+    words = [word.lower() for word in _alpha_words(text)]
+    if len(words) < 12:
+        return False
+    if len(set(words)) <= 3:
+        return False
+    return True
 
 
 def _is_noise_line(line: str) -> bool:
@@ -110,6 +125,22 @@ def _is_semantic_subheading_title(title: str) -> bool:
     if lowered in _COMMON_SUBHEADINGS:
         return True
     return normalized.isupper() and 1 < len(normalized.split()) <= 10
+
+
+def _is_upperish_heading_title(title: str) -> bool:
+    words = re.findall(r"[A-Za-z][A-Za-z0-9'/-]*", title)
+    if not words:
+        return False
+    emphasized = 0
+    for word in words:
+        letters = [char for char in word if char.isalpha()]
+        if not letters:
+            continue
+        upper = sum(1 for char in letters if char.isupper())
+        lower = sum(1 for char in letters if char.islower())
+        if upper >= max(1, lower * 2):
+            emphasized += 1
+    return emphasized >= 2 and emphasized * 2 >= len(words)
 
 
 def _content_lines(text: str) -> list[str]:
@@ -197,16 +228,17 @@ def _heading_info(line: str, current_level: int, current_title: str | None = Non
     numbered = _NUMBERED_HEADING_RE.match(s)
     if numbered and len(s.split()) <= 16:
         numbering, title = numbered.groups()
-        parts = [int(part) for part in numbering.split(".")]
+        normalized_numbering = numbering.rstrip(".")
+        parts = [int(part) for part in normalized_numbering.split(".")]
         if parts[0] > 40 or any(part > 100 for part in parts[1:]):
             return None
         if _TRAILING_PAGE_RE.search(title):
             return None
         clean_title = _clean_line(title)
-        if len(parts) == 1 and not clean_title.isupper():
+        if len(parts) == 1 and not _is_upperish_heading_title(clean_title):
             return None
-        level = numbering.count(".") + 1
-        return HeadingInfo(title=f"{numbering} {clean_title}", level=level, primary=True)
+        level = normalized_numbering.count(".") + 1
+        return HeadingInfo(title=f"{normalized_numbering} {clean_title}", level=level, primary=True)
 
     candidate = s.rstrip(":")
     if candidate.upper() in {"TREATMENT", "LOC"}:
@@ -303,6 +335,26 @@ def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]
     finalized = _finalize_section(current)
     if finalized:
         sections.append(finalized)
+
+    if not sections:
+        combined_lines: list[str] = []
+        last_page = 1
+        for page, raw in page_lines:
+            last_page = page
+            combined_lines.extend(_content_lines(raw))
+        combined_text = "\n".join(combined_lines)
+        if _has_meaningful_content(combined_text):
+            sections = [
+                ExtractedSection(
+                    title="Introduction",
+                    level=1,
+                    text=_clean_text(combined_text),
+                    html=_section_html("Introduction", 1, combined_text),
+                    page_start=1,
+                    page_end=last_page,
+                    sort_order=0,
+                )
+            ]
 
     sections = [s for s in sections if s.text or s.title]
     _populate_breadcrumbs(sections)
@@ -849,6 +901,37 @@ def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
     return tables
 
 
+def _should_use_raw_page_text(filtered_text: str, raw_text: str) -> bool:
+    return len(raw_text) >= 500 and len(filtered_text) < max(120, len(raw_text) // 4)
+
+
+def _is_low_signal_page_text(text: str) -> bool:
+    words = [word.lower() for word in _alpha_words(text)]
+    if not words:
+        return True
+    if len(words) < 12:
+        return True
+    unique = set(words)
+    return len(unique) <= 3 and "camscanner" in unique
+
+
+def _ocr_page_text(page: fitz.Page) -> str:
+    try:
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        with tempfile.TemporaryDirectory(prefix="mediguide-ocr-") as tmp:
+            image_path = Path(tmp) / "page.png"
+            image_path.write_bytes(pixmap.tobytes("png"))
+            proc = subprocess.run(
+                ["tesseract", str(image_path), "stdout", "-l", "eng"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            return _clean_text(proc.stdout)
+    except Exception:
+        return ""
+
+
 def extract_pdf(path: Path) -> ExtractedDocument:
     tables = _extract_tables_pdfplumber(path)
     table_bboxes_by_page: dict[int, list[tuple[float, float, float, float]]] = {}
@@ -863,8 +946,14 @@ def extract_pdf(path: Path) -> ExtractedDocument:
 
     for page_number, page in enumerate(doc, start=1):
         blocks = page.get_text("blocks") or []
-        text = _page_text_from_blocks(blocks, table_bboxes_by_page.get(page_number, []))
-        text = _clean_text(text)
+        raw_text = _clean_text(page.get_text("text"))
+        text = _clean_text(_page_text_from_blocks(blocks, table_bboxes_by_page.get(page_number, [])))
+        if _should_use_raw_page_text(text, raw_text):
+            text = raw_text
+        if _is_low_signal_page_text(text):
+            ocr_text = _ocr_page_text(page)
+            if len(ocr_text) > len(text):
+                text = ocr_text
         if page_number == 1:
             for line in text.splitlines():
                 if len(line.strip()) > 8:

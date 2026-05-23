@@ -19,84 +19,7 @@
     },
     "basePath": "/",
     "paths": {
-        "/api/v1/auth/login": {
-            "post": {
-                "description": "Authenticate a user and return a JWT bearer token.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Log in a user",
-                "parameters": [
-                    {
-                        "description": "Login payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LoginEnvelope"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/auth/logout": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Revoke the current authenticated session.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Log out current session",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LogoutEnvelope"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/auth/refresh": {
+        "/api/v1/collections/users/auth-refresh": {
             "post": {
                 "description": "Exchange a refresh token for a new access token and rotated refresh token.",
                 "consumes": [
@@ -142,7 +65,121 @@
                 }
             }
         },
-        "/api/v1/auth/register": {
+        "/api/v1/collections/users/auth-with-password": {
+            "post": {
+                "description": "Authenticate a user and return a JWT bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in a user",
+                "parameters": [
+                    {
+                        "description": "Login payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/users/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke the current authenticated session.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out current session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LogoutEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return the currently authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/users/register": {
             "post": {
                 "description": "Create a new backend user account.",
                 "consumes": [
@@ -175,6 +212,414 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{collection}/records": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 collection listing endpoint. Some collections are public while others require authentication depending on the collection name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "List legacy collection records",
+                "parameters": [
+                    {
+                        "enum": [
+                            "medical_guidelines",
+                            "drugs",
+                            "calculators",
+                            "abbreviations",
+                            "emergency_protocols",
+                            "faqs",
+                            "documentation",
+                            "generic_pages",
+                            "guideline_categories",
+                            "guideline_tags",
+                            "drug_categories",
+                            "drug_tags",
+                            "drug_classes",
+                            "therapeutic_categories",
+                            "consultants",
+                            "health_facilities",
+                            "regions",
+                            "districts",
+                            "counties",
+                            "subcounties",
+                            "parishes",
+                            "facility_levels",
+                            "ownership_types",
+                            "authorities",
+                            "ministry_directory",
+                            "languages",
+                            "notifications",
+                            "notification_templates",
+                            "notification_campaigns",
+                            "support_tickets",
+                            "support_ticket_replies",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs",
+                            "guideline_usage_logs",
+                            "drug_usage_logs",
+                            "abbreviation_usage_logs",
+                            "consultant_usage_logs",
+                            "facility_usage_logs",
+                            "ai_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term alias",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionListResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 collection create endpoint for authenticated user-owned resources and compatibility write flows.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Create legacy collection record",
+                "parameters": [
+                    {
+                        "enum": [
+                            "support_tickets",
+                            "support_ticket_replies",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs",
+                            "guideline_usage_logs",
+                            "drug_usage_logs",
+                            "abbreviation_usage_logs",
+                            "consultant_usage_logs",
+                            "facility_usage_logs",
+                            "ai_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Legacy collection payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{collection}/records/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 collection detail endpoint. Some collections are public while others require authentication depending on the collection name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get legacy collection record",
+                "parameters": [
+                    {
+                        "enum": [
+                            "medical_guidelines",
+                            "drugs",
+                            "calculators",
+                            "abbreviations",
+                            "emergency_protocols",
+                            "faqs",
+                            "documentation",
+                            "generic_pages",
+                            "guideline_categories",
+                            "guideline_tags",
+                            "drug_categories",
+                            "drug_tags",
+                            "drug_classes",
+                            "therapeutic_categories",
+                            "consultants",
+                            "health_facilities",
+                            "regions",
+                            "districts",
+                            "counties",
+                            "subcounties",
+                            "parishes",
+                            "facility_levels",
+                            "ownership_types",
+                            "authorities",
+                            "ministry_directory",
+                            "languages",
+                            "notifications",
+                            "notification_templates",
+                            "notification_campaigns",
+                            "support_tickets",
+                            "support_ticket_replies",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs",
+                            "guideline_usage_logs",
+                            "drug_usage_logs",
+                            "abbreviation_usage_logs",
+                            "consultant_usage_logs",
+                            "facility_usage_logs",
+                            "ai_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Legacy v1 collection patch endpoint for authenticated compatibility flows.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Update legacy collection record",
+                "parameters": [
+                    {
+                        "enum": [
+                            "users",
+                            "conversations",
+                            "messages",
+                            "reading_progress",
+                            "calculator_usage_logs"
+                        ],
+                        "type": "string",
+                        "description": "Legacy collection name",
+                        "name": "collection",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Legacy collection payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -300,43 +745,6 @@
                 }
             }
         },
-        "/api/v1/me": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Return the currently authenticated user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Get current user",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserEnvelope"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/ministry-directory/tree": {
             "get": {
                 "security": [
@@ -448,394 +856,6 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.LegacyStatsResult"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/{collection}": {
-            "get": {
-                "description": "Legacy v1 collection listing endpoint. Some collections are public while others require authentication depending on the collection name.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "List legacy collection records",
-                "parameters": [
-                    {
-                        "enum": [
-                            "medical_guidelines",
-                            "drugs",
-                            "calculators",
-                            "abbreviations",
-                            "emergency_protocols",
-                            "faqs",
-                            "documentation",
-                            "generic_pages",
-                            "guideline_categories",
-                            "guideline_tags",
-                            "drug_categories",
-                            "drug_tags",
-                            "drug_classes",
-                            "therapeutic_categories",
-                            "consultants",
-                            "health_facilities",
-                            "regions",
-                            "districts",
-                            "counties",
-                            "subcounties",
-                            "parishes",
-                            "facility_levels",
-                            "ownership_types",
-                            "authorities",
-                            "ministry_directory",
-                            "languages",
-                            "notifications",
-                            "notification_templates",
-                            "notification_campaigns",
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "calculator_usage_logs",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "per_page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search term",
-                        "name": "search",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search term alias",
-                        "name": "q",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionListResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Legacy v1 collection create endpoint for authenticated user-owned resources and compatibility write flows.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Create legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "calculator_usage_logs",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Legacy collection payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/{collection}/{id}": {
-            "get": {
-                "description": "Legacy v1 collection detail endpoint. Some collections are public while others require authentication depending on the collection name.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Get legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "medical_guidelines",
-                            "drugs",
-                            "calculators",
-                            "abbreviations",
-                            "emergency_protocols",
-                            "faqs",
-                            "documentation",
-                            "generic_pages",
-                            "guideline_categories",
-                            "guideline_tags",
-                            "drug_categories",
-                            "drug_tags",
-                            "drug_classes",
-                            "therapeutic_categories",
-                            "consultants",
-                            "health_facilities",
-                            "regions",
-                            "districts",
-                            "counties",
-                            "subcounties",
-                            "parishes",
-                            "facility_levels",
-                            "ownership_types",
-                            "authorities",
-                            "ministry_directory",
-                            "languages",
-                            "notifications",
-                            "notification_templates",
-                            "notification_campaigns",
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "calculator_usage_logs",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Record ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "description": "Legacy v1 collection patch endpoint for authenticated compatibility flows.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Update legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "users",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "calculator_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Record ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Legacy collection payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {

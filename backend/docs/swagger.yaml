@@ -987,7 +987,7 @@ info:
   title: MediGuide Backend API
   version: "1.0"
 paths:
-  /api/v1/{collection}:
+  /api/v1/collections/{collection}/records:
     get:
       description: Legacy v1 collection listing endpoint. Some collections are public
         while others require authentication depending on the collection name.
@@ -1081,6 +1081,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: List legacy collection records
       tags:
       - legacy-v1
@@ -1142,10 +1144,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create legacy collection record
       tags:
       - legacy-v1
-  /api/v1/{collection}/{id}:
+  /api/v1/collections/{collection}/records/{id}:
     get:
       description: Legacy v1 collection detail endpoint. Some collections are public
         while others require authentication depending on the collection name.
@@ -1221,6 +1225,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get legacy collection record
       tags:
       - legacy-v1
@@ -1280,59 +1286,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Update legacy collection record
       tags:
       - legacy-v1
-  /api/v1/auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate a user and return a JWT bearer token.
-      parameters:
-      - description: Login payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LoginEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Log in a user
-      tags:
-      - auth
-  /api/v1/auth/logout:
-    post:
-      description: Revoke the current authenticated session.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LogoutEnvelope'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Log out current session
-      tags:
-      - auth
-  /api/v1/auth/refresh:
+  /api/v1/collections/users/auth-refresh:
     post:
       consumes:
       - application/json
@@ -1363,7 +1322,79 @@ paths:
       summary: Refresh a user session
       tags:
       - auth
-  /api/v1/auth/register:
+  /api/v1/collections/users/auth-with-password:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and return a JWT bearer token.
+      parameters:
+      - description: Login payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Log in a user
+      tags:
+      - auth
+  /api/v1/collections/users/logout:
+    post:
+      description: Revoke the current authenticated session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LogoutEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log out current session
+      tags:
+      - auth
+  /api/v1/collections/users/me:
+    get:
+      description: Return the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/collections/users/register:
     post:
       consumes:
       - application/json
@@ -1467,29 +1498,6 @@ paths:
       summary: Get health facilities tree
       tags:
       - legacy-v1
-  /api/v1/me:
-    get:
-      description: Return the currently authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.UserEnvelope'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get current user
-      tags:
-      - auth
   /api/v1/ministry-directory/tree:
     get:
       description: Legacy v1 endpoint that groups ministry directory contacts by region,
