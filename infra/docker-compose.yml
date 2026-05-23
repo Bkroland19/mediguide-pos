@@ -23,6 +23,7 @@ services:
       MINIO_ROOT_PASSWORD: mediguide123
     ports:
       - "${MINIO_PUBLIC_PORT:-9000}:9000"
+      - "9001:9001"
     volumes:
       - minio_data:/data
     healthcheck:
