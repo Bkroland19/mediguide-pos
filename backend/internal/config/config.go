@@ -58,7 +58,7 @@ func Load() Config {
 		AIWorkerGRPCAddr:     get("AI_WORKER_GRPC_ADDR", ""),
 		AIWorkerTimeoutSecs:  getInt("AI_WORKER_TIMEOUT_SECONDS", 120),
 		AIWorkerSecret:       get("AI_WORKER_SECRET", ""),
-		AllowedOrigins:       get("ALLOWED_ORIGINS", "http://localhost:3000"),
+		AllowedOrigins:       get("ALLOWED_ORIGINS", "http://localhost:3000,*"), // Adjust for production domains
 	}
 }
 
