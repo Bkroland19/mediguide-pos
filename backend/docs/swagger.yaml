@@ -1150,6 +1150,46 @@ paths:
       tags:
       - legacy-v1
   /api/v1/collections/{collection}/records/{id}:
+    delete:
+      description: Legacy v1 collection delete endpoint for authenticated compatibility
+        flows.
+      parameters:
+      - description: Legacy collection name
+        in: path
+        name: collection
+        required: true
+        type: string
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete legacy collection record
+      tags:
+      - legacy-v1
     get:
       description: Legacy v1 collection detail endpoint. Some collections are public
         while others require authentication depending on the collection name.

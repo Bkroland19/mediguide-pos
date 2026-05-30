@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Triage Assessment Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #2196f3; }
+        .patient-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        .input-group { display: flex; gap: 10px; }
+        .input-group input, .input-group select { flex: 1; }
+        .assessment-section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .assessment-section h3 { color: #2c5aa0; margin-bottom: 15px; }
+        .vital-signs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .check-item { margin-bottom: 10px; display: flex; align-items: center; }
+        .check-item input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
+        .symptom-group { margin-bottom: 20px; }
+        .symptom-group h4 { color: #555; margin-bottom: 10px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #1e3f73; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; }
+        .result h3 { margin-bottom: 15px; }
+        .triage-1 { background: #ffebee; border-left: 6px solid #f44336; color: #c62828; }
+        .triage-2 { background: #fff3e0; border-left: 6px solid #ff9800; color: #e65100; }
+        .triage-3 { background: #fff8e1; border-left: 6px solid #ffc107; color: #f57f17; }
+        .triage-4 { background: #e8f5e8; border-left: 6px solid #4caf50; color: #2e7d32; }
+        .triage-5 { background: #e3f2fd; border-left: 6px solid #2196f3; color: #1565c0; }
+        .priority-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; }
+        .priority-1 { background: #f44336; color: white; }
+        .priority-2 { background: #ff9800; color: white; }
+        .priority-3 { background: #ffc107; color: #333; }
+        .priority-4 { background: #4caf50; color: white; }
+        .priority-5 { background: #2196f3; color: white; }
+        .action-plan { margin-top: 15px; }
+        .action-plan ul { padding-left: 20px; }
+        .action-plan li { margin-bottom: 8px; }
+        .time-target { font-weight: bold; color: #d32f2f; }
+        .warning-signs { background: #fff3e0; padding: 15px; border-radius: 4px; border-left: 4px solid #ff9800; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Emergency Triage Assessment Tool</h1>
+        
+        <div class="info-box">
+            <h4>Manchester Triage System (MTS) Based Assessment</h4>
+            <p>This tool helps prioritize patients based on clinical urgency. Categories range from Priority 1 (immediate) to Priority 5 (non-urgent), with specific time targets for medical assessment.</p>
+        </div>
+        
+        <div class="patient-info">
+            <h3>Patient Information</h3>
+            <div class="input-group">
+                <div>
+                    <label for="age">Age:</label>
+                    <input type="number" id="age" min="0" max="120" required>
+                </div>
+                <div>
+                    <label for="age-unit">Unit:</label>
+                    <select id="age-unit">
+                        <option value="years">Years</option>
+                        <option value="months">Months</option>
+                        <option value="days">Days</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="chief-complaint">Chief Complaint:</label>
+                <input type="text" id="chief-complaint" placeholder="Brief description of main problem">
+            </div>
+        </div>
+        
+        <div class="assessment-section">
+            <h3>Vital Signs & Observations</h3>
+            <div class="vital-signs">
+                <div class="form-group">
+                    <label for="heart-rate">Heart Rate (bpm):</label>
+                    <input type="number" id="heart-rate" min="20" max="250">
+                </div>
+                
+                <div class="form-group">
+                    <label for="respiratory-rate">Respiratory Rate (/min):</label>
+                    <input type="number" id="respiratory-rate" min="5" max="60">
+                </div>
+                
+                <div class="form-group">
+                    <label for="blood-pressure-sys">Blood Pressure:</label>
+                    <div class="input-group">
+                        <input type="number" id="blood-pressure-sys" placeholder="Systolic" min="50" max="250">
+                        <span>/</span>
+                        <input type="number" id="blood-pressure-dia" placeholder="Diastolic" min="30" max="150">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="temperature">Temperature (°C):</label>
+                    <input type="number" id="temperature" step="0.1" min="30" max="45">
+                </div>
+                
+                <div class="form-group">
+                    <label for="oxygen-saturation">Oxygen Saturation (%):</label>
+                    <input type="number" id="oxygen-saturation" min="70" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="pain-score">Pain Score (0-10):</label>
+                    <input type="number" id="pain-score" min="0" max="10">
+                </div>
+            </div>
+        </div>
+        
+        <div class="assessment-section">
+            <h3>Critical Signs & Symptoms</h3>
+            
+            <div class="symptom-group">
+                <h4>Immediate Threats (Priority 1)</h4>
+                <div class="check-item">
+                    <input type="checkbox" id="cardiac-arrest">
+                    <label for="cardiac-arrest">Cardiac/respiratory arrest or imminent</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="airway-obstruction">
+                    <label for="airway-obstruction">Complete airway obstruction</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="severe-shock">
+                    <label for="severe-shock">Severe shock (systolic BP <70)</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="unconscious">
+                    <label for="unconscious">Unconscious/unresponsive (GCS ≤8)</label>
+                </div>
+            </div>
+            
+            <div class="symptom-group">
+                <h4>Very Urgent (Priority 2)</h4>
+                <div class="check-item">
+                    <input type="checkbox" id="severe-breathing">
+                    <label for="severe-breathing">Severe breathing difficulty</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="chest-pain">
+                    <label for="chest-pain">Severe chest pain with cardiac features</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="altered-consciousness">
+                    <label for="altered-consciousness">Significantly altered consciousness</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="severe-hemorrhage">
+                    <label for="severe-hemorrhage">Severe active hemorrhage</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="anaphylaxis">
+                    <label for="anaphylaxis">Signs of anaphylaxis</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="stroke-signs">
+                    <label for="stroke-signs">Acute stroke signs (FAST positive)</label>
+                </div>
+            </div>
+            
+            <div class="symptom-group">
+                <h4>Urgent (Priority 3)</h4>
+                <div class="check-item">
+                    <input type="checkbox" id="moderate-breathing">
+                    <label for="moderate-breathing">Moderate breathing difficulty</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="severe-pain">
+                    <label for="severe-pain">Severe pain (8-10/10)</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="persistent-vomiting">
+                    <label for="persistent-vomiting">Persistent vomiting with dehydration</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="high-fever">
+                    <label for="high-fever">High fever with concerning features</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="significant-injury">
+                    <label for="significant-injury">Significant trauma/injury</label>
+                </div>
+            </div>
+            
+            <div class="symptom-group">
+                <h4>Standard (Priority 4)</h4>
+                <div class="check-item">
+                    <input type="checkbox" id="stable-condition">
+                    <label for="stable-condition">Stable condition requiring assessment</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="moderate-pain">
+                    <label for="moderate-pain">Moderate pain (4-7/10)</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="minor-injury">
+                    <label for="minor-injury">Minor injuries</label>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="routine-symptoms">
+                    <label for="routine-symptoms">Routine symptoms (cough, cold, etc.)</label>
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="performTriage()">Perform Triage Assessment</button>
+        
+        <div id="result" class="result">
+            <div class="priority-badge" id="priority-badge">Priority Level</div>
+            <h3 id="triage-category">Triage Category</h3>
+            <p><strong>Time Target:</strong> <span id="time-target" class="time-target"></span></p>
+            <p><strong>Clinical Priority:</strong> <span id="clinical-priority"></span></p>
+            
+            <div class="action-plan">
+                <h4>Immediate Actions Required:</h4>
+                <ul id="action-list"></ul>
+            </div>
+            
+            <div class="warning-signs">
+                <h4>Monitor for Deterioration:</h4>
+                <div id="monitoring-points"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function performTriage() {
+            // Check for immediate priority indicators
+            const priority1Signs = [
+                'cardiac-arrest', 'airway-obstruction', 'severe-shock', 'unconscious'
+            ];
+            
+            const priority2Signs = [
+                'severe-breathing', 'chest-pain', 'altered-consciousness', 
+                'severe-hemorrhage', 'anaphylaxis', 'stroke-signs'
+            ];
+            
+            const priority3Signs = [
+                'moderate-breathing', 'severe-pain', 'persistent-vomiting', 
+                'high-fever', 'significant-injury'
+            ];
+            
+            const priority4Signs = [
+                'stable-condition', 'moderate-pain', 'minor-injury', 'routine-symptoms'
+            ];
+            
+            // Check vital signs for abnormalities
+            const age = parseInt(document.getElementById('age').value);
+            const ageUnit = document.getElementById('age-unit').value;
+            const hr = parseInt(document.getElementById('heart-rate').value);
+            const rr = parseInt(document.getElementById('respiratory-rate').value);
+            const sysBP = parseInt(document.getElementById('blood-pressure-sys').value);
+            const temp = parseFloat(document.getElementById('temperature').value);
+            const o2Sat = parseInt(document.getElementById('oxygen-saturation').value);
+            const painScore = parseInt(document.getElementById('pain-score').value);
+            
+            // Convert age to years for assessment
+            let ageInYears = age;
+            if (ageUnit === 'months') ageInYears = age / 12;
+            if (ageUnit === 'days') ageInYears = age / 365;
+            
+            let priority = 5; // Default to non-urgent
+            let vitalsIndicator = checkVitalSigns(ageInYears, hr, rr, sysBP, temp, o2Sat);
+            
+            // Check for critical signs first
+            if (priority1Signs.some(sign => document.getElementById(sign).checked)) {
+                priority = 1;
+            } else if (priority2Signs.some(sign => document.getElementById(sign).checked) || vitalsIndicator <= 2) {
+                priority = 2;
+            } else if (priority3Signs.some(sign => document.getElementById(sign).checked) || vitalsIndicator === 3) {
+                priority = 3;
+            } else if (priority4Signs.some(sign => document.getElementById(sign).checked) || vitalsIndicator === 4) {
+                priority = 4;
+            }
+            
+            // Pain score can escalate priority
+            if (painScore >= 8 && priority > 3) priority = 3;
+            if (painScore >= 6 && priority > 4) priority = 4;
+            
+            displayTriageResult(priority);
+        }
+        
+        function checkVitalSigns(age, hr, rr, sysBP, temp, o2Sat) {
+            let indicator = 5; // Normal
+            
+            // Heart rate assessment by age
+            if (age < 1) {
+                if (hr < 80 || hr > 180) indicator = Math.min(indicator, 2);
+            } else if (age < 5) {
+                if (hr < 70 || hr > 150) indicator = Math.min(indicator, 3);
+            } else if (age < 12) {
+                if (hr < 60 || hr > 130) indicator = Math.min(indicator, 3);
+            } else {
+                if (hr < 50 || hr > 120) indicator = Math.min(indicator, 3);
+                if (hr < 40 || hr > 150) indicator = Math.min(indicator, 2);
+            }
+            
+            // Respiratory rate
+            if (age < 1) {
+                if (rr < 20 || rr > 40) indicator = Math.min(indicator, 3);
+                if (rr < 15 || rr > 50) indicator = Math.min(indicator, 2);
+            } else if (age < 5) {
+                if (rr < 15 || rr > 30) indicator = Math.min(indicator, 3);
+            } else {
+                if (rr < 12 || rr > 25) indicator = Math.min(indicator, 3);
+                if (rr < 8 || rr > 35) indicator = Math.min(indicator, 2);
+            }
+            
+            // Blood pressure (systolic)
+            if (sysBP < 70) indicator = Math.min(indicator, 1);
+            else if (sysBP < 90) indicator = Math.min(indicator, 2);
+            else if (sysBP > 180) indicator = Math.min(indicator, 3);
+            
+            // Temperature
+            if (temp < 35 || temp > 40) indicator = Math.min(indicator, 2);
+            else if (temp > 38.5) indicator = Math.min(indicator, 3);
+            
+            // Oxygen saturation
+            if (o2Sat < 85) indicator = Math.min(indicator, 1);
+            else if (o2Sat < 92) indicator = Math.min(indicator, 2);
+            else if (o2Sat < 95) indicator = Math.min(indicator, 3);
+            
+            return indicator;
+        }
+        
+        function displayTriageResult(priority) {
+            const categories = {
+                1: {
+                    name: "IMMEDIATE (Priority 1 - RED)",
+                    time: "0 minutes - Immediate resuscitation",
+                    description: "Life-threatening condition requiring immediate intervention",
+                    actions: [
+                        "🚨 Call resuscitation team immediately",
+                        "Begin life-saving interventions now",
+                        "Prepare for airway/breathing/circulation support",
+                        "Continuous monitoring required",
+                        "Do not delay for documentation"
+                    ],
+                    monitoring: "Continuous vital signs monitoring, assess response to interventions every 2-3 minutes"
+                },
+                2: {
+                    name: "VERY URGENT (Priority 2 - ORANGE)", 
+                    time: "10 minutes maximum",
+                    description: "Imminently life-threatening or important time-critical treatment",
+                    actions: [
+                        "Alert senior clinician immediately",
+                        "Obtain IV access and bloods",
+                        "Continuous monitoring",
+                        "Prepare for urgent investigations (ECG, X-ray)",
+                        "Pain relief as appropriate",
+                        "Keep NBM if surgery possible"
+                    ],
+                    monitoring: "Vital signs every 15 minutes, neurological observations, watch for deterioration"
+                },
+                3: {
+                    name: "URGENT (Priority 3 - YELLOW)",
+                    time: "60 minutes maximum", 
+                    description: "Urgent problem requiring prompt medical attention",
+                    actions: [
+                        "Medical assessment within 1 hour",
+                        "Obtain baseline observations",
+                        "Pain assessment and management",
+                        "Consider investigations as indicated",
+                        "Regular reassessment for deterioration"
+                    ],
+                    monitoring: "Vital signs every 30 minutes, pain scores, watch for worsening symptoms"
+                },
+                4: {
+                    name: "STANDARD (Priority 4 - GREEN)",
+                    time: "120 minutes maximum",
+                    description: "Standard urgency requiring medical assessment",
+                    actions: [
+                        "Medical assessment within 2 hours",
+                        "Baseline observations",
+                        "Pain relief if required",
+                        "Patient education and reassurance",
+                        "Routine investigation as needed"
+                    ],
+                    monitoring: "Vital signs hourly if abnormal, otherwise as clinically indicated"
+                },
+                5: {
+                    name: "NON-URGENT (Priority 5 - BLUE)",
+                    time: "240 minutes maximum",
+                    description: "Non-urgent problem suitable for routine assessment",
+                    actions: [
+                        "Medical assessment within 4 hours",
+                        "Basic observations",
+                        "Consider discharge with advice",
+                        "Primary care follow-up may be appropriate",
+                        "Health education as needed"
+                    ],
+                    monitoring: "Basic observations, self-monitoring encouraged"
+                }
+            };
+            
+            const category = categories[priority];
+            
+            // Update result display
+            document.getElementById('priority-badge').textContent = `Priority ${priority}`;
+            document.getElementById('priority-badge').className = `priority-badge priority-${priority}`;
+            document.getElementById('triage-category').textContent = category.name;
+            document.getElementById('time-target').textContent = category.time;
+            document.getElementById('clinical-priority').textContent = category.description;
+            
+            // Update actions list
+            const actionsList = document.getElementById('action-list');
+            actionsList.innerHTML = '';
+            category.actions.forEach(action => {
+                const li = document.createElement('li');
+                li.innerHTML = action;
+                actionsList.appendChild(li);
+            });
+            
+            document.getElementById('monitoring-points').textContent = category.monitoring;
+            
+            // Show result with appropriate styling
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result triage-${priority}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

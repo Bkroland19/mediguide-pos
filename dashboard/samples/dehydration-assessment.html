@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dehydration Assessment Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .patient-info { margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        .assessment-section { margin-bottom: 25px; }
+        .assessment-section h3 { color: #2c5aa0; margin-bottom: 15px; border-bottom: 2px solid #e3f2fd; padding-bottom: 5px; }
+        .check-item { margin-bottom: 10px; display: flex; align-items: flex-start; }
+        .check-item input[type="radio"] { margin-right: 10px; margin-top: 3px; }
+        .check-item label { margin-bottom: 0; font-weight: normal; cursor: pointer; flex: 1; }
+        .radio-group { margin-left: 20px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #1e3f73; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .result h3 { margin-bottom: 10px; }
+        .mild { background: #fff8e1; border-left: 4px solid #ffc107; }
+        .moderate { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .severe { background: #ffebee; border-left: 4px solid #f44336; }
+        .normal { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .score-breakdown { margin-top: 15px; font-size: 14px; color: #666; }
+        .treatment-plan { margin-top: 15px; }
+        .treatment-plan ul { padding-left: 20px; }
+        .treatment-plan li { margin-bottom: 5px; }
+        .urgent { color: #d32f2f; font-weight: bold; }
+        .fluid-calc { margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dehydration Assessment Tool</h1>
+        
+        <div class="patient-info">
+            <h3>Patient Information</h3>
+            <div class="form-group">
+                <label for="age-group">Age Group:</label>
+                <select id="age-group" onchange="updateAssessmentCriteria()">
+                    <option value="infant">Infant (0-12 months)</option>
+                    <option value="child">Child (1-12 years)</option>
+                    <option value="adolescent">Adolescent (13-17 years)</option>
+                    <option value="adult">Adult (18+ years)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="weight">Weight (if known):</label>
+                <input type="number" id="weight" step="0.1" min="1" max="200" placeholder="kg (optional)">
+            </div>
+        </div>
+
+        <div class="assessment-section">
+            <h3>Clinical Signs Assessment</h3>
+            
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">General Appearance:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="appearance" value="0" id="appearance-normal">
+                        <label for="appearance-normal">Alert, active, normal behavior</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="appearance" value="1" id="appearance-restless">
+                        <label for="appearance-restless">Restless, irritable, or slightly lethargic</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="appearance" value="2" id="appearance-lethargic">
+                        <label for="appearance-lethargic">Lethargic, unconscious, or very weak</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">Eyes:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="eyes" value="0" id="eyes-normal">
+                        <label for="eyes-normal">Normal</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="eyes" value="1" id="eyes-sunken">
+                        <label for="eyes-sunken">Slightly sunken</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="eyes" value="2" id="eyes-very-sunken">
+                        <label for="eyes-very-sunken">Very sunken</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">Mouth/Tongue:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="mouth" value="0" id="mouth-moist">
+                        <label for="mouth-moist">Moist</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="mouth" value="1" id="mouth-sticky">
+                        <label for="mouth-sticky">Sticky, decreased saliva</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="mouth" value="2" id="mouth-dry">
+                        <label for="mouth-dry">Dry, no saliva</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">Tears:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="tears" value="0" id="tears-present">
+                        <label for="tears-present">Present when crying</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="tears" value="1" id="tears-decreased">
+                        <label for="tears-decreased">Decreased tears</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="tears" value="2" id="tears-absent">
+                        <label for="tears-absent">Absent tears</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">Skin Pinch Test:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="skin" value="0" id="skin-normal">
+                        <label for="skin-normal">Returns immediately (< 2 seconds)</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="skin" value="1" id="skin-slow">
+                        <label for="skin-slow">Returns slowly (2-3 seconds)</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="skin" value="2" id="skin-very-slow">
+                        <label for="skin-very-slow">Returns very slowly (> 3 seconds)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <span style="font-weight: bold; width: 200px; display: inline-block;">Urine Output:</span>
+                <div class="radio-group">
+                    <div class="check-item">
+                        <input type="radio" name="urine" value="0" id="urine-normal">
+                        <label for="urine-normal">Normal frequency and amount</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="urine" value="1" id="urine-decreased">
+                        <label for="urine-decreased">Decreased frequency, dark color</label>
+                    </div>
+                    <div class="check-item">
+                        <input type="radio" name="urine" value="2" id="urine-minimal">
+                        <label for="urine-minimal">Little to no urine output</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="assessment-section">
+            <h3>Additional Symptoms</h3>
+            
+            <div class="check-item">
+                <input type="checkbox" id="thirst" value="1">
+                <label for="thirst">Increased thirst</label>
+            </div>
+            
+            <div class="check-item">
+                <input type="checkbox" id="nausea" value="1">
+                <label for="nausea">Nausea or vomiting</label>
+            </div>
+            
+            <div class="check-item">
+                <input type="checkbox" id="diarrhea" value="1">
+                <label for="diarrhea">Diarrhea</label>
+            </div>
+            
+            <div class="check-item">
+                <input type="checkbox" id="fever" value="1">
+                <label for="fever">Fever</label>
+            </div>
+            
+            <div class="check-item">
+                <input type="checkbox" id="dizziness" value="1">
+                <label for="dizziness">Dizziness or lightheadedness</label>
+            </div>
+        </div>
+
+        <button onclick="assessDehydration()">Assess Dehydration Level</button>
+        
+        <div id="result" class="result">
+            <h3>Dehydration Assessment Results</h3>
+            <p><strong>Dehydration Level:</strong> <span id="dehydrationLevel"></span></p>
+            <p><strong>Estimated Fluid Loss:</strong> <span id="fluidLoss"></span></p>
+            
+            <div class="score-breakdown">
+                <h4>Assessment Score: <span id="totalScore"></span></h4>
+                <p id="scoreInterpretation"></p>
+            </div>
+            
+            <div class="treatment-plan">
+                <h4>Treatment Recommendations:</h4>
+                <ul id="treatmentList"></ul>
+            </div>
+            
+            <div class="fluid-calc">
+                <h4>Fluid Replacement Calculation:</h4>
+                <p id="fluidCalculation"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateAssessmentCriteria() {
+            // Could modify criteria based on age group if needed
+            // For now, using standard pediatric dehydration assessment scale
+        }
+
+        function assessDehydration() {
+            // Calculate clinical signs score
+            const clinicalSigns = ['appearance', 'eyes', 'mouth', 'tears', 'skin', 'urine'];
+            let totalScore = 0;
+            
+            clinicalSigns.forEach(sign => {
+                const checked = document.querySelector(`input[name="${sign}"]:checked`);
+                if (checked) {
+                    totalScore += parseInt(checked.value);
+                }
+            });
+            
+            // Add additional symptoms
+            const additionalSymptoms = document.querySelectorAll('input[type="checkbox"]:checked');
+            const symptomCount = additionalSymptoms.length;
+            
+            // Determine dehydration level
+            let level, className, fluidLoss, treatments;
+            
+            if (totalScore <= 2) {
+                level = 'No or Mild Dehydration';
+                className = 'normal';
+                fluidLoss = '< 3% body weight';
+                treatments = [
+                    'Continue normal feeding and fluid intake',
+                    'Offer ORS (oral rehydration solution) for replacement',
+                    'Give 10ml/kg for each loose stool or vomiting episode',
+                    'Monitor for signs of worsening',
+                    'Reassess in 4-6 hours if symptoms persist'
+                ];
+            } else if (totalScore <= 6) {
+                level = 'Moderate Dehydration';
+                className = 'moderate';
+                fluidLoss = '3-9% body weight';
+                treatments = [
+                    '⚠️ Start oral rehydration therapy immediately',
+                    'Give ORS: 75ml/kg over 4 hours for children',
+                    'For adults: 200-400ml every hour',
+                    'Continue normal feeding if tolerated',
+                    'Reassess every hour during first 4 hours',
+                    'Consider IV fluids if unable to keep down ORS',
+                    'Monitor vital signs and urine output'
+                ];
+            } else {
+                level = 'Severe Dehydration';
+                className = 'severe';
+                fluidLoss = '> 9% body weight';
+                treatments = [
+                    '🚨 URGENT: Start IV fluid resuscitation immediately',
+                    'Normal saline or Ringer\'s lactate 20ml/kg bolus',
+                    'Reassess after each bolus, repeat if needed',
+                    'Total deficit replacement over 24-48 hours',
+                    'Monitor electrolytes and vital signs closely',
+                    'Consider hospitalization',
+                    'Treat underlying cause (infection, etc.)'
+                ];
+            }
+            
+            // Adjust based on additional symptoms
+            if (symptomCount >= 3 && className !== 'severe') {
+                if (className === 'normal') {
+                    level = 'Mild to Moderate Dehydration';
+                    className = 'mild';
+                } else {
+                    level = 'Moderate to Severe Dehydration';
+                }
+            }
+            
+            // Display results
+            document.getElementById('dehydrationLevel').textContent = level;
+            document.getElementById('fluidLoss').textContent = fluidLoss;
+            document.getElementById('totalScore').textContent = `${totalScore}/12`;
+            document.getElementById('scoreInterpretation').textContent = 
+                `Clinical signs score: ${totalScore}, Additional symptoms: ${symptomCount}`;
+            
+            const treatmentList = document.getElementById('treatmentList');
+            treatmentList.innerHTML = '';
+            treatments.forEach(treatment => {
+                const li = document.createElement('li');
+                li.innerHTML = treatment;
+                if (treatment.includes('🚨') || treatment.includes('⚠️')) {
+                    li.className = 'urgent';
+                }
+                treatmentList.appendChild(li);
+            });
+            
+            // Fluid calculation
+            const weight = parseFloat(document.getElementById('weight').value) || 10; // default 10kg
+            const ageGroup = document.getElementById('age-group').value;
+            
+            let fluidCalc;
+            if (totalScore <= 2) {
+                fluidCalc = `Maintenance fluids plus replacement: ~${Math.round(weight * 10)}ml for each episode of diarrhea/vomiting`;
+            } else if (totalScore <= 6) {
+                const orsAmount = ageGroup === 'adult' ? '200-400ml/hour' : `${Math.round(weight * 75)}ml over 4 hours`;
+                fluidCalc = `ORS replacement: ${orsAmount}`;
+            } else {
+                const ivBolus = Math.round(weight * 20);
+                fluidCalc = `IV bolus: ${ivBolus}ml normal saline, may repeat. Total deficit ~${Math.round(weight * 100)}ml over 24-48 hours`;
+            }
+            
+            document.getElementById('fluidCalculation').innerHTML = 
+                `Based on ${weight}kg: ${fluidCalc}<br><small>*Always adjust based on clinical response and local protocols</small>`;
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${className}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

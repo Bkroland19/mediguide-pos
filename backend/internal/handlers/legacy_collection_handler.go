@@ -165,6 +165,33 @@ func (h LegacyCollectionHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// Delete godoc
+// @Summary Delete legacy collection record
+// @Description Legacy v1 collection delete endpoint for authenticated compatibility flows.
+// @Tags legacy-v1
+// @Produce json
+// @Security BearerAuth
+// @Param collection path string true "Legacy collection name"
+// @Param id path string true "Record ID"
+// @Success 204
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/v1/collections/{collection}/records/{id} [delete]
+func (h LegacyCollectionHandler) Delete(c *gin.Context) {
+	userID := ""
+	if claims := h.optionalClaims(c.GetHeader("Authorization")); claims != nil {
+		userID = claims.UserID.String()
+	}
+
+	if err := h.Service.Delete(c.Param("collection"), c.Param("id"), userID); err != nil {
+		h.writeError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func (h LegacyCollectionHandler) writeError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrLegacyCollectionAuthNeeded):

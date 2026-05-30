@@ -22,6 +22,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("mg.deleted_at IS NULL").Where("(mg.is_published = ? OR mg.status = ?)", true, "published")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("mg.deleted_at IS NULL")
+		},
 	},
 	"drugs": {
 		Table:        "drugs d",
@@ -45,6 +48,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("d.deleted_at IS NULL").Where("d.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("d.deleted_at IS NULL")
+		},
 	},
 	"calculators": {
 		Table:        "calculators c",
@@ -62,6 +68,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Access: legacyAccessPublic,
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("c.deleted_at IS NULL").Where("coalesce(c.status, '') = ?", "active")
+		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("c.deleted_at IS NULL")
 		},
 	},
 	"abbreviations": {
@@ -97,6 +106,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("ep.deleted_at IS NULL").Where("ep.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("ep.deleted_at IS NULL")
+		},
 	},
 	"faqs": {
 		Table:        "faqs f",
@@ -116,6 +128,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("f.deleted_at IS NULL").Where("f.status = ?", "published")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("f.deleted_at IS NULL")
+		},
 	},
 	"documentation": {
 		Table:        "documentation doc",
@@ -132,6 +147,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Access: legacyAccessPublic,
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("doc.deleted_at IS NULL").Where("doc.status = ?", "published")
+		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("doc.deleted_at IS NULL")
 		},
 	},
 	"generic_pages": {
@@ -166,6 +184,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("gc.deleted_at IS NULL").Where("gc.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("gc.deleted_at IS NULL")
+		},
 	},
 	"guideline_tags": {
 		Table:        "guideline_tags gt",
@@ -178,6 +199,24 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Access: legacyAccessPublic,
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("gt.deleted_at IS NULL")
+		},
+	},
+	"guideline_index": {
+		Table:        "guideline_index gi",
+		IDColumn:     "gi.id",
+		Select:       "gi.*",
+		DefaultOrder: "gi.level ASC, coalesce(gi.sort_order, 999999), gi.title ASC",
+		SearchColumns: []string{
+			"gi.title", "coalesce(gi.description, '')",
+		},
+		FilterColumns: map[string]string{
+			"parent_id":    "gi.parent_id::text",
+			"has_children": "gi.has_children::text",
+			"level":        "gi.level::text",
+		},
+		Access: legacyAccessPublic,
+		ApplyScopes: func(query *gorm.DB) *gorm.DB {
+			return query.Where("gi.deleted_at IS NULL")
 		},
 	},
 	"drug_categories": {
@@ -196,6 +235,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("dc.deleted_at IS NULL").Where("dc.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("dc.deleted_at IS NULL")
+		},
 	},
 	"drug_tags": {
 		Table:        "drug_tags dt",
@@ -211,6 +253,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Access: legacyAccessPublic,
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("dt.deleted_at IS NULL").Where("dt.status = ?", "active")
+		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("dt.deleted_at IS NULL")
 		},
 	},
 	"drug_classes": {
@@ -228,6 +273,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("dc.deleted_at IS NULL").Where("dc.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("dc.deleted_at IS NULL")
+		},
 	},
 	"therapeutic_categories": {
 		Table:        "therapeutic_categories tc",
@@ -243,6 +291,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Access: legacyAccessPublic,
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("tc.deleted_at IS NULL").Where("tc.status = ?", "active")
+		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("tc.deleted_at IS NULL")
 		},
 	},
 	"consultants": {
@@ -264,6 +315,26 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Joins:  []string{"LEFT JOIN users u ON u.id = c.user_id"},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("c.deleted_at IS NULL").Where("c.status = ?", "active")
+		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("c.deleted_at IS NULL")
+		},
+	},
+	"health_sub_regions": {
+		Table:        "health_sub_regions hsr",
+		IDColumn:     "hsr.id",
+		Select:       "hsr.*, r.name AS region_name",
+		DefaultOrder: "hsr.name ASC",
+		SearchColumns: []string{
+			"hsr.name", "hsr.nhpi_code", "hsr.hsdt_code", "coalesce(r.name, '')",
+		},
+		FilterColumns: map[string]string{
+			"region_id": "hsr.region_id::text",
+		},
+		Access: legacyAccessPublic,
+		Joins:  []string{"LEFT JOIN regions r ON r.id = hsr.region_id"},
+		ApplyScopes: func(query *gorm.DB) *gorm.DB {
+			return query.Where("hsr.deleted_at IS NULL")
 		},
 	},
 	"health_facilities": {
@@ -320,6 +391,23 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		Joins:  []string{"LEFT JOIN regions r ON r.id = d.region_id"},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("d.deleted_at IS NULL")
+		},
+	},
+	"health_sub_districts": {
+		Table:        "health_sub_districts hsd",
+		IDColumn:     "hsd.id",
+		Select:       "hsd.*, d.name AS district_name",
+		DefaultOrder: "hsd.name ASC",
+		SearchColumns: []string{
+			"hsd.name", "hsd.nhpi_code", "hsd.hsdt_code", "coalesce(d.name, '')",
+		},
+		FilterColumns: map[string]string{
+			"district_id": "hsd.district_id::text",
+		},
+		Access: legacyAccessPublic,
+		Joins:  []string{"LEFT JOIN districts d ON d.id = hsd.district_id"},
+		ApplyScopes: func(query *gorm.DB) *gorm.DB {
+			return query.Where("hsd.deleted_at IS NULL")
 		},
 	},
 	"counties": {
@@ -443,6 +531,9 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("md.deleted_at IS NULL").Where("md.status = ?", "active")
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("md.deleted_at IS NULL")
+		},
 	},
 	"languages": {
 		Table:        "languages l",
@@ -461,21 +552,47 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("l.deleted_at IS NULL").Where("l.is_active = ?", true)
 		},
+		ApplyAuth: func(query *gorm.DB) *gorm.DB {
+			return query.Where("l.deleted_at IS NULL")
+		},
 	},
 	"users": {
 		Table:        "users u",
 		IDColumn:     "u.id",
-		Select:       "u.*",
+		Select:       "u.*, coalesce(r.role_key, r.name) AS role",
 		DefaultOrder: "u.updated_at DESC",
 		SearchColumns: []string{
 			"u.name", "u.email", "coalesce(u.phone, '')",
 		},
-		Access: legacyAccessUser,
+		FilterColumns: map[string]string{
+			"status": "u.status",
+			"role":   "coalesce(r.role_key, r.name)",
+		},
+		Access: legacyAccessAuth,
+		Joins: []string{
+			"LEFT JOIN user_roles ur ON ur.user_id = u.id",
+			"LEFT JOIN roles r ON r.id = ur.role_id",
+		},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("u.deleted_at IS NULL")
 		},
-		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
-			return query.Where("u.id::text = ?", userID)
+	},
+	"roles": {
+		Table:        "roles r",
+		IDColumn:     "r.id",
+		Select:       "r.*, r.role_key AS key, r.permissions_json AS permissions, r.is_active AS \"isActive\"",
+		DefaultOrder: "r.created_at DESC",
+		SearchColumns: []string{
+			"r.name", "coalesce(r.role_key, '')", "coalesce(r.description, '')",
+		},
+		FilterColumns: map[string]string{
+			"is_active": "r.is_active::text",
+			"isActive":  "r.is_active::text",
+			"key":       "r.role_key",
+		},
+		Access: legacyAccessAuth,
+		ApplyScopes: func(query *gorm.DB) *gorm.DB {
+			return query.Where("r.deleted_at IS NULL")
 		},
 	},
 	"notifications": {

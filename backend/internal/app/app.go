@@ -104,8 +104,13 @@ func New(cfg config.Config) (*App, error) {
 	legacyProtected.GET("/overview", legacyAPIH.Overview)
 	legacyProtected.POST("/collections/:collection/records", legacyCollectionH.Create)
 	legacyProtected.PATCH("/collections/:collection/records/:id", legacyCollectionH.Update)
+	legacyProtected.DELETE("/collections/:collection/records/:id", legacyCollectionH.Delete)
 	legacyV1.GET("/collections/:collection/records/:id", legacyCollectionH.Get)
 	legacyV1.GET("/collections/:collection/records", legacyCollectionH.List)
+
+	legacyCompat := r.Group("/api")
+	legacyCompat.Use(middleware.AuthRequired(cfg, database))
+	legacyCompat.GET("/overview", legacyAPIH.Overview)
 
 	v2 := r.Group("/api/v2")
 	{

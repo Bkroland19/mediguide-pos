@@ -1,6 +1,5 @@
 *.md
 backend/.env
 backend/.env.local
-dashboard
 guidelines
-go_api
+.DS_Store

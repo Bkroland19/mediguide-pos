@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Pain Assessment Scale</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5aa0; margin-bottom: 20px; text-align: center; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #2196f3; }
+        .patient-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .scale-selection { margin-bottom: 20px; }
+        .scale-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .scale-tab { padding: 10px 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        .scale-tab.active { background: #2c5aa0; color: white; border-color: #2c5aa0; }
+        .scale-section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; display: none; }
+        .scale-section.active { display: block; }
+        .scale-section h3 { color: #2c5aa0; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        .input-group { display: flex; gap: 10px; }
+        .input-group input, .input-group select { flex: 1; }
+        .numeric-scale { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .scale-number { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; transition: all 0.2s; background: white; }
+        .scale-number:hover { border-color: #2c5aa0; }
+        .scale-number.selected { background: #2c5aa0; color: white; border-color: #2c5aa0; }
+        .scale-labels { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #666; }
+        .wong-baker-faces { display: flex; justify-content: space-between; margin: 20px 0; }
+        .face-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 8px; transition: all 0.2s; }
+        .face-option:hover { background: #f5f5f5; }
+        .face-option.selected { background: #e3f2fd; border: 2px solid #2196f3; }
+        .face-emoji { font-size: 40px; margin-bottom: 5px; }
+        .face-label { font-size: 12px; color: #666; }
+        .behavioral-indicators { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .indicator-group { background: #f8f9fa; padding: 15px; border-radius: 4px; }
+        .indicator-group h4 { margin-bottom: 10px; color: #2c5aa0; }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 8px; }
+        .checkbox-item input { width: auto; margin-right: 8px; }
+        button { background: #2c5aa0; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #1e3f73; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; }
+        .result h3 { margin-bottom: 15px; }
+        .no-pain { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .mild-pain { background: #fff8e1; border-left: 4px solid #ffc107; }
+        .moderate-pain { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .severe-pain { background: #ffebee; border-left: 4px solid #f44336; }
+        .pain-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .summary-card { background: white; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ddd; }
+        .summary-card .value { font-size: 24px; font-weight: bold; color: #2c5aa0; }
+        .summary-card .label { font-size: 14px; color: #666; margin-top: 5px; }
+        .management { margin-top: 15px; }
+        .management ul { padding-left: 20px; }
+        .management li { margin-bottom: 8px; }
+        .urgent { color: #d32f2f; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Comprehensive Pain Assessment Scale</h1>
+        
+        <div class="info-box">
+            <h4>Multi-Modal Pain Assessment</h4>
+            <p>This tool combines multiple validated pain assessment scales to provide comprehensive pain evaluation. Choose the most appropriate scale based on patient age, cognitive ability, and clinical situation.</p>
+        </div>
+        
+        <div class="patient-info">
+            <h3>Patient Information</h3>
+            <div class="input-group">
+                <div>
+                    <label for="patient-age">Age:</label>
+                    <input type="number" id="patient-age" min="0" max="120">
+                </div>
+                <div>
+                    <label for="cognitive-status">Cognitive Status:</label>
+                    <select id="cognitive-status">
+                        <option value="normal">Normal/Alert</option>
+                        <option value="mild-impairment">Mild impairment</option>
+                        <option value="moderate-impairment">Moderate impairment</option>
+                        <option value="severe-impairment">Severe impairment</option>
+                        <option value="nonverbal">Nonverbal</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <div>
+                    <label for="pain-duration">Pain Duration:</label>
+                    <select id="pain-duration">
+                        <option value="acute">Acute (< 3 months)</option>
+                        <option value="chronic">Chronic (> 3 months)</option>
+                        <option value="acute-on-chronic">Acute on chronic</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="pain-location">Primary Pain Location:</label>
+                    <input type="text" id="pain-location" placeholder="e.g., Lower back, right knee">
+                </div>
+            </div>
+        </div>
+        
+        <div class="scale-selection">
+            <h3>Select Pain Assessment Scale</h3>
+            <div class="scale-tabs">
+                <div class="scale-tab active" onclick="selectScale('numeric')">Numeric Rating Scale (0-10)</div>
+                <div class="scale-tab" onclick="selectScale('wong-baker')">Wong-Baker FACES</div>
+                <div class="scale-tab" onclick="selectScale('behavioral')">Behavioral Pain Scale</div>
+                <div class="scale-tab" onclick="selectScale('flacc')">FLACC Scale (Pediatric)</div>
+                <div class="scale-tab" onclick="selectScale('pqrst')">PQRST Assessment</div>
+            </div>
+        </div>
+        
+        <!-- Numeric Rating Scale -->
+        <div id="numeric-scale" class="scale-section active">
+            <h3>Numeric Rating Scale (0-10)</h3>
+            <p style="margin-bottom: 15px;">Select the number that best describes your pain level right now:</p>
+            
+            <div class="numeric-scale">
+                <div class="scale-number" data-value="0">0</div>
+                <div class="scale-number" data-value="1">1</div>
+                <div class="scale-number" data-value="2">2</div>
+                <div class="scale-number" data-value="3">3</div>
+                <div class="scale-number" data-value="4">4</div>
+                <div class="scale-number" data-value="5">5</div>
+                <div class="scale-number" data-value="6">6</div>
+                <div class="scale-number" data-value="7">7</div>
+                <div class="scale-number" data-value="8">8</div>
+                <div class="scale-number" data-value="9">9</div>
+                <div class="scale-number" data-value="10">10</div>
+            </div>
+            
+            <div class="scale-labels">
+                <span>No Pain</span>
+                <span>Mild Pain</span>
+                <span>Moderate Pain</span>
+                <span>Severe Pain</span>
+                <span>Worst Possible Pain</span>
+            </div>
+        </div>
+        
+        <!-- Wong-Baker FACES Scale -->
+        <div id="wong-baker-scale" class="scale-section">
+            <h3>Wong-Baker FACES Pain Rating Scale</h3>
+            <p style="margin-bottom: 15px;">Choose the face that shows how much you hurt:</p>
+            
+            <div class="wong-baker-faces">
+                <div class="face-option" data-value="0">
+                    <div class="face-emoji">😊</div>
+                    <div class="face-label">0<br>No Pain</div>
+                </div>
+                <div class="face-option" data-value="2">
+                    <div class="face-emoji">🙂</div>
+                    <div class="face-label">2<br>Hurts Little Bit</div>
+                </div>
+                <div class="face-option" data-value="4">
+                    <div class="face-emoji">😐</div>
+                    <div class="face-label">4<br>Hurts Little More</div>
+                </div>
+                <div class="face-option" data-value="6">
+                    <div class="face-emoji">😟</div>
+                    <div class="face-label">6<br>Hurts Even More</div>
+                </div>
+                <div class="face-option" data-value="8">
+                    <div class="face-emoji">😢</div>
+                    <div class="face-label">8<br>Hurts Whole Lot</div>
+                </div>
+                <div class="face-option" data-value="10">
+                    <div class="face-emoji">😭</div>
+                    <div class="face-label">10<br>Hurts Worst</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Behavioral Pain Scale -->
+        <div id="behavioral-scale" class="scale-section">
+            <h3>Behavioral Pain Scale (BPS)</h3>
+            <p style="margin-bottom: 15px;">For patients unable to self-report - observe and score behaviors:</p>
+            
+            <div class="behavioral-indicators">
+                <div class="indicator-group">
+                    <h4>Facial Expression</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="facial" value="1" id="facial-1">
+                        <label for="facial-1">Relaxed (1 point)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="facial" value="2" id="facial-2">
+                        <label for="facial-2">Partially tightened (2 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="facial" value="3" id="facial-3">
+                        <label for="facial-3">Fully tightened (3 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="facial" value="4" id="facial-4">
+                        <label for="facial-4">Grimacing (4 points)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Upper Limbs</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="limbs" value="1" id="limbs-1">
+                        <label for="limbs-1">No movement (1 point)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="limbs" value="2" id="limbs-2">
+                        <label for="limbs-2">Partially bent (2 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="limbs" value="3" id="limbs-3">
+                        <label for="limbs-3">Fully bent with finger flexion (3 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="limbs" value="4" id="limbs-4">
+                        <label for="limbs-4">Permanently retracted (4 points)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Compliance with Ventilation</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="ventilation" value="1" id="vent-1">
+                        <label for="vent-1">Tolerating movement (1 point)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="ventilation" value="2" id="vent-2">
+                        <label for="vent-2">Coughing but tolerating (2 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="ventilation" value="3" id="vent-3">
+                        <label for="vent-3">Fighting ventilator (3 points)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="ventilation" value="4" id="vent-4">
+                        <label for="vent-4">Unable to control ventilation (4 points)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FLACC Scale -->
+        <div id="flacc-scale" class="scale-section">
+            <h3>FLACC Scale (Face, Legs, Activity, Cry, Consolability)</h3>
+            <p style="margin-bottom: 15px;">For children 2 months to 7 years - observe for 1-5 minutes:</p>
+            
+            <div class="behavioral-indicators">
+                <div class="indicator-group">
+                    <h4>Face</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-face" value="0" id="flacc-face-0">
+                        <label for="flacc-face-0">No particular expression (0)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-face" value="1" id="flacc-face-1">
+                        <label for="flacc-face-1">Occasional grimace, withdrawn (1)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-face" value="2" id="flacc-face-2">
+                        <label for="flacc-face-2">Frequent grimace, clenched jaw (2)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Legs</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-legs" value="0" id="flacc-legs-0">
+                        <label for="flacc-legs-0">Normal position, relaxed (0)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-legs" value="1" id="flacc-legs-1">
+                        <label for="flacc-legs-1">Uneasy, restless, tense (1)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-legs" value="2" id="flacc-legs-2">
+                        <label for="flacc-legs-2">Kicking or legs drawn up (2)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Activity</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-activity" value="0" id="flacc-activity-0">
+                        <label for="flacc-activity-0">Lying quietly, normal position (0)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-activity" value="1" id="flacc-activity-1">
+                        <label for="flacc-activity-1">Squirming, shifting, tense (1)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-activity" value="2" id="flacc-activity-2">
+                        <label for="flacc-activity-2">Arched, rigid, jerking (2)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Cry</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-cry" value="0" id="flacc-cry-0">
+                        <label for="flacc-cry-0">No cry (0)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-cry" value="1" id="flacc-cry-1">
+                        <label for="flacc-cry-1">Moans, whimpers (1)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-cry" value="2" id="flacc-cry-2">
+                        <label for="flacc-cry-2">Crying steadily, screams (2)</label>
+                    </div>
+                </div>
+                
+                <div class="indicator-group">
+                    <h4>Consolability</h4>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-console" value="0" id="flacc-console-0">
+                        <label for="flacc-console-0">Content, relaxed (0)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-console" value="1" id="flacc-console-1">
+                        <label for="flacc-console-1">Reassured by occasional touching (1)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" name="flacc-console" value="2" id="flacc-console-2">
+                        <label for="flacc-console-2">Difficult to console (2)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PQRST Assessment -->
+        <div id="pqrst-scale" class="scale-section">
+            <h3>PQRST Comprehensive Pain Assessment</h3>
+            
+            <div class="form-group">
+                <label for="pqrst-provocation">P - Provocation/Palliation: What makes it better or worse?</label>
+                <textarea id="pqrst-provocation" rows="2" placeholder="e.g., Movement makes it worse, rest helps"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="pqrst-quality">Q - Quality: How would you describe the pain?</label>
+                <select id="pqrst-quality">
+                    <option value="">Select pain quality...</option>
+                    <option value="sharp">Sharp/Stabbing</option>
+                    <option value="dull">Dull/Aching</option>
+                    <option value="burning">Burning</option>
+                    <option value="throbbing">Throbbing/Pulsating</option>
+                    <option value="cramping">Cramping</option>
+                    <option value="shooting">Shooting</option>
+                    <option value="pressure">Pressure/Squeezing</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="pqrst-region">R - Region/Radiation: Where is the pain? Does it spread?</label>
+                <textarea id="pqrst-region" rows="2" placeholder="e.g., Lower back, radiates to right leg"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="pqrst-severity">S - Severity: Rate pain from 0-10</label>
+                <div class="numeric-scale">
+                    <div class="scale-number pqrst-severity" data-value="0">0</div>
+                    <div class="scale-number pqrst-severity" data-value="1">1</div>
+                    <div class="scale-number pqrst-severity" data-value="2">2</div>
+                    <div class="scale-number pqrst-severity" data-value="3">3</div>
+                    <div class="scale-number pqrst-severity" data-value="4">4</div>
+                    <div class="scale-number pqrst-severity" data-value="5">5</div>
+                    <div class="scale-number pqrst-severity" data-value="6">6</div>
+                    <div class="scale-number pqrst-severity" data-value="7">7</div>
+                    <div class="scale-number pqrst-severity" data-value="8">8</div>
+                    <div class="scale-number pqrst-severity" data-value="9">9</div>
+                    <div class="scale-number pqrst-severity" data-value="10">10</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="pqrst-timing">T - Timing: When did it start? How long does it last?</label>
+                <textarea id="pqrst-timing" rows="2" placeholder="e.g., Started 3 days ago, constant vs intermittent"></textarea>
+            </div>
+        </div>
+        
+        <button onclick="assessPain()">Assess Pain</button>
+        
+        <div id="result" class="result">
+            <h3>Pain Assessment Results</h3>
+            
+            <div class="pain-summary">
+                <div class="summary-card">
+                    <div class="value" id="pain-score">0</div>
+                    <div class="label">Pain Score</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" id="pain-level">None</div>
+                    <div class="label">Pain Level</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" id="pain-scale-used">NRS</div>
+                    <div class="label">Scale Used</div>
+                </div>
+            </div>
+            
+            <div class="management">
+                <h4>Pain Management Recommendations:</h4>
+                <ul id="management-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScale = 'numeric';
+        let selectedPainScore = null;
+
+        function selectScale(scale) {
+            currentScale = scale;
+            
+            // Update active tab
+            document.querySelectorAll('.scale-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide scale sections
+            document.querySelectorAll('.scale-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(`${scale}-scale`).classList.add('active');
+            
+            // Reset selections
+            selectedPainScore = null;
+            document.querySelectorAll('.scale-number, .face-option').forEach(el => el.classList.remove('selected'));
+        }
+
+        // Numeric scale selection
+        document.querySelectorAll('.scale-number').forEach(number => {
+            number.addEventListener('click', function() {
+                const scale = this.classList.contains('pqrst-severity') ? 'pqrst-severity' : 'scale-number';
+                document.querySelectorAll(`.${scale}`).forEach(n => n.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                if (currentScale === 'pqrst' && this.classList.contains('pqrst-severity')) {
+                    selectedPainScore = parseInt(this.dataset.value);
+                } else if (currentScale === 'numeric') {
+                    selectedPainScore = parseInt(this.dataset.value);
+                }
+            });
+        });
+
+        // Wong-Baker faces selection
+        document.querySelectorAll('.face-option').forEach(face => {
+            face.addEventListener('click', function() {
+                document.querySelectorAll('.face-option').forEach(f => f.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedPainScore = parseInt(this.dataset.value);
+            });
+        });
+
+        function assessPain() {
+            const age = parseInt(document.getElementById('patient-age').value);
+            const cognitiveStatus = document.getElementById('cognitive-status').value;
+            const painDuration = document.getElementById('pain-duration').value;
+            const painLocation = document.getElementById('pain-location').value;
+            
+            let painScore = 0;
+            let scaleUsed = '';
+            
+            if (currentScale === 'numeric') {
+                painScore = selectedPainScore;
+                scaleUsed = 'Numeric Rating Scale (0-10)';
+            } else if (currentScale === 'wong-baker') {
+                painScore = selectedPainScore;
+                scaleUsed = 'Wong-Baker FACES Scale';
+            } else if (currentScale === 'behavioral') {
+                const facial = parseInt(document.querySelector('input[name="facial"]:checked')?.value) || 0;
+                const limbs = parseInt(document.querySelector('input[name="limbs"]:checked')?.value) || 0;
+                const ventilation = parseInt(document.querySelector('input[name="ventilation"]:checked')?.value) || 0;
+                painScore = facial + limbs + ventilation;
+                scaleUsed = 'Behavioral Pain Scale (3-12)';
+            } else if (currentScale === 'flacc') {
+                const face = parseInt(document.querySelector('input[name="flacc-face"]:checked')?.value) || 0;
+                const legs = parseInt(document.querySelector('input[name="flacc-legs"]:checked')?.value) || 0;
+                const activity = parseInt(document.querySelector('input[name="flacc-activity"]:checked')?.value) || 0;
+                const cry = parseInt(document.querySelector('input[name="flacc-cry"]:checked')?.value) || 0;
+                const console = parseInt(document.querySelector('input[name="flacc-console"]:checked')?.value) || 0;
+                painScore = face + legs + activity + cry + console;
+                scaleUsed = 'FLACC Scale (0-10)';
+            } else if (currentScale === 'pqrst') {
+                painScore = selectedPainScore;
+                scaleUsed = 'PQRST Assessment';
+            }
+            
+            if (painScore === null || painScore === undefined) {
+                alert('Please complete the pain assessment by selecting a score or answering all questions.');
+                return;
+            }
+            
+            displayPainAssessment(painScore, scaleUsed, painDuration, painLocation, age);
+        }
+
+        function displayPainAssessment(score, scaleUsed, duration, location, age) {
+            let painLevel, className, recommendations;
+            
+            // Determine pain level based on scale
+            if (currentScale === 'behavioral') {
+                // BPS: 3-12 scale
+                if (score <= 5) {
+                    painLevel = 'Minimal/No Pain';
+                    className = 'no-pain';
+                } else if (score <= 8) {
+                    painLevel = 'Moderate Pain';
+                    className = 'moderate-pain';
+                } else {
+                    painLevel = 'Severe Pain';
+                    className = 'severe-pain';
+                }
+            } else {
+                // 0-10 scales
+                if (score === 0) {
+                    painLevel = 'No Pain';
+                    className = 'no-pain';
+                } else if (score <= 3) {
+                    painLevel = 'Mild Pain';
+                    className = 'mild-pain';
+                } else if (score <= 6) {
+                    painLevel = 'Moderate Pain';
+                    className = 'moderate-pain';
+                } else {
+                    painLevel = 'Severe Pain';
+                    className = 'severe-pain';
+                }
+            }
+            
+            // Generate recommendations
+            recommendations = generatePainRecommendations(score, painLevel, duration, age, currentScale);
+            
+            // Display results
+            document.getElementById('pain-score').textContent = score;
+            document.getElementById('pain-level').textContent = painLevel;
+            document.getElementById('pain-scale-used').textContent = scaleUsed;
+            
+            const managementList = document.getElementById('management-list');
+            managementList.innerHTML = '';
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.innerHTML = rec;
+                if (rec.includes('🚨') || rec.includes('⚠️')) {
+                    li.className = 'urgent';
+                }
+                managementList.appendChild(li);
+            });
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${className}`;
+            resultDiv.style.display = 'block';
+        }
+
+        function generatePainRecommendations(score, level, duration, age, scale) {
+            const recommendations = [];
+            
+            // Basic pain management
+            if (score === 0) {
+                recommendations.push('No pain intervention needed at this time');
+                recommendations.push('Continue current comfort measures');
+                recommendations.push('Reassess pain in 4-6 hours or as needed');
+            } else if (score <= 3) {
+                recommendations.push('Non-pharmacological interventions may be sufficient');
+                recommendations.push('Consider: positioning, heat/cold therapy, relaxation techniques');
+                recommendations.push('Paracetamol/acetaminophen if needed');
+                recommendations.push('Monitor and reassess in 2-4 hours');
+            } else if (score <= 6) {
+                recommendations.push('⚠️ Moderate pain requires intervention');
+                recommendations.push('Combine pharmacological and non-pharmacological approaches');
+                recommendations.push('Consider: paracetamol + NSAID (if no contraindications)');
+                recommendations.push('Reassess within 1-2 hours after intervention');
+                if (duration === 'chronic') {
+                    recommendations.push('Consider referral to pain specialist if chronic');
+                }
+            } else {
+                recommendations.push('🚨 Severe pain requires immediate attention');
+                recommendations.push('Strong analgesics may be needed (opioids if appropriate)');
+                recommendations.push('Consider multimodal approach');
+                recommendations.push('Frequent reassessment (every 30-60 minutes initially)');
+                recommendations.push('Investigate underlying cause if acute onset');
+            }
+            
+            // Age-specific considerations
+            if (age < 18) {
+                recommendations.push('Pediatric dosing protocols apply');
+                recommendations.push('Consider parent/caregiver involvement in comfort measures');
+            } else if (age > 65) {
+                recommendations.push('Elderly patients: start with lower doses, monitor closely');
+                recommendations.push('Increased risk of medication interactions and side effects');
+            }
+            
+            // Scale-specific considerations
+            if (scale === 'behavioral' || scale === 'flacc') {
+                recommendations.push('Continue behavioral observations for pain assessment');
+                recommendations.push('Look for changes in vital signs as pain indicators');
+            }
+            
+            // General recommendations
+            recommendations.push('Document pain score and interventions');
+            recommendations.push('Educate patient/family about pain management plan');
+            recommendations.push('Consider underlying conditions affecting pain perception');
+            
+            return recommendations;
+        }
+    </script>
+</body>
+</html>

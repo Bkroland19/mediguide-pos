@@ -60,6 +60,7 @@ type legacyCollectionSpec struct {
 	Access        legacyAccessMode
 	Joins         []string
 	ApplyScopes   func(*gorm.DB) *gorm.DB
+	ApplyAuth     func(*gorm.DB) *gorm.DB
 	ApplyUser     func(*gorm.DB, string) *gorm.DB
 }
 
@@ -149,6 +150,8 @@ func (s LegacyCollectionService) Create(collection string, payload map[string]an
 	}
 
 	switch collection {
+	case "users":
+		return s.createUser(payload)
 	case "support_tickets":
 		return s.createSupportTicket(payload, userID)
 	case "support_ticket_replies":
@@ -174,7 +177,7 @@ func (s LegacyCollectionService) Create(collection string, payload map[string]an
 	case "ai_usage_logs":
 		return s.createUsageLog(collection, payload, userID)
 	default:
-		return nil, ErrLegacyCollectionWrite
+		return s.createGeneric(collection, payload, userID)
 	}
 }
 
@@ -189,7 +192,10 @@ func (s LegacyCollectionService) Update(collection, id string, payload map[strin
 
 	switch collection {
 	case "users":
-		return s.updateUser(id, payload, userID)
+		if id == userID {
+			return s.updateUser(id, payload, userID)
+		}
+		return s.updateUserAdmin(id, payload)
 	case "conversations":
 		return s.updateConversation(id, payload, userID)
 	case "messages":
@@ -199,7 +205,24 @@ func (s LegacyCollectionService) Update(collection, id string, payload map[strin
 	case "calculator_usage_logs":
 		return s.updateUsageLog(collection, id, payload, userID)
 	default:
-		return nil, ErrLegacyCollectionWrite
+		return s.updateGeneric(collection, id, payload, userID)
+	}
+}
+
+func (s LegacyCollectionService) Delete(collection, id, userID string) error {
+	spec, ok := legacyCollectionSpecs[collection]
+	if !ok {
+		return ErrLegacyCollectionNotFound
+	}
+	if err := validateLegacyAccess(spec, userID); err != nil {
+		return err
+	}
+
+	switch collection {
+	case "users":
+		return s.deleteUser(id)
+	default:
+		return s.deleteGeneric(collection, id, userID)
 	}
 }
 
@@ -208,7 +231,9 @@ func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID st
 	for _, join := range spec.Joins {
 		query = query.Joins(join)
 	}
-	if spec.ApplyScopes != nil {
+	if strings.TrimSpace(userID) != "" && spec.ApplyAuth != nil {
+		query = spec.ApplyAuth(query)
+	} else if spec.ApplyScopes != nil {
 		query = spec.ApplyScopes(query)
 	}
 	if spec.ApplyUser != nil && strings.TrimSpace(userID) != "" {
