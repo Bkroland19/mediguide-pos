@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/responsive.dart';
 
 /// A reusable empty state widget that displays when no content is available
-///
+/// 
 /// Provides consistent empty state UI across the app with:
 /// - Large icon with themed background
 /// - Title and description text
@@ -14,22 +14,22 @@ import '../utils/responsive.dart';
 class EmptyState extends StatelessWidget {
   /// The icon to display in the empty state
   final IconData icon;
-
+  
   /// The main title text
   final String title;
-
+  
   /// The description text explaining the empty state
   final String description;
-
+  
   /// Optional action button text
   final String? actionLabel;
-
+  
   /// Callback for the action button
   final VoidCallback? onAction;
-
+  
   /// Icon color (defaults to onSurfaceVariant)
   final Color? iconColor;
-
+  
   /// Icon background color (defaults to surfaceContainerHighest)
   final Color? iconBackgroundColor;
 
@@ -125,20 +125,20 @@ class EmptyState extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color:
-                    iconBackgroundColor ??
-                    context.theme.colorScheme.surfaceContainerHighest,
+                color: iconBackgroundColor ?? 
+                       context.theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(60),
               ),
               child: Icon(
                 icon,
                 size: 60,
-                color: iconColor ?? context.theme.colorScheme.onSurfaceVariant,
+                color: iconColor ?? 
+                       context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
-
+            
             const SizedBox(height: 24),
-
+            
             // Title
             Text(
               title,
@@ -148,9 +148,9 @@ class EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-
+            
             const SizedBox(height: 8),
-
+            
             // Description
             Text(
               description,
@@ -160,7 +160,7 @@ class EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-
+            
             // Optional action button
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 32),

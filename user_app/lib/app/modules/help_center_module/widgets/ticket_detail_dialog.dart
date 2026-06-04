@@ -35,21 +35,15 @@ class TicketDetailDialog extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Obx(
-          () => Text(
-            controller.selectedTicket.value?.subject ?? 'Ticket Details',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(LucideIcons.x),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Obx(() => Text(
+          controller.selectedTicket.value?.subject ?? 'Ticket Details',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        )),
+        leading: IconButton(icon: const Icon(LucideIcons.x), onPressed: () => Navigator.pop(context)),
       ),
       body: Obx(() {
-        if (controller.isLoading.value &&
-            controller.selectedTicket.value == null) {
+        if (controller.isLoading.value && controller.selectedTicket.value == null) {
           return const CenteredLoading.large();
         }
 
@@ -59,18 +53,11 @@ class TicketDetailDialog extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  LucideIcons.circleAlert,
-                  size: 48,
-                  color: cs.onSurfaceVariant,
-                ),
+                Icon(LucideIcons.circleAlert, size: 48, color: cs.onSurfaceVariant),
                 AppSpacing.gapMd,
                 Text('Ticket not found', style: context.textTheme.titleMedium),
                 AppSpacing.gapSm,
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
               ],
             ),
           );
@@ -82,10 +69,7 @@ class TicketDetailDialog extends StatelessWidget {
               child: RefreshIndicator(
                 onRefresh: () => controller.loadTicketDetails(ticketId),
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   children: [
                     // ── Ticket info header ──
                     // Status row
@@ -94,80 +78,41 @@ class TicketDetailDialog extends StatelessWidget {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: ticket.status.color,
-                          ),
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: ticket.status.color),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           ticket.status.label,
-                          style: context.textTheme.labelMedium?.copyWith(
-                            color: ticket.status.color,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: context.textTheme.labelMedium?.copyWith(color: ticket.status.color, fontWeight: FontWeight.w600),
                         ),
                         if (ticket.isHighPriority) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              '·',
-                              style: TextStyle(color: cs.onSurfaceVariant),
-                            ),
+                            child: Text('·', style: TextStyle(color: cs.onSurfaceVariant)),
                           ),
-                          Icon(
-                            LucideIcons.flag,
-                            size: 14,
-                            color: ticket.priority.color,
-                          ),
+                          Icon(LucideIcons.flag, size: 14, color: ticket.priority.color),
                           const SizedBox(width: 4),
-                          Text(
-                            ticket.priority.label,
-                            style: context.textTheme.labelMedium?.copyWith(
-                              color: ticket.priority.color,
-                            ),
-                          ),
+                          Text(ticket.priority.label, style: context.textTheme.labelMedium?.copyWith(color: ticket.priority.color)),
                         ],
                         const Spacer(),
-                        Text(
-                          ticket.timeAgo,
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
+                        Text(ticket.timeAgo, style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                       ],
                     ),
 
                     AppSpacing.gapSm,
 
                     // Subject
-                    Text(
-                      ticket.subject,
-                      style: context.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text(ticket.subject, style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
 
                     if (ticket.category.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        ticket.category,
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: cs.primary,
-                        ),
-                      ),
+                      Text(ticket.category, style: context.textTheme.bodySmall?.copyWith(color: cs.primary)),
                     ],
 
                     AppSpacing.gapMd,
 
                     // Description
-                    Text(
-                      ticket.description,
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurface,
-                        height: 1.5,
-                      ),
-                    ),
+                    Text(ticket.description, style: context.textTheme.bodyMedium?.copyWith(color: cs.onSurface, height: 1.5)),
 
                     AppSpacing.gapLg,
 
@@ -191,41 +136,22 @@ class TicketDetailDialog extends StatelessWidget {
 
                       if (replies.isEmpty) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.xl,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
                           child: Column(
                             children: [
-                              Icon(
-                                LucideIcons.messageCircle,
-                                size: 32,
-                                color: cs.onSurfaceVariant.withValues(
-                                  alpha: 0.4,
-                                ),
-                              ),
+                              Icon(LucideIcons.messageCircle, size: 32, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
                               AppSpacing.gapSm,
-                              Text(
-                                'No replies yet',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
+                              Text('No replies yet', style: context.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                             ],
                           ),
                         );
                       }
 
                       return Column(
-                        children: replies
-                            .map(
-                              (reply) => Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: TicketReplyCard(reply: reply),
-                              ),
-                            )
-                            .toList(),
+                        children: replies.map((reply) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: TicketReplyCard(reply: reply),
+                        )).toList(),
                       );
                     }),
 
@@ -240,17 +166,10 @@ class TicketDetailDialog extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   color: cs.surface,
-                  border: Border(
-                    top: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.4),
-                    ),
-                  ),
+                  border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4))),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   child: FormBuilder(
                     key: controller.replyFormKey,
                     child: Row(
@@ -259,10 +178,7 @@ class TicketDetailDialog extends StatelessWidget {
                         Expanded(
                           child: FormBuilderTextField(
                             name: 'reply',
-                            decoration: const InputDecoration(
-                              hintText: 'Type your reply...',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(hintText: 'Type your reply...', border: OutlineInputBorder()),
                             maxLines: 3,
                             minLines: 1,
                             textInputAction: TextInputAction.newline,
@@ -273,16 +189,10 @@ class TicketDetailDialog extends StatelessWidget {
                           ),
                         ),
                         AppSpacing.hGapSm,
-                        Obx(
-                          () => IconButton.filled(
-                            onPressed: controller.isAddingReply.value
-                                ? null
-                                : () => _submitReply(controller),
-                            icon: controller.isAddingReply.value
-                                ? const Loading.small()
-                                : const Icon(LucideIcons.send),
-                          ),
-                        ),
+                        Obx(() => IconButton.filled(
+                          onPressed: controller.isAddingReply.value ? null : () => _submitReply(controller),
+                          icon: controller.isAddingReply.value ? const Loading.small() : const Icon(LucideIcons.send),
+                        )),
                       ],
                     ),
                   ),
@@ -296,12 +206,9 @@ class TicketDetailDialog extends StatelessWidget {
 
   Future<void> _submitReply(HelpCenterController controller) async {
     if (controller.replyFormKey.currentState?.saveAndValidate() ?? false) {
-      final message =
-          controller.replyFormKey.currentState!.value['reply'] as String;
+      final message = controller.replyFormKey.currentState!.value['reply'] as String;
       await controller.addReplyToCurrentTicket(message);
-      if (!controller.isAddingReply.value) {
-        controller.replyFormKey.currentState?.reset();
-      }
+      if (!controller.isAddingReply.value) controller.replyFormKey.currentState?.reset();
     }
   }
 }

@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/common.dart';
 
 class ReadGuidelineController extends GetxController {
@@ -45,10 +45,10 @@ class ReadGuidelineController extends GetxController {
   void _setupScrollListener() {
     scrollController.addListener(() {
       if (!scrollController.hasClients) return;
-
+      
       final maxScroll = scrollController.position.maxScrollExtent;
       final currentScroll = scrollController.position.pixels;
-
+      
       if (maxScroll > 0) {
         final progress = (currentScroll / maxScroll).clamp(0.0, 1.0);
         progressPercentage.value = progress;
@@ -66,37 +66,25 @@ class ReadGuidelineController extends GetxController {
     if (g.hasDefinition) sections.add(GuidelineSection.definition);
     if (g.hasCauses) sections.add(GuidelineSection.causes);
     if (g.hasClinicalFeatures) sections.add(GuidelineSection.clinicalFeatures);
-    if (g.differentialDiagnosis.isNotEmpty) {
-      sections.add(GuidelineSection.differentialDiagnosis);
-    }
+    if (g.differentialDiagnosis.isNotEmpty) sections.add(GuidelineSection.differentialDiagnosis);
     if (g.hasClassifications) sections.add(GuidelineSection.classification);
-    if (g.generalManagement.isNotEmpty) {
-      sections.add(GuidelineSection.generalManagement);
-    }
-    if (g.hasPrimaryMedication || g.hasSecondaryMedication) {
-      sections.add(GuidelineSection.medication);
-    }
-    if (g.monitoringRequirements.isNotEmpty) {
-      sections.add(GuidelineSection.monitoring);
-    }
-    if (g.preventionMeasures.isNotEmpty) {
-      sections.add(GuidelineSection.prevention);
-    }
+    if (g.generalManagement.isNotEmpty) sections.add(GuidelineSection.generalManagement);
+    if (g.hasPrimaryMedication || g.hasSecondaryMedication) sections.add(GuidelineSection.medication);
+    if (g.monitoringRequirements.isNotEmpty) sections.add(GuidelineSection.monitoring);
+    if (g.preventionMeasures.isNotEmpty) sections.add(GuidelineSection.prevention);
     if (g.specialNotes.isNotEmpty) sections.add(GuidelineSection.specialNotes);
 
     availableSections.assignAll(sections);
   }
 
   Future<void> _loadReadingProgress() async {
-    if (guideline.value == null || AuthService.to.currentUser.value == null) {
-      return;
-    }
+    if (guideline.value == null || AuthService.to.currentUser.value == null) return;
 
     try {
       final userId = AuthService.to.currentUser.value!.id;
       final guidelineId = guideline.value!.id;
 
-      final records = await BackendService.to.getRecordList(
+      final records = await PocketBaseService.to.getRecordList(
         collectionName: 'reading_progress',
         filter: 'user_id="$userId" && guideline_id="$guidelineId"',
       );
@@ -115,9 +103,7 @@ class ReadGuidelineController extends GetxController {
   }
 
   Future<void> _createInitialProgress() async {
-    if (guideline.value == null || AuthService.to.currentUser.value == null) {
-      return;
-    }
+    if (guideline.value == null || AuthService.to.currentUser.value == null) return;
 
     try {
       final userId = AuthService.to.currentUser.value!.id;
@@ -131,7 +117,7 @@ class ReadGuidelineController extends GetxController {
         progressPercentage: 0.0,
       );
 
-      final record = await BackendService.to.createRecord(
+      final record = await PocketBaseService.to.createRecord(
         collectionName: 'reading_progress',
         data: progressData,
       );
@@ -153,7 +139,7 @@ class ReadGuidelineController extends GetxController {
     try {
       final isCompleted = progressPercentage.value >= 0.95;
 
-      await BackendService.to.updateRecord(
+      await PocketBaseService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -164,9 +150,7 @@ class ReadGuidelineController extends GetxController {
         },
       );
 
-      final updatedData = Map<String, dynamic>.from(
-        readingProgress.value!.data,
-      );
+      final updatedData = Map<String, dynamic>.from(readingProgress.value!.data);
       updatedData.addAll({
         'current_section': currentSection.value,
         'progress_percentage': progressPercentage.value,
@@ -184,7 +168,7 @@ class ReadGuidelineController extends GetxController {
 
   void navigateToSection(GuidelineSection section) {
     currentSection.value = section.fieldName;
-
+    
     // Scroll to section if key exists
     final key = sectionKeys[section.fieldName];
     if (key?.currentContext != null) {
@@ -211,14 +195,14 @@ class ReadGuidelineController extends GetxController {
       isLoading.value = true;
       final newBookmarkStatus = !isBookmarked.value;
 
-      await BackendService.to.updateRecord(
+      await PocketBaseService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {'is_bookmarked': newBookmarkStatus},
       );
 
       isBookmarked.value = newBookmarkStatus;
-
+      
       Common.quickToast(
         title: newBookmarkStatus ? 'Guideline bookmarked' : 'Bookmark removed',
       );
@@ -238,7 +222,7 @@ class ReadGuidelineController extends GetxController {
     try {
       isLoading.value = true;
 
-      await BackendService.to.updateRecord(
+      await PocketBaseService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -249,8 +233,10 @@ class ReadGuidelineController extends GetxController {
       );
 
       progressPercentage.value = 1.0;
-
-      Common.quickToast(title: 'Guideline marked as completed!');
+      
+      Common.quickToast(
+        title: 'Guideline marked as completed!',
+      );
     } catch (e) {
       Common.quickToast(
         title: 'Failed to mark as completed',
@@ -330,12 +316,12 @@ class ReadGuidelineController extends GetxController {
     if (g.medicationPrimary.isNotEmpty) {
       content.writeln('<h4>Primary Medication</h4>');
       content.writeln(g.medicationPrimary);
-
+      
       if (g.dosageAdult.isNotEmpty) {
         content.writeln('<h5>Adult Dosage</h5>');
         content.writeln(g.dosageAdult);
       }
-
+      
       if (g.dosagePediatric.isNotEmpty) {
         content.writeln('<h5>Pediatric Dosage</h5>');
         content.writeln(g.dosagePediatric);
@@ -346,12 +332,12 @@ class ReadGuidelineController extends GetxController {
     if (g.medicationSecondary.isNotEmpty) {
       content.writeln('<h4>Secondary Medication</h4>');
       content.writeln(g.medicationSecondary);
-
+      
       if (g.dosageSecondaryAdult.isNotEmpty) {
         content.writeln('<h5>Adult Dosage</h5>');
         content.writeln(g.dosageSecondaryAdult);
       }
-
+      
       if (g.dosageSecondaryPediatric.isNotEmpty) {
         content.writeln('<h5>Pediatric Dosage</h5>');
         content.writeln(g.dosageSecondaryPediatric);
@@ -375,23 +361,20 @@ class ReadGuidelineController extends GetxController {
   Future<void> _trackGuidelineUsage(String guidelineId) async {
     try {
       if (AuthService.to.currentUser.value == null) return;
-
+      
       // Create guideline usage log
       final logData = GuidelineUsageLog.forCreate(
         userId: AuthService.to.currentUser.value!.id,
         guidelineId: guidelineId,
       );
-
-      await BackendService.to.createRecord(
+      
+      await PocketBaseService.to.createRecord(
         collectionName: GuidelineUsageLog.collection,
         data: logData,
       );
-
+      
       // Increment guideline usage count
-      await BackendService.to.incrementUsageCount(
-        Guideline.collection,
-        guidelineId,
-      );
+      await PocketBaseService.to.incrementUsageCount(Guideline.collection, guidelineId);
     } catch (e) {
       // Handle error silently to not disrupt user experience
     }

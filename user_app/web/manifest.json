@@ -1,11 +1,11 @@
 {
-    "name": "user_app",
-    "short_name": "user_app",
+    "name": "MediGuide - Digital Health Companion",
+    "short_name": "MediGuide",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "A digital companion for frontline health workers to access clinical tools, treatment protocols, and guidelines at the point of care.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -10,14 +10,11 @@ import '../utils/app_spacing.dart';
 /// Theme controller - minimal, focused on theme management only
 class ThemeController extends GetxController {
   final RxString currentThemeMode = ThemeModes.system.obs;
-
+  
   @override
   void onInit() {
     super.onInit();
-    currentThemeMode.value = PreferenceUtils.getString(
-      SharedPreferencesKeys.themeMode,
-      ThemeModes.system,
-    );
+    currentThemeMode.value = PreferenceUtils.getString(SharedPreferencesKeys.themeMode, ThemeModes.system);
   }
 
   ThemeMode _getThemeMode() => switch (currentThemeMode.value) {
@@ -53,9 +50,7 @@ class ThemeBottomSheet extends StatelessWidget {
               height: 4,
               margin: EdgeInsets.only(bottom: AppSpacing.md),
               decoration: BoxDecoration(
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.4,
-                ),
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -63,38 +58,18 @@ class ThemeBottomSheet extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 AppTranslationKey.chooseTheme.tr,
-                style: context.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             AppSpacing.gapMd,
             Column(
               children: [
-                _buildOption(
-                  context,
-                  controller,
-                  ThemeModes.light,
-                  AppTranslationKey.lightMode.tr,
-                  AppTranslationKey.lightModeDesc.tr,
-                  LucideIcons.sun,
-                ),
-                _buildOption(
-                  context,
-                  controller,
-                  ThemeModes.dark,
-                  AppTranslationKey.darkMode.tr,
-                  AppTranslationKey.darkModeDesc.tr,
-                  LucideIcons.moon,
-                ),
-                _buildOption(
-                  context,
-                  controller,
-                  ThemeModes.system,
-                  AppTranslationKey.systemDefault.tr,
-                  AppTranslationKey.systemDefaultDesc.tr,
-                  LucideIcons.monitor,
-                ),
+                _buildOption(context, controller, ThemeModes.light, AppTranslationKey.lightMode.tr, 
+                            AppTranslationKey.lightModeDesc.tr, LucideIcons.sun),
+                _buildOption(context, controller, ThemeModes.dark, AppTranslationKey.darkMode.tr, 
+                            AppTranslationKey.darkModeDesc.tr, LucideIcons.moon),
+                _buildOption(context, controller, ThemeModes.system, AppTranslationKey.systemDefault.tr, 
+                            AppTranslationKey.systemDefaultDesc.tr, LucideIcons.monitor),
               ],
             ),
           ],
@@ -103,35 +78,16 @@ class ThemeBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildOption(
-    BuildContext context,
-    ThemeController controller,
-    String mode,
-    String title,
-    String subtitle,
-    IconData icon,
-  ) {
+  Widget _buildOption(BuildContext context, ThemeController controller, String mode, String title, String subtitle, IconData icon) {
     final isSelected = controller.currentThemeMode.value == mode;
     return ListTile(
-      leading: Icon(
-        icon,
+      leading: Icon(icon, color: isSelected ? context.theme.colorScheme.primary : null),
+      title: Text(title, style: TextStyle(
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         color: isSelected ? context.theme.colorScheme.primary : null,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          color: isSelected ? context.theme.colorScheme.primary : null,
-        ),
-      ),
+      )),
       subtitle: Text(subtitle),
-      trailing: isSelected
-          ? Icon(
-              LucideIcons.check,
-              color: context.theme.colorScheme.primary,
-              size: 20,
-            )
-          : null,
+      trailing: isSelected ? Icon(LucideIcons.check, color: context.theme.colorScheme.primary, size: 20) : null,
       onTap: () async {
         await controller.setThemeMode(mode);
         Get.back();
@@ -144,9 +100,7 @@ class ThemeBottomSheet extends StatelessWidget {
     Get.bottomSheet(
       const ThemeBottomSheet(),
       backgroundColor: Get.theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       clipBehavior: Clip.antiAliasWithSaveLayer,
       isScrollControlled: false,
       enableDrag: true,

@@ -33,7 +33,9 @@ class ConversationCard extends StatelessWidget {
     final hasMessage = messagePreview.isNotEmpty;
 
     // Subtitle: message preview or user info fallback
-    final subtitle = hasMessage ? messagePreview : _userInfoSubtitle(otherUser);
+    final subtitle = hasMessage
+        ? messagePreview
+        : _userInfoSubtitle(otherUser);
 
     return InkWell(
       onTap: onTap,

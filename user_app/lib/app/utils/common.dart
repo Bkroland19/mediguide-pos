@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../data/models/backend_record.dart';
 import 'package:toastification/toastification.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Common {
@@ -33,8 +33,8 @@ class Common {
     );
   }
 
-  /// Parse structured API errors into a user-friendly message.
-  static String parseClientError(ClientException e) {
+  /// Parse error message from PocketBase ClientException for user-friendly display
+  static String parsePocketBaseError(ClientException e) {
     if (e.response.containsKey('data')) {
       final data = e.response['data'] as Map<String, dynamic>?;
       if (data != null) {
@@ -52,49 +52,22 @@ class Common {
         }
       }
     }
-
+    
     if (e.response.containsKey('message')) {
       return e.response['message'].toString();
     }
-
-    if (e.response.containsKey('error')) {
-      return e.response['error'].toString();
-    }
-
-    if (e.originalError != null &&
-        e.originalError.toString().trim().isNotEmpty) {
-      return e.originalError.toString().trim();
-    }
-
+    
     return 'An error occurred. Please try again.';
   }
 
-  static String parseApiError(Object error) {
-    if (error is ClientException) {
-      return parseClientError(error);
-    }
-
-    final message = error.toString().trim();
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length).trim();
-    }
-    if (message.startsWith('Unsupported operation: ')) {
-      return message.substring('Unsupported operation: '.length).trim();
-    }
-    if (message.isEmpty) {
-      return 'An error occurred. Please try again.';
-    }
-    return message;
-  }
-
   /// Make a phone call
-  static Future<void> makeCall(
-    String phoneNumber, {
-    String? contactName,
-  }) async {
+  static Future<void> makeCall(String phoneNumber, {String? contactName}) async {
     try {
-      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-
+      final Uri phoneUri = Uri(
+        scheme: 'tel',
+        path: phoneNumber,
+      );
+      
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
       } else {
@@ -124,17 +97,15 @@ class Common {
       final Map<String, String> queryParams = {};
       if (subject != null) queryParams['subject'] = subject;
       if (body != null) queryParams['body'] = body;
-
+      
       final Uri emailUri = Uri(
         scheme: 'mailto',
         path: email,
-        query: queryParams.isNotEmpty
-            ? queryParams.entries
-                  .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
-                  .join('&')
-            : null,
+        query: queryParams.isNotEmpty 
+          ? queryParams.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')
+          : null,
       );
-
+      
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
       } else {

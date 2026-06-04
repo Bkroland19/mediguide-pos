@@ -5,7 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:convert';
 import '../translations/app_translations.dart';
 import '../utils/app_spacing.dart';
-import '../data/services/backend_service.dart';
+import '../data/services/pocketbase_service.dart';
 import '../data/models/language_model.dart';
 import '../utils/preference_utils.dart';
 import '../utils/constants.dart';
@@ -18,17 +18,14 @@ class LanguageController extends GetxController {
   final RxList<LanguageModel> availableLanguages = <LanguageModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString currentLanguageCode = 'en'.obs;
-
+  
   @override
   void onInit() {
     super.onInit();
     // Load current language from preferences
-    currentLanguageCode.value = PreferenceUtils.getString(
-      SharedPreferencesKeys.language,
-      'en',
-    );
+    currentLanguageCode.value = PreferenceUtils.getString(SharedPreferencesKeys.language, 'en');
     // Only fetch if user is authenticated
-    if (BackendService.to.isAuthenticated) {
+    if (PocketBaseService.to.isAuthenticated) {
       fetchAvailableLanguages();
     }
   }
@@ -37,21 +34,19 @@ class LanguageController extends GetxController {
   Future<List<LanguageModel>> fetchAvailableLanguages() async {
     try {
       isLoading.value = true;
-
-      final response = await BackendService.to.getRecordList(
+      
+      final response = await PocketBaseService.to.getRecordList(
         collectionName: 'languages',
         filter: 'is_active = true || enabled_for_users = true',
         sort: 'is_default desc, name asc',
       );
 
-      final languages = response.items
-          .map((record) => LanguageModel.fromRecord(record))
-          .toList();
+      final languages = response.items.map((record) => LanguageModel.fromRecord(record)).toList();
       availableLanguages.assignAll(languages);
-
+      
       return languages;
     } catch (e) {
-      debugPrint('Error fetching languages: $e');
+      print('Error fetching languages: $e');
       // Fallback to default English if database fails
       final defaultEnglish = LanguageModel(
         id: 'default_en',
@@ -74,50 +69,37 @@ class LanguageController extends GetxController {
   /// Get cached translations for a language
   Map<String, String>? getCachedTranslations(String languageCode) {
     try {
-      final cachedData = PreferenceUtils.getString(
-        'translations_$languageCode',
-        '',
-      );
+      final cachedData = PreferenceUtils.getString('translations_$languageCode', '');
       if (cachedData.isEmpty) return null;
-
+      
       final Map<String, dynamic> jsonData = json.decode(cachedData);
       return Map<String, String>.from(jsonData);
     } catch (e) {
-      debugPrint('Error getting cached translations: $e');
+      print('Error getting cached translations: $e');
       return null;
     }
   }
 
   /// Cache translations locally
-  Future<void> cacheTranslations(
-    String languageCode,
-    Map<String, String> translations,
-  ) async {
+  Future<void> cacheTranslations(String languageCode, Map<String, String> translations) async {
     try {
       final jsonString = json.encode(translations);
       await PreferenceUtils.setString('translations_$languageCode', jsonString);
-
+      
       // Also cache the version number
-      final language = availableLanguages.firstWhereOrNull(
-        (lang) => lang.code == languageCode,
-      );
+      final language = availableLanguages.firstWhereOrNull((lang) => lang.code == languageCode);
       if (language != null) {
-        await PreferenceUtils.setInt(
-          'translations_version_$languageCode',
-          language.version.toInt(),
-        );
+        await PreferenceUtils.setInt('translations_version_$languageCode', language.version.toInt());
       }
     } catch (e) {
-      debugPrint('Error caching translations: $e');
+      print('Error caching translations: $e');
     }
   }
 
   /// Download translations from URL or get from database
   Future<Map<String, String>?> downloadTranslations(String languageCode) async {
     try {
-      final language = availableLanguages.firstWhereOrNull(
-        (lang) => lang.code == languageCode,
-      );
+      final language = availableLanguages.firstWhereOrNull((lang) => lang.code == languageCode);
       if (language == null) return null;
 
       // First, check if translations are stored in database
@@ -135,7 +117,7 @@ class LanguageController extends GetxController {
 
       return null;
     } catch (e) {
-      debugPrint('Error downloading translations: $e');
+      print('Error downloading translations: $e');
       return null;
     }
   }
@@ -145,15 +127,14 @@ class LanguageController extends GetxController {
     try {
       // Save to preferences
       currentLanguageCode.value = languageCode;
-      await PreferenceUtils.setString(
-        SharedPreferencesKeys.language,
-        languageCode,
-      );
+      await PreferenceUtils.setString(SharedPreferencesKeys.language, languageCode);
 
       // Get or download translations
       Map<String, String>? translations = getCachedTranslations(languageCode);
-
-      translations ??= await downloadTranslations(languageCode);
+      
+      if (translations == null) {
+        translations = await downloadTranslations(languageCode);
+      }
 
       // Update GetX locale if translations are available
       if (translations != null && translations.isNotEmpty) {
@@ -164,30 +145,25 @@ class LanguageController extends GetxController {
       // Update GetX locale
       final locale = _getLocale(languageCode);
       Get.updateLocale(locale);
-
+      
       HapticFeedback.selectionClick();
     } catch (e) {
-      debugPrint('Error setting language: $e');
+      print('Error setting language: $e');
     }
   }
 
   /// Update app translations dynamically
-  Future<void> updateAppTranslations(
-    String languageCode,
-    Map<String, String> translations,
-  ) async {
+  Future<void> updateAppTranslations(String languageCode, Map<String, String> translations) async {
     // Update the dynamic translations in AppTranslation
     AppTranslation.updateTranslations(languageCode, translations);
-
+    
     // Also cache the translations locally
     await cacheTranslations(languageCode, translations);
   }
 
   /// Get the current language model
   LanguageModel? get currentLanguage {
-    return availableLanguages.firstWhereOrNull(
-      (lang) => lang.code == currentLanguageCode.value,
-    );
+    return availableLanguages.firstWhereOrNull((lang) => lang.code == currentLanguageCode.value);
   }
 
   /// Get the default language (fallback)
@@ -204,15 +180,10 @@ class LanguageController extends GetxController {
   /// Check if language data needs update
   bool needsUpdate(String languageCode) {
     try {
-      final language = availableLanguages.firstWhereOrNull(
-        (lang) => lang.code == languageCode,
-      );
+      final language = availableLanguages.firstWhereOrNull((lang) => lang.code == languageCode);
       if (language == null) return true;
 
-      final cachedVersion = PreferenceUtils.getInt(
-        'translations_version_$languageCode',
-        0,
-      );
+      final cachedVersion = PreferenceUtils.getInt('translations_version_$languageCode', 0);
       return language.version.toInt() > cachedVersion;
     } catch (e) {
       return true;
@@ -223,7 +194,7 @@ class LanguageController extends GetxController {
   Future<void> updateLanguageData() async {
     // Refresh available languages from database
     await fetchAvailableLanguages();
-
+    
     // Check if current language needs update
     if (needsUpdate(currentLanguageCode.value)) {
       await downloadTranslations(currentLanguageCode.value);
@@ -262,9 +233,7 @@ class LanguageBottomSheet extends StatelessWidget {
               height: 4,
               margin: EdgeInsets.only(bottom: AppSpacing.md),
               decoration: BoxDecoration(
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.4,
-                ),
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -272,9 +241,7 @@ class LanguageBottomSheet extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 AppTranslationKey.chooseLanguage.tr,
-                style: context.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             AppSpacing.gapMd,
@@ -287,7 +254,7 @@ class LanguageBottomSheet extends StatelessWidget {
                   ),
                 );
               }
-
+              
               if (controller.availableLanguages.isEmpty) {
                 return Center(
                   child: Padding(
@@ -296,17 +263,15 @@ class LanguageBottomSheet extends StatelessWidget {
                   ),
                 );
               }
-
+              
               return Column(
                 children: controller.availableLanguages.map((language) {
                   return _buildOption(
-                    context,
-                    controller,
-                    language.code,
-                    language.name,
-                    language.nativeName.isNotEmpty
-                        ? language.nativeName
-                        : language.name,
+                    context, 
+                    controller, 
+                    language.code, 
+                    language.name, 
+                    language.nativeName.isNotEmpty ? language.nativeName : language.name,
                     LucideIcons.languages, // Use generic language icon for all
                   );
                 }).toList(),
@@ -318,36 +283,17 @@ class LanguageBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildOption(
-    BuildContext context,
-    LanguageController controller,
-    String languageCode,
-    String title,
-    String subtitle,
-    IconData icon,
-  ) {
+  Widget _buildOption(BuildContext context, LanguageController controller, String languageCode, String title, String subtitle, IconData icon) {
     return Obx(() {
       final isSelected = controller.currentLanguageCode.value == languageCode;
       return ListTile(
-        leading: Icon(
-          icon,
+        leading: Icon(icon, color: isSelected ? context.theme.colorScheme.primary : null),
+        title: Text(title, style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           color: isSelected ? context.theme.colorScheme.primary : null,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? context.theme.colorScheme.primary : null,
-          ),
-        ),
+        )),
         subtitle: Text(subtitle),
-        trailing: isSelected
-            ? Icon(
-                LucideIcons.check,
-                color: context.theme.colorScheme.primary,
-                size: 20,
-              )
-            : null,
+        trailing: isSelected ? Icon(LucideIcons.check, color: context.theme.colorScheme.primary, size: 20) : null,
         onTap: () async {
           await controller.setLanguage(languageCode);
           Get.back();
@@ -361,9 +307,7 @@ class LanguageBottomSheet extends StatelessWidget {
     Get.bottomSheet(
       const LanguageBottomSheet(),
       backgroundColor: Get.theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       clipBehavior: Clip.antiAliasWithSaveLayer,
       isScrollControlled: false,
       enableDrag: true,

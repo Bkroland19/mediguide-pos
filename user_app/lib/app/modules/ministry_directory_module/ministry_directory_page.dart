@@ -15,97 +15,283 @@ class MinistryDirectoryPage extends GetWidget<MinistryDirectoryController> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('ministryDirectory'.tr),
+        titleSpacing: AppSpacing.md,
+        title: Text(
+          'ministryDirectory'.tr,
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         actions: [
-          FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showAdvancedFilter(context),
-            onReset: controller.resetFilters,
+          Obx(
+            () => FilterButton(
+              hasActiveFilters: controller.hasActiveFilters.value,
+              onPressed: () => controller.showAdvancedFilter(context),
+              onReset: controller.hasActiveFilters.value
+                  ? controller.resetFilters
+                  : null,
+              tooltip: 'filterDirectory'.tr,
+            ),
+          ),
+          AppSpacing.xs.gap,
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          controller.pagingController.refresh();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: _DirectoryHeaderCard(
+                  onOpenFilters: () => controller.showAdvancedFilter(context),
+                ),
+              ),
+            ),
+
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.xxxl,
+              ),
+              sliver: PagingListener<int, MinistryDirectory>(
+                controller: controller.pagingController,
+                builder: (context, state, fetchNextPage) {
+                  return PagedSliverList<int, MinistryDirectory>.separated(
+                    state: state,
+                    fetchNextPage: fetchNextPage,
+                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    builderDelegate:
+                        PagedChildBuilderDelegate<MinistryDirectory>(
+                          itemBuilder: (context, entry, index) {
+                            return _DirectoryCardShell(
+                              child: MinistryDirectoryCard(
+                                entry: entry,
+                                index: index,
+                              ),
+                            );
+                          },
+
+                          // ================= ERROR STATES =================
+                          firstPageErrorIndicatorBuilder: (context) =>
+                              PaginationIndicators.firstPageError(
+                                onRetry: fetchNextPage,
+                                title: 'Failed to load directory',
+                                subtitle:
+                                    'Please check your connection and try again',
+                                icon: LucideIcons.phone,
+                              ),
+
+                          newPageErrorIndicatorBuilder: (context) =>
+                              PaginationIndicators.newPageError(
+                                onRetry: fetchNextPage,
+                                title: 'Failed to load more entries',
+                                icon: LucideIcons.phone,
+                              ),
+
+                          // ================= LOADING STATES =================
+                          firstPageProgressIndicatorBuilder: (context) =>
+                              PaginationIndicators.firstPageProgress(),
+
+                          newPageProgressIndicatorBuilder: (context) =>
+                              PaginationIndicators.newPageProgress(),
+
+                          // ================= EMPTY STATE =================
+                          noItemsFoundIndicatorBuilder: (context) {
+                            return Obx(() {
+                              final hasFilters =
+                                  controller.hasActiveFilters.value;
+
+                              return _EmptyDirectoryState(
+                                hasFilters: hasFilters,
+                                onClearFilters: controller.resetFilters,
+                              );
+                            });
+                          },
+
+                          // ================= END STATE =================
+                          noMoreItemsIndicatorBuilder: (context) =>
+                              PaginationIndicators.noMoreItems(),
+                        ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: cs.surface,
+    );
+  }
+}
+
+class _DirectoryHeaderCard extends StatelessWidget {
+  final VoidCallback onOpenFilters;
+
+  const _DirectoryHeaderCard({required this.onOpenFilters});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: cs.primaryContainer.withValues(alpha: 0.35),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(LucideIcons.phone, color: cs.primary, size: 28),
+          ),
+
+          AppSpacing.md.gap,
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ministryDirectory'.tr,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Find ministry contacts, emergency numbers and support offices.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          AppSpacing.sm.gap,
+
+          IconButton.filledTonal(
+            onPressed: onOpenFilters,
+            icon: const Icon(LucideIcons.slidersHorizontal),
             tooltip: 'filterDirectory'.tr,
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () =>
-            Future.sync(() => controller.pagingController.refresh()),
-        child: PagingListener<int, MinistryDirectory>(
-          controller: controller.pagingController,
-          builder: (context, state, fetchNextPage) {
-            return PagedListView<int, MinistryDirectory>(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              state: state,
-              fetchNextPage: fetchNextPage,
-              builderDelegate: PagedChildBuilderDelegate<MinistryDirectory>(
-                itemBuilder: (context, entry, index) =>
-                    MinistryDirectoryCard(entry: entry, index: index),
+    );
+  }
+}
 
-                // Error indicators
-                firstPageErrorIndicatorBuilder: (context) =>
-                    PaginationIndicators.firstPageError(
-                      onRetry: fetchNextPage,
-                      title: 'Failed to load directory',
-                      subtitle: 'Please check your connection and try again',
-                      icon: LucideIcons.phone,
-                    ),
+class _DirectoryCardShell extends StatelessWidget {
+  final Widget child;
 
-                newPageErrorIndicatorBuilder: (context) =>
-                    PaginationIndicators.newPageError(
-                      onRetry: fetchNextPage,
-                      title: 'Failed to load more entries',
-                      icon: LucideIcons.phone,
-                    ),
+  const _DirectoryCardShell({required this.child});
 
-                // Loading indicators
-                firstPageProgressIndicatorBuilder: (context) =>
-                    PaginationIndicators.firstPageProgress(),
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
 
-                newPageProgressIndicatorBuilder: (context) =>
-                    PaginationIndicators.newPageProgress(),
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
 
-                // No items indicators
-                noItemsFoundIndicatorBuilder: (context) {
-                  return Obx(() {
-                    String title;
-                    String subtitle;
+class _EmptyDirectoryState extends StatelessWidget {
+  final bool hasFilters;
+  final VoidCallback onClearFilters;
 
-                    if (controller.hasActiveFilters.value) {
-                      title = 'No entries match your filters';
-                      subtitle = 'Try adjusting your search or filters';
-                    } else {
-                      title = 'No directory entries found';
-                      subtitle =
-                          'Directory entries will appear here when available';
-                    }
+  const _EmptyDirectoryState({
+    required this.hasFilters,
+    required this.onClearFilters,
+  });
 
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        PaginationIndicators.noItemsFound(
-                          icon: LucideIcons.phone,
-                          title: title,
-                          subtitle: subtitle,
-                        ),
-                        if (controller.hasActiveFilters.value) ...[
-                          AppSpacing.md.gap,
-                          ElevatedButton.icon(
-                            onPressed: controller.resetFilters,
-                            icon: const Icon(LucideIcons.x),
-                            label: Text('clearFilters'.tr),
-                          ),
-                        ],
-                      ],
-                    );
-                  });
-                },
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
 
-                noMoreItemsIndicatorBuilder: (context) =>
-                    PaginationIndicators.noMoreItems(),
-              ),
-            );
-          },
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xl,
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(
+              hasFilters ? LucideIcons.searchX : LucideIcons.phone,
+              color: cs.primary,
+              size: 36,
+            ),
+          ),
+
+          AppSpacing.md.gap,
+
+          Text(
+            hasFilters
+                ? 'No entries match your filters'
+                : 'No directory entries found',
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            hasFilters
+                ? 'Try adjusting your search or filters.'
+                : 'Directory entries will appear here when available.',
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          if (hasFilters) ...[
+            AppSpacing.lg.gap,
+            FilledButton.icon(
+              onPressed: onClearFilters,
+              icon: const Icon(LucideIcons.x),
+              label: Text('clearFilters'.tr),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -13,7 +13,10 @@ import '../../../data/models/ai_context.dart';
 class DrugDetailsBottomSheet extends StatelessWidget {
   final Drug drug;
 
-  const DrugDetailsBottomSheet({super.key, required this.drug});
+  const DrugDetailsBottomSheet({
+    super.key,
+    required this.drug,
+  });
 
   /// Show the drug details bottom sheet
   static Future<void> show({
@@ -54,24 +57,17 @@ class DrugDetailsBottomSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       drug.name,
-                      style: context.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
                     decoration: BoxDecoration(
-                      color: context.theme.colorScheme.primary.withValues(
-                        alpha: 0.1,
-                      ),
+                      color: context.theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
                       onPressed: () => _showAiAssistant(),
-                      icon: Icon(
-                        LucideIcons.sparkles,
-                        color: context.theme.colorScheme.primary,
-                      ),
+                      icon: Icon(LucideIcons.sparkles, color: context.theme.colorScheme.primary),
                       tooltip: 'Ask AI about this medication',
                       visualDensity: VisualDensity.compact,
                     ),
@@ -84,10 +80,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${'brand'.tr}: ${drug.brandNames}',
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: context.theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: context.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic, color: context.theme.colorScheme.onSurfaceVariant),
                 ),
               ],
 
@@ -96,31 +89,20 @@ class DrugDetailsBottomSheet extends StatelessWidget {
               // Status tags
               Text(
                 [
-                  if (drug.categories.isNotEmpty)
-                    ...drug.categories.take(3).map((c) => c.name),
+                  if (drug.categories.isNotEmpty) ...drug.categories.take(3).map((c) => c.name),
                   if (drug.whoEmlStatus) 'WHO EML',
                   if (drug.antimicrobialStatus) 'antimicrobial'.tr,
-                  if (drug.pregnancyCategory != null)
-                    '${'pregnancyCat'.tr} ${drug.pregnancyCategory!.label}',
-                  if (drug.controlledSubstance != null &&
-                      drug.controlledSubstance!.label != 'None')
-                    drug.controlledSubstance!.label,
+                  if (drug.pregnancyCategory != null) '${'pregnancyCat'.tr} ${drug.pregnancyCategory!.label}',
+                  if (drug.controlledSubstance != null && drug.controlledSubstance!.label != 'None') drug.controlledSubstance!.label,
                 ].join(' · '),
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.theme.colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: context.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.primary, fontWeight: FontWeight.w500),
               ),
 
               AppSpacing.gapLg,
 
               // Description
               if (drug.description.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'description'.tr,
-                  LucideIcons.fileText,
-                ),
+                _buildSectionHeader(context, 'description'.tr, LucideIcons.fileText),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.description),
                 AppSpacing.gapLg,
@@ -128,11 +110,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
 
               // Mechanism of Action
               if (drug.mechanismOfAction.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'mechanismOfAction'.tr,
-                  LucideIcons.activity,
-                ),
+                _buildSectionHeader(context, 'mechanismOfAction'.tr, LucideIcons.activity),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.mechanismOfAction),
                 AppSpacing.gapLg,
@@ -142,128 +120,71 @@ class DrugDetailsBottomSheet extends StatelessWidget {
               if (_hasDosageInfo()) ...[
                 _buildSectionHeader(context, 'dosing'.tr, LucideIcons.droplets),
                 AppSpacing.gapSm,
-
+                
                 if (drug.adultDose.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'adultDose'.tr,
-                    drug.adultDose,
-                    LucideIcons.user,
-                  ),
-
+                  _buildInfoRow(context, 'adultDose'.tr, drug.adultDose, LucideIcons.user),
+                
                 if (drug.pediatricDose.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'pediatricDose'.tr,
-                    drug.pediatricDose,
-                    LucideIcons.baby,
-                  ),
-
+                  _buildInfoRow(context, 'pediatricDose'.tr, drug.pediatricDose, LucideIcons.baby),
+                
                 if (drug.elderlyDose.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'elderlyDose'.tr,
-                    drug.elderlyDose,
-                    LucideIcons.userCheck,
-                  ),
-
+                  _buildInfoRow(context, 'elderlyDose'.tr, drug.elderlyDose, LucideIcons.userCheck),
+                
                 if (drug.maxDailyDose.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'maxDailyDose'.tr,
-                    drug.maxDailyDose,
-                    LucideIcons.triangleAlert,
-                  ),
-
+                  _buildInfoRow(context, 'maxDailyDose'.tr, drug.maxDailyDose, LucideIcons.triangleAlert),
+                
                 if (drug.frequency.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'frequency'.tr,
-                    drug.frequency,
-                    LucideIcons.clock,
-                  ),
-
+                  _buildInfoRow(context, 'frequency'.tr, drug.frequency, LucideIcons.clock),
+                
                 if (drug.duration.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'duration'.tr,
-                    drug.duration,
-                    LucideIcons.calendar,
-                  ),
+                  _buildInfoRow(context, 'duration'.tr, drug.duration, LucideIcons.calendar),
 
                 AppSpacing.gapLg,
               ],
 
               // Administration
               if (_hasAdministrationInfo()) ...[
-                _buildSectionHeader(
-                  context,
-                  'administration'.tr,
-                  LucideIcons.pill,
-                ),
+                _buildSectionHeader(context, 'administration'.tr, LucideIcons.pill),
                 AppSpacing.gapSm,
-
+                
                 if (drug.routeOfAdministration.isNotEmpty)
                   _buildInfoRow(
                     context,
                     'route'.tr,
-                    drug.routeOfAdministration
-                        .map((r) => r.displayName)
-                        .join(', '),
+                    drug.routeOfAdministration.map((r) => r.displayName).join(', '),
                     LucideIcons.route,
                   ),
-
+                
                 if (drug.monitoringParameters.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'monitoring'.tr,
-                    drug.monitoringParameters,
-                    LucideIcons.stethoscope,
-                  ),
+                  _buildInfoRow(context, 'monitoring'.tr, drug.monitoringParameters, LucideIcons.stethoscope),
 
                 AppSpacing.gapLg,
               ],
 
               // Clinical Information
               if (drug.indications.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'indications'.tr,
-                  LucideIcons.target,
-                ),
+                _buildSectionHeader(context, 'indications'.tr, LucideIcons.target),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.indications),
                 AppSpacing.gapLg,
               ],
 
               if (drug.contraindications.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'contraindications'.tr,
-                  LucideIcons.x,
-                ),
+                _buildSectionHeader(context, 'contraindications'.tr, LucideIcons.x),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.contraindications),
                 AppSpacing.gapLg,
               ],
 
               if (drug.sideEffects.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'sideEffects'.tr,
-                  LucideIcons.triangleAlert,
-                ),
+                _buildSectionHeader(context, 'sideEffects'.tr, LucideIcons.triangleAlert),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.sideEffects),
                 AppSpacing.gapLg,
               ],
 
               if (drug.warnings.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'warnings'.tr,
-                  LucideIcons.triangleAlert,
-                ),
+                _buildSectionHeader(context, 'warnings'.tr, LucideIcons.triangleAlert),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.warnings),
                 AppSpacing.gapLg,
@@ -271,11 +192,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
 
               // Clinical Notes
               if (drug.clinicalNotes.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'clinicalNotes'.tr,
-                  LucideIcons.notepadText,
-                ),
+                _buildSectionHeader(context, 'clinicalNotes'.tr, LucideIcons.notepadText),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.clinicalNotes),
                 AppSpacing.gapLg,
@@ -283,11 +200,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
 
               // References
               if (drug.references.isNotEmpty) ...[
-                _buildSectionHeader(
-                  context,
-                  'references'.tr,
-                  LucideIcons.bookOpen,
-                ),
+                _buildSectionHeader(context, 'references'.tr, LucideIcons.bookOpen),
                 AppSpacing.gapSm,
                 _buildHtmlContent(context, drug.references),
                 AppSpacing.gapLg,
@@ -295,11 +208,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
 
               // Additional Information
               if (_hasAdditionalInfo()) ...[
-                _buildSectionHeader(
-                  context,
-                  'additionalInfo'.tr,
-                  LucideIcons.info,
-                ),
+                _buildSectionHeader(context, 'additionalInfo'.tr, LucideIcons.info),
                 AppSpacing.gapSm,
 
                 if (drug.tags.isNotEmpty) ...[
@@ -312,30 +221,15 @@ class DrugDetailsBottomSheet extends StatelessWidget {
                 ],
 
                 if (drug.drugClass != null) ...[
-                  _buildInfoRow(
-                    context,
-                    'drugClass'.tr,
-                    drug.drugClass!.name,
-                    LucideIcons.layers,
-                  ),
+                  _buildInfoRow(context, 'drugClass'.tr, drug.drugClass!.name, LucideIcons.layers),
                 ],
 
                 if (drug.therapeuticCategory != null) ...[
-                  _buildInfoRow(
-                    context,
-                    'therapeuticCategory'.tr,
-                    drug.therapeuticCategory!.name,
-                    LucideIcons.activity,
-                  ),
+                  _buildInfoRow(context, 'therapeuticCategory'.tr, drug.therapeuticCategory!.name, LucideIcons.activity),
                 ],
 
                 if (drug.searchKeywords.isNotEmpty) ...[
-                  _buildInfoRow(
-                    context,
-                    'keywords'.tr,
-                    drug.searchKeywords,
-                    LucideIcons.search,
-                  ),
+                  _buildInfoRow(context, 'keywords'.tr, drug.searchKeywords, LucideIcons.search),
                 ],
 
                 AppSpacing.gapLg,
@@ -351,11 +245,7 @@ class DrugDetailsBottomSheet extends StatelessWidget {
   }
 
   /// Build section header — uppercase label with divider
-  Widget _buildSectionHeader(
-    BuildContext context,
-    String title,
-    IconData icon,
-  ) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
     final cs = context.theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -365,19 +255,10 @@ class DrugDetailsBottomSheet extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             title.toUpperCase(),
-            style: context.textTheme.labelSmall?.copyWith(
-              color: cs.primary,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
+            style: context.textTheme.labelSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w700, letterSpacing: 0.8),
           ),
           AppSpacing.hGapSm,
-          Expanded(
-            child: Divider(
-              height: 1,
-              color: cs.outlineVariant.withValues(alpha: 0.3),
-            ),
-          ),
+          Expanded(child: Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.3))),
         ],
       ),
     );
@@ -395,31 +276,34 @@ class DrugDetailsBottomSheet extends StatelessWidget {
           color: context.theme.colorScheme.onSurface,
           lineHeight: const LineHeight(1.5),
         ),
-        'p': Style(margin: Margins.only(bottom: AppSpacing.sm)),
+        'p': Style(
+          margin: Margins.only(bottom: AppSpacing.sm),
+        ),
         'ul': Style(
           margin: Margins.only(left: AppSpacing.md, bottom: AppSpacing.sm),
         ),
         'ol': Style(
           margin: Margins.only(left: AppSpacing.md, bottom: AppSpacing.sm),
         ),
-        'li': Style(margin: Margins.only(bottom: AppSpacing.xs)),
+        'li': Style(
+          margin: Margins.only(bottom: AppSpacing.xs),
+        ),
       },
     );
   }
 
   /// Build info row with icon, label, and value
-  Widget _buildInfoRow(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-  ) {
+  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
     return Padding(
       padding: EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: context.theme.colorScheme.outline),
+          Icon(
+            icon,
+            size: 16,
+            color: context.theme.colorScheme.outline,
+          ),
           AppSpacing.hGapSm,
           Expanded(
             child: RichText(
@@ -469,55 +353,48 @@ class DrugDetailsBottomSheet extends StatelessWidget {
   /// Navigate to AI assistant with drug context
   void _showAiAssistant() {
     final drugContext = _buildDrugContext();
-    Get.toNamed('/aiAssistant', arguments: {'aiContext': drugContext.toJson()});
+    Get.toNamed(
+      '/aiAssistant',
+      arguments: {'aiContext': drugContext.toJson()},
+    );
   }
 
   /// Build AI context from drug data
   AiContext _buildDrugContext() {
     // Build comprehensive drug content for AI
     final contentBuffer = StringBuffer();
-
+    
     // Basic information
     contentBuffer.writeln('Drug Name: ${drug.name}');
     if (drug.brandNames.isNotEmpty) {
       contentBuffer.writeln('Brand Names: ${drug.brandNames}');
     }
-
+    
     // Categories and classifications
     if (drug.categories.isNotEmpty) {
-      contentBuffer.writeln(
-        'Categories: ${drug.categories.map((c) => c.name).join(', ')}',
-      );
+      contentBuffer.writeln('Categories: ${drug.categories.map((c) => c.name).join(', ')}');
     }
     if (drug.drugClass != null) {
       contentBuffer.writeln('Drug Class: ${drug.drugClass!.name}');
     }
     if (drug.therapeuticCategory != null) {
-      contentBuffer.writeln(
-        'Therapeutic Category: ${drug.therapeuticCategory!.name}',
-      );
+      contentBuffer.writeln('Therapeutic Category: ${drug.therapeuticCategory!.name}');
     }
 
     // Clinical information
     if (drug.description.isNotEmpty) {
       contentBuffer.writeln('\nDescription:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.description),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.description));
     }
-
+    
     if (drug.mechanismOfAction.isNotEmpty) {
       contentBuffer.writeln('\nMechanism of Action:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.mechanismOfAction),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.mechanismOfAction));
     }
-
+    
     if (drug.indications.isNotEmpty) {
       contentBuffer.writeln('\nIndications:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.indications),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.indications));
     }
 
     // Dosing information
@@ -545,49 +422,34 @@ class DrugDetailsBottomSheet extends StatelessWidget {
 
     // Administration
     if (drug.routeOfAdministration.isNotEmpty) {
-      contentBuffer.writeln(
-        '\nRoute of Administration: ${drug.routeOfAdministration.map((r) => r.displayName).join(', ')}',
-      );
+      contentBuffer.writeln('\nRoute of Administration: ${drug.routeOfAdministration.map((r) => r.displayName).join(', ')}');
     }
     if (drug.monitoringParameters.isNotEmpty) {
-      contentBuffer.writeln(
-        'Monitoring Parameters: ${drug.monitoringParameters}',
-      );
+      contentBuffer.writeln('Monitoring Parameters: ${drug.monitoringParameters}');
     }
 
     // Safety information
     if (drug.contraindications.isNotEmpty) {
       contentBuffer.writeln('\nContraindications:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.contraindications),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.contraindications));
     }
-
+    
     if (drug.sideEffects.isNotEmpty) {
       contentBuffer.writeln('\nSide Effects:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.sideEffects),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.sideEffects));
     }
-
+    
     if (drug.warnings.isNotEmpty) {
       contentBuffer.writeln('\nWarnings:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.warnings),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.warnings));
     }
 
     // Special considerations
     if (drug.pregnancyCategory != null) {
-      contentBuffer.writeln(
-        '\nPregnancy Category: ${drug.pregnancyCategory!.label}',
-      );
+      contentBuffer.writeln('\nPregnancy Category: ${drug.pregnancyCategory!.label}');
     }
-    if (drug.controlledSubstance != null &&
-        drug.controlledSubstance!.label != 'None') {
-      contentBuffer.writeln(
-        'Controlled Substance: ${drug.controlledSubstance!.label}',
-      );
+    if (drug.controlledSubstance != null && drug.controlledSubstance!.label != 'None') {
+      contentBuffer.writeln('Controlled Substance: ${drug.controlledSubstance!.label}');
     }
     if (drug.antimicrobialStatus) {
       contentBuffer.writeln('Antimicrobial Status: Yes');
@@ -599,16 +461,12 @@ class DrugDetailsBottomSheet extends StatelessWidget {
     // Clinical notes and references
     if (drug.clinicalNotes.isNotEmpty) {
       contentBuffer.writeln('\nClinical Notes:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.clinicalNotes),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.clinicalNotes));
     }
-
+    
     if (drug.references.isNotEmpty) {
       contentBuffer.writeln('\nReferences:');
-      contentBuffer.writeln(
-        AiContextService.to.cleanHtmlContent(drug.references),
-      );
+      contentBuffer.writeln(AiContextService.to.cleanHtmlContent(drug.references));
     }
 
     return AiContext.drug(

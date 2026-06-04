@@ -1,29 +1,25 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import '../enums/consultant_enums.dart';
 import '../enums/user_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Consultant model based on backend consultants collection
+/// Consultant model based on PocketBase consultants collection
 class Consultant extends BaseModel {
-  Consultant(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  Consultant(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'consultants';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => Consultant(data));
-    _didRegister = true;
-  }
-
-  /// Create Consultant from backend record
+    return true;
+  })();
+  
+  /// Create Consultant from PocketBase record
   static Consultant fromRecord(RecordModel record) => Consultant(record.data);
-
+  
   /// Create JSON for new consultant record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -60,34 +56,29 @@ class Consultant extends BaseModel {
       'country': country,
       'specialty': _specialtyToDisplayValue(specialty),
       'status': status.name,
-      'user': ?user,
-      'alternativePhone': ?alternativePhone,
-      'licenseNumber': ?licenseNumber,
-      'yearsOfExperience': ?yearsOfExperience,
-      if (qualifications != null)
-        'qualifications': qualifications.map(_qualificationToValue).toList(),
-      'certifications': ?certifications,
-      'address': ?address,
-      'city': ?city,
-      'region': ?region,
-      'postalCode': ?postalCode,
-      'organization': ?organization,
-      'department': ?department,
-      if (preferredLanguage != null)
-        'preferredLanguage': preferredLanguage.name,
-      'timezone': ?timezone,
-      'availability': ?availability,
-      if (consultationTypes != null)
-        'consultationTypes': consultationTypes
-            .map(_consultationTypeToValue)
-            .toList(),
-      'isVerified': ?isVerified,
-      'rating': ?rating,
-      'totalConsultations': ?totalConsultations,
-      'notes': ?notes,
+      if (user != null) 'user': user,
+      if (alternativePhone != null) 'alternativePhone': alternativePhone,
+      if (licenseNumber != null) 'licenseNumber': licenseNumber,
+      if (yearsOfExperience != null) 'yearsOfExperience': yearsOfExperience,
+      if (qualifications != null) 'qualifications': qualifications.map(_qualificationToValue).toList(),
+      if (certifications != null) 'certifications': certifications,
+      if (address != null) 'address': address,
+      if (city != null) 'city': city,
+      if (region != null) 'region': region,
+      if (postalCode != null) 'postalCode': postalCode,
+      if (organization != null) 'organization': organization,
+      if (department != null) 'department': department,
+      if (preferredLanguage != null) 'preferredLanguage': preferredLanguage.name,
+      if (timezone != null) 'timezone': timezone,
+      if (availability != null) 'availability': availability,
+      if (consultationTypes != null) 'consultationTypes': consultationTypes.map(_consultationTypeToValue).toList(),
+      if (isVerified != null) 'isVerified': isVerified,
+      if (rating != null) 'rating': rating,
+      if (totalConsultations != null) 'totalConsultations': totalConsultations,
+      if (notes != null) 'notes': notes,
     };
   }
-
+  
   /// Create JSON for updating consultant record
   static Map<String, dynamic> forUpdate({
     String? name,
@@ -117,39 +108,34 @@ class Consultant extends BaseModel {
     ConsultantStatus? status,
   }) {
     return {
-      'name': ?name,
-      'email': ?email,
-      'phone': ?phone,
-      'user': ?user,
-      'alternativePhone': ?alternativePhone,
-      'licenseNumber': ?licenseNumber,
-      'yearsOfExperience': ?yearsOfExperience,
-      if (qualifications != null)
-        'qualifications': qualifications.map(_qualificationToValue).toList(),
-      'certifications': ?certifications,
-      'address': ?address,
-      'city': ?city,
-      'region': ?region,
-      'postalCode': ?postalCode,
-      'organization': ?organization,
-      'department': ?department,
-      if (preferredLanguage != null)
-        'preferredLanguage': preferredLanguage.name,
-      'timezone': ?timezone,
-      'availability': ?availability,
-      if (consultationTypes != null)
-        'consultationTypes': consultationTypes
-            .map(_consultationTypeToValue)
-            .toList(),
-      'isVerified': ?isVerified,
-      'rating': ?rating,
-      'totalConsultations': ?totalConsultations,
-      'notes': ?notes,
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      if (user != null) 'user': user,
+      if (alternativePhone != null) 'alternativePhone': alternativePhone,
+      if (licenseNumber != null) 'licenseNumber': licenseNumber,
+      if (yearsOfExperience != null) 'yearsOfExperience': yearsOfExperience,
+      if (qualifications != null) 'qualifications': qualifications.map(_qualificationToValue).toList(),
+      if (certifications != null) 'certifications': certifications,
+      if (address != null) 'address': address,
+      if (city != null) 'city': city,
+      if (region != null) 'region': region,
+      if (postalCode != null) 'postalCode': postalCode,
+      if (organization != null) 'organization': organization,
+      if (department != null) 'department': department,
+      if (preferredLanguage != null) 'preferredLanguage': preferredLanguage.name,
+      if (timezone != null) 'timezone': timezone,
+      if (availability != null) 'availability': availability,
+      if (consultationTypes != null) 'consultationTypes': consultationTypes.map(_consultationTypeToValue).toList(),
+      if (isVerified != null) 'isVerified': isVerified,
+      if (rating != null) 'rating': rating,
+      if (totalConsultations != null) 'totalConsultations': totalConsultations,
+      if (notes != null) 'notes': notes,
       if (specialty != null) 'specialty': _specialtyToDisplayValue(specialty),
       if (status != null) 'status': status.name,
     };
   }
-
+  
   // Direct string properties - late final for performance
   late final String name = get<String>("name", "");
   late final String email = get<String>("email", "");
@@ -166,50 +152,31 @@ class Consultant extends BaseModel {
   late final String department = get<String>("department", "");
   late final String timezone = get<String>("timezone", "");
   late final String notes = get<String>("notes", "");
-
+  
   // Relation field
   late final String user = get<String>("user", "");
-
+  
   // Numeric properties
   late final double yearsOfExperience = get<double>("yearsOfExperience", 0);
   late final double rating = get<double>("rating", 0);
   late final double totalConsultations = get<double>("totalConsultations", 0);
-
+  
   // Boolean properties
   late final bool isVerified = get<bool>("isVerified", false);
-
+  
   // JSON properties
-  late final Map<String, dynamic> availability = get<Map<String, dynamic>>(
-    "availability",
-    {},
-  );
-
+  late final Map<String, dynamic> availability = get<Map<String, dynamic>>("availability", {});
+  
   // Enum properties - use BaseModel's enhanced enum handling
-  late final ConsultantSpecialty? specialty = getEnum<ConsultantSpecialty>(
-    "specialty",
-    ConsultantSpecialty.values,
-  );
-  late final ConsultantStatus status =
-      getEnum<ConsultantStatus>("status", ConsultantStatus.values) ??
-      ConsultantStatus.inactive;
-  late final List<ConsultantQualification> qualifications =
-      getEnumList<ConsultantQualification>(
-        "qualifications",
-        ConsultantQualification.values,
-      );
-  late final List<ConsultationType> consultationTypes =
-      getEnumList<ConsultationType>(
-        "consultationTypes",
-        ConsultationType.values,
-      );
-  late final PreferredLanguage? preferredLanguage = getEnum<PreferredLanguage>(
-    "preferredLanguage",
-    PreferredLanguage.values,
-  );
-
+  late final ConsultantSpecialty? specialty = getEnum<ConsultantSpecialty>("specialty", ConsultantSpecialty.values);
+  late final ConsultantStatus status = getEnum<ConsultantStatus>("status", ConsultantStatus.values) ?? ConsultantStatus.inactive;
+  late final List<ConsultantQualification> qualifications = getEnumList<ConsultantQualification>("qualifications", ConsultantQualification.values);
+  late final List<ConsultationType> consultationTypes = getEnumList<ConsultationType>("consultationTypes", ConsultationType.values);
+  late final PreferredLanguage? preferredLanguage = getEnum<PreferredLanguage>("preferredLanguage", PreferredLanguage.values);
+  
   // Related models - using expand functionality
   User? get userAccount => getRelation<User>("user");
-
+  
   // Helper methods for enum conversion
   static String _specialtyToDisplayValue(ConsultantSpecialty specialty) {
     switch (specialty) {
@@ -230,12 +197,13 @@ class Consultant extends BaseModel {
         return _enumNameToTitleCase(specialty.name);
     }
   }
-
+  
   /// Convert enum name to Title Case (e.g., 'cardiology' -> 'Cardiology')
   static String _enumNameToTitleCase(String enumName) {
     return enumName[0].toUpperCase() + enumName.substring(1);
   }
-
+  
+  
   static String _qualificationToValue(ConsultantQualification qualification) {
     switch (qualification) {
       case ConsultantQualification.md:
@@ -268,7 +236,7 @@ class Consultant extends BaseModel {
         return _enumNameToTitleCase(qualification.name);
     }
   }
-
+  
   static String _consultationTypeToValue(ConsultationType type) {
     switch (type) {
       case ConsultationType.inPerson:
@@ -293,4 +261,5 @@ class Consultant extends BaseModel {
         return 'Health Education';
     }
   }
+  
 }

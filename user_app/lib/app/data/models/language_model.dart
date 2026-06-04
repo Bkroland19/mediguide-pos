@@ -1,4 +1,4 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 
 /// Model representing a language available in the system
 class LanguageModel {
@@ -26,13 +26,12 @@ class LanguageModel {
     required this.version,
     DateTime? created,
     DateTime? updated,
-  }) : created = created ?? DateTime.fromMillisecondsSinceEpoch(0),
-       updated = updated ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }) : 
+    created = created ?? DateTime.fromMillisecondsSinceEpoch(0),
+    updated = updated ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Create from backend record
+  /// Create from PocketBase record
   factory LanguageModel.fromRecord(RecordModel record) {
-    final rawTranslations =
-        record.data['translations'] ?? record.data['translations_json'];
     return LanguageModel(
       id: record.id,
       code: record.getStringValue('code'),
@@ -41,16 +40,10 @@ class LanguageModel {
       isActive: record.getBoolValue('is_active'),
       isDefault: record.getBoolValue('is_default'),
       translationsUrl: record.getStringValue('translations_url'),
-      translations: rawTranslations is Map<String, dynamic>
-          ? rawTranslations
-          : rawTranslations is Map
-          ? Map<String, dynamic>.from(rawTranslations)
-          : {},
+      translations: record.get<Map<String, dynamic>>('translations') ?? {},
       version: record.getDoubleValue('version'),
-      created:
-          DateTime.tryParse(record.get<String>('created')) ?? DateTime.now(),
-      updated:
-          DateTime.tryParse(record.get<String>('updated')) ?? DateTime.now(),
+      created: DateTime.tryParse(record.get<String>('created')) ?? DateTime.now(),
+      updated: DateTime.tryParse(record.get<String>('updated')) ?? DateTime.now(),
     );
   }
 
@@ -66,12 +59,8 @@ class LanguageModel {
       translationsUrl: json['translations_url'] as String? ?? '',
       translations: json['translations'] as Map<String, dynamic>? ?? {},
       version: (json['version'] as num?)?.toDouble() ?? 1.0,
-      created: json['created'] != null
-          ? DateTime.parse(json['created'])
-          : DateTime.now(),
-      updated: json['updated'] != null
-          ? DateTime.parse(json['updated'])
-          : DateTime.now(),
+      created: json['created'] != null ? DateTime.parse(json['created']) : DateTime.now(),
+      updated: json['updated'] != null ? DateTime.parse(json['updated']) : DateTime.now(),
     );
   }
 

@@ -1,4 +1,4 @@
-/// User role enum based on backend users collection schema
+/// User role enum based on PocketBase users collection schema
 enum UserRole {
   superAdmin(label: 'Super Admin'),
   admin(label: 'Admin'),
@@ -8,11 +8,11 @@ enum UserRole {
   observer(label: 'Observer');
 
   const UserRole({required this.label});
-
+  
   final String label;
 }
 
-/// User status enum based on backend users collection schema
+/// User status enum based on PocketBase users collection schema
 enum UserStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -20,11 +20,11 @@ enum UserStatus {
   pendingActivation(label: 'Pending Activation');
 
   const UserStatus({required this.label});
-
+  
   final String label;
 }
 
-/// User specialization enum based on backend users collection schema
+/// User specialization enum based on PocketBase users collection schema
 enum Specialization {
   generalPractice(label: 'General Practice'),
   pediatrics(label: 'Pediatrics'),
@@ -42,11 +42,11 @@ enum Specialization {
   other(label: 'Other');
 
   const Specialization({required this.label});
-
+  
   final String label;
 }
 
-/// Preferred language enum based on backend users collection schema
+/// Preferred language enum based on PocketBase users collection schema
 enum PreferredLanguage {
   english(label: 'English'),
   french(label: 'French'),
@@ -57,6 +57,6 @@ enum PreferredLanguage {
   amharic(label: 'Amharic');
 
   const PreferredLanguage({required this.label});
-
+  
   final String label;
 }

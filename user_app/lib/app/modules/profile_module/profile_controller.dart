@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
@@ -15,13 +15,15 @@ class ProfileController extends GetxController {
   // Observable state
   final RxBool isLoading = false.obs;
 
+
+
   /// Handle logout
   Future<void> logout() async {
     try {
       isLoading.value = true;
 
-      // Clear backend auth session
-      BackendService.to.logout();
+      // Clear PocketBase auth session
+      PocketBaseService.to.logout();
 
       // Clear user session from AuthService (includes shared preferences)
       await AuthService.to.logout();
@@ -62,15 +64,15 @@ class ProfileController extends GetxController {
     }
   }
 
+
+
   /// Delete account with confirmation
   Future<void> deleteAccount() async {
     // Show confirmation dialog
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: Text(AppTranslationKey.deleteAccount.tr),
-        content: Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
-        ),
+        content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -90,8 +92,8 @@ class ProfileController extends GetxController {
 
         // TODO: Implement actual account deletion API call
 
-        // Clear backend auth session
-        BackendService.to.logout();
+        // Clear PocketBase auth session
+        PocketBaseService.to.logout();
 
         // Clear user session from AuthService (includes shared preferences)
         await AuthService.to.logout();
@@ -116,12 +118,14 @@ class ProfileController extends GetxController {
     }
   }
 
+
   // Settings getters for ProfilePage compatibility
   DummySettings get settings => DummySettings();
+  
 }
 
 /// Settings class for ProfilePage compatibility
-/// TODO: Replace with actual UserSettings model from backend
+/// TODO: Replace with actual UserSettings model from PocketBase
 class DummySettings {
   bool get biometricEnabled => false;
   bool get notificationsEnabled => true;
@@ -129,11 +133,11 @@ class DummySettings {
   bool get vibrationEnabled => true;
   bool get dataBackupEnabled => true;
   bool get analyticsEnabled => true;
-
+  
   String get languageCode {
     return PreferenceUtils.getString(SharedPreferencesKeys.language, 'en');
   }
-
+  
   String get languageDisplayName {
     try {
       final controller = Get.find<LanguageController>();

@@ -1,360 +1,300 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/app/data/models/abbreviation_usage_log.dart';
+import 'package:user_app/app/data/models/guideline_category.dart';
+import 'package:user_app/app/data/models/guideline_tag.dart';
 
-import '../../data/models/models.dart';
+import '../../data/models/abbreviation.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_service.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/abbreviation_detail_modal.dart';
 
+/// ===============================
+/// QUERY MODEL (CLEAN STATE)
+/// ===============================
+class AbbreviationQuery {
+  final String search;
+  final String? categoryId;
+  final List<String> tagIds;
+  final bool showCommonOnly;
+
+  const AbbreviationQuery({
+    this.search = '',
+    this.categoryId,
+    this.tagIds = const [],
+    this.showCommonOnly = false,
+  });
+
+  bool get hasFilters =>
+      search.isNotEmpty ||
+      categoryId != null ||
+      tagIds.isNotEmpty ||
+      showCommonOnly;
+
+  AbbreviationQuery copyWith({
+    String? search,
+    String? categoryId,
+    List<String>? tagIds,
+    bool? showCommonOnly,
+  }) {
+    return AbbreviationQuery(
+      search: search ?? this.search,
+      categoryId: categoryId ?? this.categoryId,
+      tagIds: tagIds ?? this.tagIds,
+      showCommonOnly: showCommonOnly ?? this.showCommonOnly,
+    );
+  }
+
+  static const empty = AbbreviationQuery();
+}
+
+/// ===============================
+/// CONTROLLER
+/// ===============================
 class AbbreviationsController extends GetxController {
-  // Pagination controller
   late final PagingController<int, Abbreviation> pagingController;
 
-  // Search and filter state
-  final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
-  final RxString selectedCategoryId = ''.obs;
-  final RxList<String> selectedTagIds = <String>[].obs;
-  final RxBool showCommonOnly = false.obs;
+  final Rx<AbbreviationQuery> query = AbbreviationQuery.empty.obs;
 
-  // Data state
   final RxList<GuidelineCategory> availableCategories =
       <GuidelineCategory>[].obs;
+
   final RxList<GuidelineTag> availableTags = <GuidelineTag>[].obs;
+
   final RxBool isLoadingFilters = false.obs;
+
+  Timer? _debounce;
 
   @override
   void onInit() {
     super.onInit();
-    pagingController = PagingController<int, Abbreviation>(
+
+    pagingController = PagingController(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
+
     _loadFilterOptions();
   }
 
   @override
   void onClose() {
+    _debounce?.cancel();
     pagingController.dispose();
     super.onClose();
   }
 
-  /// Load a page of abbreviations
+  // ===============================
+  // PAGINATION
+  // ===============================
   Future<List<Abbreviation>> _loadPage(int pageKey) async {
     try {
-      final List<Abbreviation> newItems;
+      final q = query.value;
 
-      if (searchQuery.value.isNotEmpty || hasActiveFilters.value) {
-        // Search with filters
-        newItems = await _searchAbbreviations(
-          query: searchQuery.value,
-          page: pageKey,
-          perPage: pageSize,
-          categoryFilter: selectedCategoryId.value.isNotEmpty
-              ? selectedCategoryId.value
-              : null,
-          tagFilters: selectedTagIds.isNotEmpty
-              ? selectedTagIds.toList()
-              : null,
-        );
-      } else if (showCommonOnly.value) {
-        // Show only common abbreviations
+      if (q.showCommonOnly) {
         if (pageKey == 1) {
-          newItems = await getCommonAbbreviations();
-        } else {
-          newItems = [];
+          return getCommonAbbreviations();
         }
-      } else {
-        // Regular pagination
-        newItems = await getAbbreviations(page: pageKey, perPage: pageSize);
+        return [];
       }
 
-      return newItems;
-    } catch (error) {
+      if (q.search.isNotEmpty || q.categoryId != null || q.tagIds.isNotEmpty) {
+        return _searchAbbreviations(query: q, page: pageKey, perPage: pageSize);
+      }
+
+      return getAbbreviations(page: pageKey, perPage: pageSize);
+    } catch (e) {
       Common.quickToast(title: 'errorLoadingAbbreviations'.tr);
       rethrow;
     }
   }
 
-  /// Load available categories and tags for filtering
+  // ===============================
+  // FILTER UPDATE (CENTRALIZED)
+  // ===============================
+  void updateQuery(AbbreviationQuery newQuery) {
+    query.value = newQuery;
+    _refresh();
+  }
+
+  void clearAllFilters() {
+    query.value = AbbreviationQuery.empty;
+    _refresh();
+  }
+
+  void search(String value) {
+    query.value = query.value.copyWith(search: value.trim());
+
+    _debouncedRefresh();
+  }
+
+  void _debouncedRefresh() {
+    _debounce?.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 300), _refresh);
+  }
+
+  void _refresh() {
+    pagingController.refresh();
+  }
+
+  // ===============================
+  // FILTER OPTIONS
+  // ===============================
   Future<void> _loadFilterOptions() async {
     try {
       isLoadingFilters.value = true;
 
       final categories = await getGuidelineCategories();
+
       final tags = await getGuidelineTags();
 
       availableCategories.value = categories;
       availableTags.value = tags;
-    } catch (error) {
-      Common.quickToast(title: 'errorLoadingFilters'.tr);
     } finally {
       isLoadingFilters.value = false;
     }
   }
 
-  /// Search abbreviations
-  void searchAbbreviations(String query) {
-    searchQuery.value = query.trim();
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedCategoryId.value.isNotEmpty ||
-        selectedTagIds.isNotEmpty ||
-        showCommonOnly.value;
-    pagingController.refresh();
-  }
-
-  /// Clear all filters
-  void clearAllFilters() {
-    selectedCategoryId.value = '';
-    selectedTagIds.clear();
-    showCommonOnly.value = false;
-    searchQuery.value = '';
-    hasActiveFilters.value = false;
-    pagingController.refresh();
-  }
-
-  /// Show filter modal using generic filter bottom sheet
+  // ===============================
+  // FILTER UI
+  // ===============================
   Future<void> showFilterModal(BuildContext context) async {
-    // Ensure filter options are loaded
-    if (availableCategories.isEmpty || availableTags.isEmpty) {
-      await _loadFilterOptions();
-    }
-
-    final fields = <FilterField>[
-      FilterField.text('search', 'search'.tr, hint: 'searchAbbreviations'.tr),
-      FilterField.boolean('showCommonOnly', 'showCommonOnly'.tr),
-    ];
-
-    // Category dropdown
-    if (availableCategories.isNotEmpty) {
-      final categoryOptions = availableCategories
-          .map((category) => category.displayName)
-          .toList();
-      fields.add(
-        FilterField.dropdown('category', 'category'.tr, [''] + categoryOptions),
-      );
-    }
-
-    // Tags multi-select
-    if (availableTags.isNotEmpty) {
-      final tagOptions = availableTags.map((tag) => tag.displayName).toList();
-      fields.add(FilterField.multiSelect('tags', 'tags'.tr, tagOptions));
-    }
-
-    // Get initial values
-    final values = <String, dynamic>{};
-    if (searchQuery.value.isNotEmpty) values['search'] = searchQuery.value;
-    if (showCommonOnly.value) values['showCommonOnly'] = true;
-
-    if (selectedCategoryId.value.isNotEmpty) {
-      final category = availableCategories
-          .where((cat) => cat.id == selectedCategoryId.value)
-          .firstOrNull;
-      if (category != null) values['category'] = category.displayName;
-    }
-
-    if (selectedTagIds.isNotEmpty) {
-      final tagNames = availableTags
-          .where((tag) => selectedTagIds.contains(tag.id))
-          .map((tag) => tag.displayName)
-          .toList();
-      if (tagNames.isNotEmpty) values['tags'] = tagNames;
-    }
-
     if (!context.mounted) return;
+
+    final q = query.value;
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'filterAbbreviations'.tr,
-      fields: fields,
-      initialValues: values,
+      fields: [
+        FilterField.text('search', 'search'.tr, hint: 'searchAbbreviations'.tr),
+        FilterField.boolean('commonOnly', 'showCommonOnly'.tr),
+      ],
+      initialValues: {
+        if (q.search.isNotEmpty) 'search': q.search,
+        if (q.showCommonOnly) 'commonOnly': true,
+      },
     );
 
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
-    }
+    if (result == null) return;
+
+    updateQuery(
+      AbbreviationQuery(
+        search: result.getValue<String>('search') ?? '',
+        showCommonOnly: result.getValue<bool>('commonOnly') ?? false,
+        categoryId: q.categoryId,
+        tagIds: q.tagIds,
+      ),
+    );
   }
 
-  /// Apply filters from the generic filter result
-  void _applyFilters(FilterResult result) {
-    // Clear existing filters first
-    selectedCategoryId.value = '';
-    selectedTagIds.clear();
-    showCommonOnly.value = false;
-    searchQuery.value = '';
-
-    // Apply new filters
-    final search = result.getValue<String>('search');
-    if (search != null && search.isNotEmpty) {
-      searchQuery.value = search;
-    }
-
-    final commonOnly = result.getValue<bool>('showCommonOnly');
-    if (commonOnly == true) {
-      showCommonOnly.value = true;
-    }
-
-    final categoryName = result.getValue<String>('category');
-    if (categoryName != null && categoryName.isNotEmpty) {
-      final category = availableCategories
-          .where((cat) => cat.displayName == categoryName)
-          .firstOrNull;
-      if (category != null) {
-        selectedCategoryId.value = category.id;
-      }
-    }
-
-    final tagNames = result.getValue<List>('tags');
-    if (tagNames != null && tagNames.isNotEmpty) {
-      final tagIds = <String>[];
-      for (final tagName in tagNames) {
-        final tag = availableTags
-            .where((t) => t.displayName == tagName)
-            .firstOrNull;
-        if (tag != null) {
-          tagIds.add(tag.id);
-        }
-      }
-      selectedTagIds.addAll(tagIds);
-    }
-
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedCategoryId.value.isNotEmpty ||
-        selectedTagIds.isNotEmpty ||
-        showCommonOnly.value;
-    pagingController.refresh();
-  }
-
-  // ==================== ABBREVIATION-SPECIFIC METHODS ====================
-
-  /// Get abbreviations with optional filtering and pagination
+  // ===============================
+  // DATA LAYER
+  // ===============================
   Future<List<Abbreviation>> getAbbreviations({
     int page = 1,
     int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
   }) async {
-    final result = await BackendService.to.getRecordList(
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
-      filter: filter,
-      sort: sort ?? '-created',
-      expand: expand ?? 'category,tags',
-    );
-    return result.items
-        .map((record) => Abbreviation.fromRecord(record))
-        .toList();
-  }
-
-  /// Get abbreviation by ID with expanded relationships
-  Future<Abbreviation?> getAbbreviationById(String abbreviationId) async {
-    final record = await BackendService.to.getRecord(
-      collectionName: Abbreviation.collection,
-      recordId: abbreviationId,
+      sort: '-created',
       expand: 'category,tags',
     );
-    return record != null ? Abbreviation.fromRecord(record) : null;
+
+    return result.items.map(Abbreviation.fromRecord).toList();
   }
 
-  /// Get common abbreviations (commonly used ones)
-  Future<List<Abbreviation>> getCommonAbbreviations({
-    int perPage = 50,
-    String? expand,
-  }) async {
-    final result = await BackendService.to.getRecordList(
+  Future<List<Abbreviation>> getCommonAbbreviations() async {
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: Abbreviation.collection,
-      perPage: perPage,
+      perPage: 50,
       filter: 'common_usage = true',
       sort: 'abbreviation',
-      expand: expand ?? 'category,tags',
+      expand: 'category,tags',
     );
-    return result.items
-        .map((record) => Abbreviation.fromRecord(record))
-        .toList();
+
+    return result.items.map(Abbreviation.fromRecord).toList();
   }
 
-  /// Search abbreviations by query string
   Future<List<Abbreviation>> _searchAbbreviations({
-    required String query,
-    int page = 1,
-    int perPage = 30,
-    String? categoryFilter,
-    List<String>? tagFilters,
+    required AbbreviationQuery query,
+    required int page,
+    required int perPage,
   }) async {
-    final List<String> filters = [];
+    final filters = <String>[];
 
-    // Search in abbreviation, meaning, and description
-    if (query.isNotEmpty) {
+    if (query.search.isNotEmpty) {
       filters.add(
-        '(abbreviation ~ "$query" || meaning ~ "$query" || description ~ "$query")',
+        '(abbreviation ~ "${query.search}" || '
+        'meaning ~ "${query.search}" || '
+        'description ~ "${query.search}")',
       );
     }
 
-    // Category filter
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      filters.add('category = "$categoryFilter"');
+    if (query.categoryId != null) {
+      filters.add('category = "${query.categoryId}"');
     }
 
-    // Tag filters
-    if (tagFilters != null && tagFilters.isNotEmpty) {
-      final tagFilterString = tagFilters
-          .map((tag) => 'tags ~ "$tag"')
-          .join(' || ');
-      filters.add('($tagFilterString)');
+    if (query.tagIds.isNotEmpty) {
+      final tagFilter = query.tagIds.map((e) => 'tags ~ "$e"').join(' || ');
+
+      filters.add('($tagFilter)');
     }
 
-    final filterString = filters.isNotEmpty ? filters.join(' && ') : null;
-
-    final result = await BackendService.to.getRecordList(
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
-      filter: filterString,
+      filter: filters.isEmpty ? null : filters.join(' && '),
       sort: 'abbreviation',
       expand: 'category,tags',
     );
 
-    return result.items
-        .map((record) => Abbreviation.fromRecord(record))
-        .toList();
+    return result.items.map(Abbreviation.fromRecord).toList();
   }
 
-  /// Get abbreviations by category
-  Future<List<Abbreviation>> getAbbreviationsByCategory(
-    String categoryId,
+  // ===============================
+  // DETAIL + TRACKING
+  // ===============================
+  Future<void> showAbbreviationDetail(
+    BuildContext context,
+    Abbreviation abbreviation,
   ) async {
-    final result = await BackendService.to.getRecordList(
-      collectionName: Abbreviation.collection,
-      filter: 'category = "$categoryId"',
-      sort: 'abbreviation',
-      expand: 'category,tags',
-    );
-    return result.items
-        .map((record) => Abbreviation.fromRecord(record))
-        .toList();
+    _trackUsage(abbreviation.id);
+
+    await AbbreviationDetailModal.show(context, abbreviation);
   }
 
-  /// Get abbreviations by tag
-  Future<List<Abbreviation>> getAbbreviationsByTag(String tagId) async {
-    final result = await BackendService.to.getRecordList(
-      collectionName: Abbreviation.collection,
-      filter: 'tags ~ "$tagId"',
-      sort: 'abbreviation',
-      expand: 'category,tags',
-    );
-    return result.items
-        .map((record) => Abbreviation.fromRecord(record))
-        .toList();
+  Future<void> _trackUsage(String id) async {
+    try {
+      final user = AuthService.to.currentUser.value;
+
+      if (user == null) return;
+
+      await PocketBaseService.to.createRecord(
+        collectionName: AbbreviationUsageLog.collection,
+        data: AbbreviationUsageLog.forCreate(
+          userId: user.id,
+          abbreviationId: id,
+        ),
+      );
+
+      await PocketBaseService.to.incrementUsageCount(
+        Abbreviation.collection,
+        id,
+      );
+    } catch (_) {}
   }
 
   /// Get all guideline categories
@@ -362,7 +302,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendService.to.getRecordList(
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: GuidelineCategory.collection,
       filter: filter ?? 'status = "active"',
       sort: sort ?? 'sort_order,name',
@@ -378,7 +318,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendService.to.getRecordList(
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: GuidelineTag.collection,
       filter: filter,
       sort: sort ?? 'name',
@@ -386,43 +326,5 @@ class AbbreviationsController extends GetxController {
     return result.items
         .map((record) => GuidelineTag.fromRecord(record))
         .toList();
-  }
-
-  /// Show abbreviation detail with usage tracking
-  Future<void> showAbbreviationDetail(
-    BuildContext context,
-    Abbreviation abbreviation,
-  ) async {
-    // Track abbreviation usage
-    _trackAbbreviationUsage(abbreviation.id);
-
-    // Show detail modal
-    await AbbreviationDetailModal.show(context, abbreviation);
-  }
-
-  /// Track abbreviation usage
-  Future<void> _trackAbbreviationUsage(String abbreviationId) async {
-    try {
-      if (AuthService.to.currentUser.value == null) return;
-
-      // Create abbreviation usage log
-      final logData = AbbreviationUsageLog.forCreate(
-        userId: AuthService.to.currentUser.value!.id,
-        abbreviationId: abbreviationId,
-      );
-
-      await BackendService.to.createRecord(
-        collectionName: AbbreviationUsageLog.collection,
-        data: logData,
-      );
-
-      // Increment abbreviation usage count
-      await BackendService.to.incrementUsageCount(
-        Abbreviation.collection,
-        abbreviationId,
-      );
-    } catch (e) {
-      // Handle error silently to not disrupt user experience
-    }
   }
 }

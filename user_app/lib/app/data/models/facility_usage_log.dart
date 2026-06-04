@@ -1,57 +1,53 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'base_model.dart';
 import 'user.dart';
 import 'health_facility.dart';
 
 /// Facility usage log model for tracking health facility information access
 class FacilityUsageLog extends BaseModel {
-  FacilityUsageLog(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  FacilityUsageLog(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'facility_usage_logs';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => FacilityUsageLog(data));
-    _didRegister = true;
-  }
-
-  /// Create FacilityUsageLog from backend record
-  static FacilityUsageLog fromRecord(RecordModel record) =>
-      FacilityUsageLog(record.data);
-
+    return true;
+  })();
+  
+  /// Create FacilityUsageLog from PocketBase record
+  static FacilityUsageLog fromRecord(RecordModel record) => FacilityUsageLog(record.data);
+  
   /// Create JSON for new usage log record
   static Map<String, dynamic> forCreate({
     required String userId,
     required String facilityId,
   }) {
-    return {'user_id': userId, 'facility_id': facilityId};
+    return {
+      'user_id': userId,
+      'facility_id': facilityId,
+    };
   }
-
+  
   // Direct field properties
   late final String userId = get<String>("user_id", "");
   late final String facilityId = get<String>("facility_id", "");
-
+  
   // Relationship properties
   late final User? user = getRelation<User>("user_id");
-  late final HealthFacility? facility = getRelation<HealthFacility>(
-    "facility_id",
-  );
-
+  late final HealthFacility? facility = getRelation<HealthFacility>("facility_id");
+  
   // Computed properties
-
+  
   /// Get access date (uses created field)
   DateTime get accessedAt => createdDate ?? DateTime.now();
-
+  
   /// Get formatted access time
   String get accessTimeFormatted {
     final now = DateTime.now();
     final difference = now.difference(accessedAt);
-
+    
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inHours < 1) {
@@ -64,18 +60,14 @@ class FacilityUsageLog extends BaseModel {
       return '${(difference.inDays / 7).floor()}w ago';
     }
   }
-
+  
   /// Get access date formatted
   String get accessDateFormatted {
     final now = DateTime.now();
-    final accessDate = DateTime(
-      accessedAt.year,
-      accessedAt.month,
-      accessedAt.day,
-    );
+    final accessDate = DateTime(accessedAt.year, accessedAt.month, accessedAt.day);
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-
+    
     if (accessDate == today) {
       return 'Today';
     } else if (accessDate == yesterday) {

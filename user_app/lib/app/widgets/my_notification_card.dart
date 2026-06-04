@@ -8,7 +8,11 @@ class MyNotificationCard extends StatelessWidget {
   final MyNotification notification;
   final VoidCallback? onTap;
 
-  const MyNotificationCard({super.key, required this.notification, this.onTap});
+  const MyNotificationCard({
+    super.key,
+    required this.notification,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,9 +38,7 @@ class MyNotificationCard extends StatelessWidget {
                     Text(
                       notification.formattedDate,
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -52,9 +54,7 @@ class MyNotificationCard extends StatelessWidget {
                 Text(
                   notification.message,
                   style: context.textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.8),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

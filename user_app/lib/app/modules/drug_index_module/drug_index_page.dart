@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../data/models/models.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
@@ -15,96 +16,273 @@ class DrugIndexPage extends GetWidget<DrugIndexController> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppTranslationKey.drugIndex),
-        actions: [
-          FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.clearAllFilters,
+        titleSpacing: AppSpacing.md,
+        title: Text(
+          AppTranslationKey.drugIndex.tr,
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
           ),
+        ),
+        actions: [
+          Obx(
+            () => FilterButton(
+              hasActiveFilters: controller.hasActiveFilters.value,
+              onPressed: () => controller.showFilterModal(context),
+              onReset: controller.hasActiveFilters.value
+                  ? controller.clearAllFilters
+                  : null,
+            ),
+          ),
+          AppSpacing.xs.gap,
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => Future.sync(() => controller.refreshData()),
-        child: PagingListener<int, Drug>(
-          controller: controller.pagingController,
-          builder: (context, state, fetchNextPage) {
-            return PagedListView<int, Drug>(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              state: state,
-              fetchNextPage: fetchNextPage,
-              builderDelegate: PagedChildBuilderDelegate<Drug>(
-                itemBuilder: (context, drug, index) => DrugCard(
-                  drug: drug,
-                  onTap: () => controller.navigateToDrugDetail(drug),
-                  onBookmarkTap: () => controller.toggleBookmark(drug),
+        onRefresh: () => Future.sync(controller.refreshData),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: _DrugIndexHeaderCard(
+                  onOpenFilters: () => controller.showFilterModal(context),
                 ),
+              ),
+            ),
 
-                // Error indicators
-                firstPageErrorIndicatorBuilder: (context) =>
-                    PaginationIndicators.firstPageError(
-                      onRetry: fetchNextPage,
-                      title: 'failedToLoadDrugs'.tr,
-                      subtitle:
-                          AppTranslationKey.pleaseCheckConnectionAndTryAgain,
-                      icon: LucideIcons.pill,
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.xxxl,
+              ),
+              sliver: PagingListener<int, Drug>(
+                controller: controller.pagingController,
+                builder: (context, state, fetchNextPage) {
+                  return PagedSliverList<int, Drug>.separated(
+                    state: state,
+                    fetchNextPage: fetchNextPage,
+                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    builderDelegate: PagedChildBuilderDelegate<Drug>(
+                      itemBuilder: (context, drug, index) {
+                        return _DrugCardShell(
+                          child: DrugCard(
+                            drug: drug,
+                            onTap: () => controller.navigateToDrugDetail(drug),
+                            onBookmarkTap: () =>
+                                controller.toggleBookmark(drug),
+                          ),
+                        );
+                      },
+                      firstPageErrorIndicatorBuilder: (context) =>
+                          PaginationIndicators.firstPageError(
+                            onRetry: fetchNextPage,
+                            title: 'failedToLoadDrugs'.tr,
+                            subtitle: AppTranslationKey
+                                .pleaseCheckConnectionAndTryAgain,
+                            icon: LucideIcons.pill,
+                          ),
+                      newPageErrorIndicatorBuilder: (context) =>
+                          PaginationIndicators.newPageError(
+                            onRetry: fetchNextPage,
+                            title: 'failedToLoadMoreDrugs'.tr,
+                            icon: LucideIcons.pill,
+                          ),
+                      firstPageProgressIndicatorBuilder: (context) =>
+                          PaginationIndicators.firstPageProgress(),
+                      newPageProgressIndicatorBuilder: (context) =>
+                          PaginationIndicators.newPageProgress(),
+                      noItemsFoundIndicatorBuilder: (context) {
+                        return Obx(() {
+                          final hasFilters = controller.hasActiveFilters.value;
+
+                          return _EmptyDrugState(
+                            hasFilters: hasFilters,
+                            onClearFilters: controller.clearAllFilters,
+                          );
+                        });
+                      },
+                      noMoreItemsIndicatorBuilder: (context) =>
+                          PaginationIndicators.noMoreItems(),
                     ),
-
-                newPageErrorIndicatorBuilder: (context) =>
-                    PaginationIndicators.newPageError(
-                      onRetry: fetchNextPage,
-                      title: 'failedToLoadMoreDrugs'.tr,
-                      icon: LucideIcons.pill,
-                    ),
-
-                // Loading indicators
-                firstPageProgressIndicatorBuilder: (context) =>
-                    PaginationIndicators.firstPageProgress(),
-
-                newPageProgressIndicatorBuilder: (context) =>
-                    PaginationIndicators.newPageProgress(),
-
-                // No items indicators - inline logic
-                noItemsFoundIndicatorBuilder: (context) {
-                  String title;
-                  String subtitle;
-
-                  if (controller.hasActiveFilters.value) {
-                    title = AppTranslationKey.noDrugsMatchFilters;
-                    subtitle = AppTranslationKey.tryAdjustingSearchOrFilters;
-                  } else {
-                    title = 'noDrugsFound'.tr;
-                    subtitle = AppTranslationKey.drugsWillAppearHere;
-                  }
-
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PaginationIndicators.noItemsFound(
-                        title: title,
-                        subtitle: subtitle,
-                        icon: LucideIcons.pill,
-                      ),
-                      if (controller.hasActiveFilters.value) ...[
-                        AppSpacing.md.gap,
-                        ElevatedButton.icon(
-                          onPressed: controller.clearAllFilters,
-                          icon: const Icon(LucideIcons.x),
-                          label: Text(AppTranslationKey.clearFilters),
-                        ),
-                      ],
-                    ],
                   );
                 },
-
-                noMoreItemsIndicatorBuilder: (context) =>
-                    PaginationIndicators.noMoreItems(),
               ),
-            );
-          },
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _DrugIndexHeaderCard extends StatelessWidget {
+  final VoidCallback onOpenFilters;
+
+  const _DrugIndexHeaderCard({required this.onOpenFilters});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: cs.primaryContainer.withValues(alpha: 0.35),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(LucideIcons.pill, color: cs.primary, size: 28),
+          ),
+
+          AppSpacing.md.gap,
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppTranslationKey.drugIndex.tr,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Search medicines, review indications, dosage guidance and safety information.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          AppSpacing.sm.gap,
+
+          IconButton.filledTonal(
+            onPressed: onOpenFilters,
+            icon: const Icon(LucideIcons.slidersHorizontal),
+            tooltip: 'Filter drugs',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrugCardShell extends StatelessWidget {
+  final Widget child;
+
+  const _DrugCardShell({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+class _EmptyDrugState extends StatelessWidget {
+  final bool hasFilters;
+  final VoidCallback onClearFilters;
+
+  const _EmptyDrugState({
+    required this.hasFilters,
+    required this.onClearFilters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    final title = hasFilters
+        ? AppTranslationKey.noDrugsMatchFilters
+        : 'noDrugsFound'.tr;
+
+    final subtitle = hasFilters
+        ? AppTranslationKey.tryAdjustingSearchOrFilters
+        : AppTranslationKey.drugsWillAppearHere;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xl,
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(
+              hasFilters ? LucideIcons.searchX : LucideIcons.pill,
+              color: cs.primary,
+              size: 34,
+            ),
+          ),
+
+          AppSpacing.md.gap,
+
+          Text(
+            title,
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            subtitle,
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          if (hasFilters) ...[
+            AppSpacing.lg.gap,
+            FilledButton.icon(
+              onPressed: onClearFilters,
+              icon: const Icon(LucideIcons.x),
+              label: Text(AppTranslationKey.clearFilters),
+            ),
+          ],
+        ],
       ),
     );
   }

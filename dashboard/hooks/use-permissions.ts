@@ -9,7 +9,8 @@ import { showToast } from '@/lib/toast'
 import { 
   permissionService,
   parsePermissionsFromDatabase,
-  serializePermissionsForDatabase 
+  serializePermissionsForDatabase,
+  getTemplatePermissions,
 } from '@/lib/permissions'
 import type { 
   RolePermissions, 
@@ -78,7 +79,11 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
       const allRolePermissions: Record<string, RolePermissions> = {}
       
       for (const role of roles) {
-        const permissions = parsePermissionsFromDatabase(role.permissions)
+        const parsedPermissions = parsePermissionsFromDatabase(role.permissions)
+        const permissions =
+          Object.keys(parsedPermissions).length > 0
+            ? parsedPermissions
+            : getTemplatePermissions(role.key)
         allRolePermissions[role.key] = permissions
       }
       
@@ -138,7 +143,11 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
       const pb = getPB()
       
       const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
-      const permissions = parsePermissionsFromDatabase(role.permissions)
+      const parsedPermissions = parsePermissionsFromDatabase(role.permissions)
+      const permissions =
+        Object.keys(parsedPermissions).length > 0
+          ? parsedPermissions
+          : getTemplatePermissions(role.key)
       
       return permissions
     } catch (err) {

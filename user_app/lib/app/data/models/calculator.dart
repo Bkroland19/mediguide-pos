@@ -1,28 +1,24 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import '../enums/calculator_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Calculator model based on backend calculators collection
+/// Calculator model based on PocketBase calculators collection
 class Calculator extends BaseModel {
-  Calculator(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  Calculator(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'calculators';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => Calculator(data));
-    _didRegister = true;
-  }
-
-  /// Create Calculator from backend record
+    return true;
+  })();
+  
+  /// Create Calculator from PocketBase record
   static Calculator fromRecord(RecordModel record) => Calculator(record.data);
-
+  
   /// Create JSON for new calculator record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -40,20 +36,20 @@ class Calculator extends BaseModel {
   }) {
     return {
       'name': name,
-      'description': ?description,
-      'icon': ?icon,
-      'color': ?color,
-      'backgroundColor': ?backgroundColor,
+      if (description != null) 'description': description,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor,
       'appFile': appFile,
       'version': version,
       'addedBy': addedBy,
       'type': _typeToString(type),
       'status': _statusToString(status ?? CalculatorStatus.draft),
-      'usageCount': ?usageCount,
-      'featured': ?featured,
+      if (usageCount != null) 'usageCount': usageCount,
+      if (featured != null) 'featured': featured,
     };
   }
-
+  
   // Direct string properties - late final for performance
   late final String name = get<String>("name", "");
   late final String description = get<String>("description", "");
@@ -62,22 +58,20 @@ class Calculator extends BaseModel {
   late final String backgroundColor = get<String>("backgroundColor", "");
   late final String appFile = get<String>("appFile", "");
   late final String version = get<String>("version", "");
-
+  
   // Numeric properties
   late final int usageCount = get<int>("usageCount", 0);
-
+  
   // Boolean properties
   late final bool featured = get<bool>("featured", false);
-
+  
   // Enum properties with proper conversion
-  late final CalculatorType type =
-      _parseType(get<String>("type", "")) ?? CalculatorType.calculator;
-  late final CalculatorStatus status =
-      _parseStatus(get<String>("status", "")) ?? CalculatorStatus.draft;
-
+  late final CalculatorType type = _parseType(get<String>("type", "")) ?? CalculatorType.calculator;
+  late final CalculatorStatus status = _parseStatus(get<String>("status", "")) ?? CalculatorStatus.draft;
+  
   // Relationship properties
   late final User? addedBy = getRelation<User>("addedBy");
-
+  
   // Helper methods for enum conversion
   static String _typeToString(CalculatorType type) {
     switch (type) {
@@ -89,7 +83,7 @@ class Calculator extends BaseModel {
         return 'checklist';
     }
   }
-
+  
   static CalculatorType? _parseType(String value) {
     switch (value.toLowerCase()) {
       case 'calculator':
@@ -102,7 +96,7 @@ class Calculator extends BaseModel {
         return null;
     }
   }
-
+  
   static String _statusToString(CalculatorStatus status) {
     switch (status) {
       case CalculatorStatus.active:
@@ -113,7 +107,7 @@ class Calculator extends BaseModel {
         return 'archived';
     }
   }
-
+  
   static CalculatorStatus? _parseStatus(String value) {
     switch (value.toLowerCase()) {
       case 'active':
@@ -126,29 +120,23 @@ class Calculator extends BaseModel {
         return null;
     }
   }
-
+  
   // Convenience getters
   /// Get the full URL for the app file
   String getAppFileUrl(String baseUrl) {
     if (appFile.isEmpty) return '';
-    if (appFile.startsWith('http://') || appFile.startsWith('https://')) {
-      return appFile;
-    }
-    if (appFile.startsWith('/')) {
-      return '$baseUrl$appFile';
-    }
     return '$baseUrl/api/files/$collectionId/$id/$appFile';
   }
-
+  
   /// Check if calculator is active
   bool get isActive => status == CalculatorStatus.active;
-
+  
   /// Check if calculator is a draft
   bool get isDraft => status == CalculatorStatus.draft;
-
+  
   /// Check if calculator is archived
   bool get isArchived => status == CalculatorStatus.archived;
-
+  
   /// Get display name for type
   String get typeDisplayName {
     switch (type) {

@@ -6,9 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../utils/loading.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../data/models/models.dart';
-import '../../../data/services/backend_service.dart';
-import '../../../utils/common.dart';
-import 'package:toastification/toastification.dart';
 import '../help_center_controller.dart';
 
 /// Full screen dialog for creating a new support ticket
@@ -17,16 +14,6 @@ class CreateTicketDialog extends StatelessWidget {
 
   /// Show the full screen create ticket dialog
   static Future<void> show() {
-    if (!BackendService.to.supportsSupportTickets) {
-      Common.quickToast(
-        type: ToastificationType.info,
-        title: 'Support Center',
-        description: BackendService.to.unsupportedCollectionWriteMessage(
-          'support_tickets',
-        ),
-      );
-      return Future.value();
-    }
     return showDialog<void>(
       context: Get.overlayContext!,
       barrierDismissible: false,

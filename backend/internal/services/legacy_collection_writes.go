@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"mediguide/internal/models"
+	"mediguide/internal/security"
 
 	"github.com/google/uuid"
 )
@@ -247,6 +248,17 @@ func (s LegacyCollectionService) updateUser(id string, payload map[string]any, u
 	}
 
 	updates := map[string]any{}
+	if password := firstPayloadString(payload, "password"); password != "" {
+		passwordConfirm := firstPayloadStringAny(payload, "passwordConfirm", "password_confirm")
+		if passwordConfirm != "" && passwordConfirm != password {
+			return nil, ErrLegacyCollectionInvalid
+		}
+		hash, err := security.HashPassword(password)
+		if err != nil {
+			return nil, err
+		}
+		updates["password_hash"] = hash
+	}
 	copyStringUpdate(payload, updates, "name")
 	copyStringUpdate(payload, updates, "phone")
 	copyNullableStringUpdate(payload, updates, "alternative_phone")

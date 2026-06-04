@@ -41,10 +41,7 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
             width: 36,
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 16),
-            decoration: BoxDecoration(
-              color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
+            decoration: BoxDecoration(color: cs.onSurfaceVariant.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
           ),
           Flexible(
             child: SingleChildScrollView(
@@ -55,47 +52,17 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
                   // ── Header ──
                   if (entry.isEmergencyContact) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.error,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'EMERGENCY',
-                        style: context.textTheme.labelSmall?.copyWith(
-                          color: cs.onError,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: cs.error, borderRadius: BorderRadius.circular(6)),
+                      child: Text('EMERGENCY', style: context.textTheme.labelSmall?.copyWith(color: cs.onError, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                     ),
                     AppSpacing.gapSm,
                   ],
-                  Text(
-                    entry.name,
-                    style: context.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(entry.name, style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(
-                    entry.title,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(entry.title, style: context.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 2),
-                  Text(
-                    entry.ministry.label,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(entry.ministry.label, style: context.textTheme.bodySmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w500)),
 
                   AppSpacing.gapLg,
 
@@ -103,86 +70,26 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
                   SectionGroup(
                     title: 'Contact',
                     items: [
-                      _ContactRow(
-                        icon: LucideIcons.phone,
-                        label: 'Phone',
-                        value: entry.phone,
-                        onTap: () => Common.makeCall(
-                          entry.phone,
-                          contactName: entry.name,
-                        ),
-                      ),
+                      _ContactRow(icon: LucideIcons.phone, label: 'Phone', value: entry.phone, onTap: () => Common.makeCall(entry.phone, contactName: entry.name)),
                       if (entry.alternativePhone.isNotEmpty)
-                        _ContactRow(
-                          icon: LucideIcons.phoneCall,
-                          label: 'Alt. Phone',
-                          value: entry.alternativePhone,
-                          onTap: () => Common.makeCall(
-                            entry.alternativePhone,
-                            contactName: entry.name,
-                          ),
-                        ),
+                        _ContactRow(icon: LucideIcons.phoneCall, label: 'Alt. Phone', value: entry.alternativePhone, onTap: () => Common.makeCall(entry.alternativePhone, contactName: entry.name)),
                       if (entry.email.isNotEmpty)
-                        _ContactRow(
-                          icon: LucideIcons.mail,
-                          label: 'Email',
-                          value: entry.email,
-                          onTap: () => Common.sendEmail(
-                            entry.email,
-                            subject: 'Ministry Directory Inquiry',
-                            contactName: entry.name,
-                          ),
-                        ),
+                        _ContactRow(icon: LucideIcons.mail, label: 'Email', value: entry.email, onTap: () => Common.sendEmail(entry.email, subject: 'Ministry Directory Inquiry', contactName: entry.name)),
                     ],
                   ),
 
                   // ── Details ──
-                  if (entry.department.isNotEmpty ||
-                      entry.locationString.isNotEmpty ||
-                      entry.officeAddress.isNotEmpty ||
-                      entry.availabilityHours.isNotEmpty ||
-                      entry.specialization.isNotEmpty ||
-                      entry.notes.isNotEmpty) ...[
+                  if (entry.department.isNotEmpty || entry.locationString.isNotEmpty || entry.officeAddress.isNotEmpty || entry.availabilityHours.isNotEmpty || entry.specialization.isNotEmpty || entry.notes.isNotEmpty) ...[
                     AppSpacing.gapMd,
                     SectionGroup(
                       title: 'Details',
                       items: [
-                        if (entry.department.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.briefcase,
-                            label: 'Department',
-                            value: entry.department,
-                          ),
-                        if (entry.locationString.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.mapPin,
-                            label: 'Location',
-                            value: entry.locationString,
-                          ),
-                        if (entry.officeAddress.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.building,
-                            label: 'Office',
-                            value: entry.officeAddress,
-                          ),
-                        if (entry.availabilityHours.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.clock,
-                            label: 'Hours',
-                            value: entry.availabilityHours,
-                          ),
-                        if (entry.specialization.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.award,
-                            label: 'Specialization',
-                            value: entry.specialization,
-                          ),
-                        if (entry.notes.isNotEmpty)
-                          _DetailRow(
-                            icon: LucideIcons.fileText,
-                            label: 'Notes',
-                            value: entry.notes,
-                          ),
+                        if (entry.department.isNotEmpty) _DetailRow(icon: LucideIcons.briefcase, label: 'Department', value: entry.department),
+                        if (entry.locationString.isNotEmpty) _DetailRow(icon: LucideIcons.mapPin, label: 'Location', value: entry.locationString),
+                        if (entry.officeAddress.isNotEmpty) _DetailRow(icon: LucideIcons.building, label: 'Office', value: entry.officeAddress),
+                        if (entry.availabilityHours.isNotEmpty) _DetailRow(icon: LucideIcons.clock, label: 'Hours', value: entry.availabilityHours),
+                        if (entry.specialization.isNotEmpty) _DetailRow(icon: LucideIcons.award, label: 'Specialization', value: entry.specialization),
+                        if (entry.notes.isNotEmpty) _DetailRow(icon: LucideIcons.fileText, label: 'Notes', value: entry.notes),
                       ],
                     ),
                   ],
@@ -193,31 +100,20 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Common.makeCall(
-                            entry.phone,
-                            contactName: entry.name,
-                          ),
+                          onPressed: () => Common.makeCall(entry.phone, contactName: entry.name),
                           icon: const Icon(LucideIcons.phone, size: 18),
                           label: const Text('Call'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(0, 48),
-                          ),
+                          style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
                         ),
                       ),
                       if (entry.email.isNotEmpty) ...[
                         AppSpacing.hGapMd,
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () => Common.sendEmail(
-                              entry.email,
-                              subject: 'Ministry Directory Inquiry',
-                              contactName: entry.name,
-                            ),
+                            onPressed: () => Common.sendEmail(entry.email, subject: 'Ministry Directory Inquiry', contactName: entry.name),
                             icon: const Icon(LucideIcons.mail, size: 18),
                             label: const Text('Email'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 48),
-                            ),
+                            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                           ),
                         ),
                       ],
@@ -241,12 +137,7 @@ class _ContactRow extends StatelessWidget {
   final String value;
   final VoidCallback onTap;
 
-  const _ContactRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
+  const _ContactRow({required this.icon, required this.label, required this.value, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -254,10 +145,7 @@ class _ContactRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         child: Row(
           children: [
             Icon(icon, size: 16, color: cs.primary),
@@ -266,19 +154,9 @@ class _ContactRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: context.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
+                  Text(label, style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                   const SizedBox(height: 1),
-                  Text(
-                    value,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(value, style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -296,20 +174,13 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _DetailRow({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -319,12 +190,7 @@ class _DetailRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
+                Text(label, style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                 const SizedBox(height: 1),
                 Text(value, style: context.textTheme.bodyMedium),
               ],

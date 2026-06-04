@@ -18,10 +18,7 @@ class SupportTicketCard extends StatelessWidget {
     return InkWell(
       onTap: () => TicketDetailDialog.show(ticket.id),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 2,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -31,10 +28,7 @@ class SupportTicketCard extends StatelessWidget {
               child: Container(
                 width: 10,
                 height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: ticket.status.color,
-                ),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: ticket.status.color),
               ),
             ),
             AppSpacing.hGapMd,
@@ -50,30 +44,21 @@ class SupportTicketCard extends StatelessWidget {
                         child: Text(
                           ticket.subject,
                           style: context.textTheme.bodyLarge?.copyWith(
-                            fontWeight: ticket.isActive
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                            fontWeight: ticket.isActive ? FontWeight.w600 : FontWeight.w400,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       AppSpacing.hGapSm,
-                      Text(
-                        ticket.timeAgo,
-                        style: context.textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
+                      Text(ticket.timeAgo, style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                     ],
                   ),
                   const SizedBox(height: 2),
                   // Description preview
                   Text(
                     ticket.description,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: context.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -83,46 +68,26 @@ class SupportTicketCard extends StatelessWidget {
                     children: [
                       Text(
                         ticket.status.label,
-                        style: context.textTheme.labelSmall?.copyWith(
-                          color: ticket.status.color,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: context.textTheme.labelSmall?.copyWith(color: ticket.status.color, fontWeight: FontWeight.w600),
                       ),
                       if (ticket.isHighPriority) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            '·',
-                            style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
+                          child: Text('·', style: TextStyle(color: cs.onSurfaceVariant)),
                         ),
-                        Icon(
-                          LucideIcons.flag,
-                          size: 12,
-                          color: ticket.priority.color,
-                        ),
+                        Icon(LucideIcons.flag, size: 12, color: ticket.priority.color),
                         const SizedBox(width: 3),
                         Text(
                           ticket.priority.label,
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: ticket.priority.color,
-                          ),
+                          style: context.textTheme.labelSmall?.copyWith(color: ticket.priority.color),
                         ),
                       ],
                       if (ticket.category.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            '·',
-                            style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
+                          child: Text('·', style: TextStyle(color: cs.onSurfaceVariant)),
                         ),
-                        Text(
-                          ticket.category,
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
+                        Text(ticket.category, style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                       ],
                     ],
                   ),
@@ -132,11 +97,7 @@ class SupportTicketCard extends StatelessWidget {
             AppSpacing.hGapSm,
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Icon(
-                LucideIcons.chevronRight,
-                size: 16,
-                color: cs.onSurfaceVariant,
-              ),
+              child: Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
             ),
           ],
         ),

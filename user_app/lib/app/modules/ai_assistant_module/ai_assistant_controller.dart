@@ -1,16 +1,14 @@
 import 'package:get/get.dart';
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/openai_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../data/services/ai_context_service.dart';
 import '../../data/models/ai_usage_log.dart';
 import '../../data/models/ai_context.dart';
-import '../../data/models/backend_record.dart';
 import '../../utils/common.dart';
 
 class AiAssistantController extends GetxController {
-  static const Duration _chatRequestTimeout = Duration(minutes: 1);
-
   // Chat controller for managing messages
   late final ChatMessagesController chatController;
 
@@ -18,7 +16,6 @@ class AiAssistantController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isTyping = false.obs;
   final RxList<String> conversationHistory = <String>[].obs;
-  final RxString sessionId = ''.obs;
 
   // Chat users
   late final ChatUser currentUser;
@@ -62,12 +59,12 @@ class AiAssistantController extends GetxController {
     if (currentContext.value != null) {
       try {
         // Generate contextual welcome message
-        contextualWelcomeMessage.value = AiContextService.to
-            .generateWelcomeMessage(currentContext.value!);
-
+        contextualWelcomeMessage.value = 
+            AiContextService.to.generateWelcomeMessage(currentContext.value!);
+        
         // Generate contextual example questions
         contextualExampleQuestions.assignAll(
-          AiContextService.to.generateExampleQuestions(currentContext.value!),
+          AiContextService.to.generateExampleQuestions(currentContext.value!)
         );
       } catch (e) {
         // Fall back to default content if service fails
@@ -107,17 +104,8 @@ class AiAssistantController extends GetxController {
     // chatController.addMessage(welcomeMessage);
   }
 
-  /// Handle sending messages through the backend AI chat API
+  /// Handle sending messages with real OpenAI integration
   Future<void> handleSendMessage(ChatMessage message) async {
-    if (!BackendService.to.isAuthenticated ||
-        AuthService.to.currentUser.value == null) {
-      final description =
-          'Your session expired. Please sign in again to continue using the guideline assistant.';
-      Common.quickToast(title: 'Session expired', description: description);
-      await _handleErrorResponse(description);
-      return;
-    }
-
     try {
       isLoading.value = true;
       isTyping.value = true;
@@ -129,14 +117,13 @@ class AiAssistantController extends GetxController {
       // Get AI response
       await _handleAiResponse(message.text);
     } catch (e) {
-      final description = Common.parseApiError(e);
-      Common.quickToast(title: 'Error', description: description);
+      Common.quickToast(
+        title: 'Error',
+        description: 'Failed to send message: ${e.toString()}',
+      );
 
-      if (e is ClientException) {
-        await _handleErrorResponse(description);
-      } else {
-        await _handleFallbackResponse(message.text);
-      }
+      // Fallback to basic response on error
+      await _handleFallbackResponse(message.text);
     } finally {
       isLoading.value = false;
       isTyping.value = false;
@@ -145,87 +132,43 @@ class AiAssistantController extends GetxController {
 
   /// Handle AI response
   Future<void> _handleAiResponse(String userMessage) async {
-    final response = await BackendService.to.postCustomEndpoint(
-      path: '/api/v2/chat/ask',
-      body: {
-        'question': userMessage.trim(),
-        if (sessionId.value.isNotEmpty) 'session_id': sessionId.value,
-      },
-      timeout: _chatRequestTimeout,
-    );
-    final data = _extractResponseData(response);
-    final answer = data['answer']?.toString().trim() ?? '';
-    if (answer.isEmpty) {
-      throw Exception('Empty response from AI service');
-    }
-    sessionId.value = data['session_id']?.toString() ?? sessionId.value;
-    final aiResponse = _mergeCitationsIntoAnswer(
-      answer,
-      data['citations'] as List?,
-    );
-
-    // Create AI message
-    final aiMessage = ChatMessage(
-      text: aiResponse,
-      user: aiUser,
-      createdAt: DateTime.now(),
-    );
-
-    // Add to chat and conversation history
-    chatController.addMessage(aiMessage);
-    conversationHistory.add(aiResponse);
-
-    // Track usage analytics
-    _trackUsage(userMessage, aiResponse);
-  }
-
-  Map<String, dynamic> _extractResponseData(Map<String, dynamic> response) {
-    final data = response['data'];
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
-    }
-    return response;
-  }
-
-  String _mergeCitationsIntoAnswer(String answer, List<dynamic>? citations) {
-    if (citations == null || citations.isEmpty) {
-      return answer;
-    }
-
-    final lines = <String>[];
-    for (final raw in citations) {
-      if (raw is! Map) {
-        continue;
+    try {
+      // Build contextual instructions if page context is available
+      String? customInstructions;
+      if (currentContext.value != null) {
+        try {
+          customInstructions = AiContextService.to.buildContextInstructions(currentContext.value!);
+        } catch (e) {
+          // Fall back to the default assistant instructions if context building fails
+          customInstructions = null;
+        }
       }
-      final item = Map<String, dynamic>.from(raw);
-      final title = item['title']?.toString().trim() ?? '';
-      final sourceName = item['source_name']?.toString().trim() ?? '';
-      final sourceVersion = item['source_version']?.toString().trim() ?? '';
-      final pageStart = item['page_start']?.toString().trim() ?? '';
-      final pageEnd = item['page_end']?.toString().trim() ?? '';
 
-      final parts = <String>[
-        if (title.isNotEmpty) title,
-        if (sourceName.isNotEmpty) sourceName,
-        if (sourceVersion.isNotEmpty) 'v$sourceVersion',
-        if (pageStart.isNotEmpty && pageEnd.isNotEmpty)
-          'pp. $pageStart-$pageEnd'
-        else if (pageStart.isNotEmpty)
-          'p. $pageStart',
-      ];
-      if (parts.isNotEmpty) {
-        lines.add('- ${parts.join(' • ')}');
-      }
+      final aiResponse = await OpenAiService.to.createChatCompletion(
+        userMessage: userMessage,
+        conversationHistory: conversationHistory.length > 10
+            ? conversationHistory.sublist(conversationHistory.length - 10)
+            : conversationHistory.toList(),
+        customInstructions: customInstructions,
+      );
+
+      // Create AI message
+      final aiMessage = ChatMessage(
+        text: aiResponse,
+        user: aiUser,
+        createdAt: DateTime.now(),
+      );
+
+      // Add to chat and conversation history
+      chatController.addMessage(aiMessage);
+      conversationHistory.add(aiResponse);
+
+      // Track usage analytics
+      _trackUsage(userMessage, aiResponse);
+    } catch (e) {
+      // Fallback on AI error
+      await _handleFallbackResponse(userMessage);
     }
-
-    if (lines.isEmpty) {
-      return answer;
-    }
-
-    return '$answer\n\nSources:\n${lines.join('\n')}';
   }
 
   /// Handle fallback response when OpenAI is unavailable
@@ -245,43 +188,6 @@ class AiAssistantController extends GetxController {
 
     // Track usage analytics
     _trackUsage(userMessage, fallbackResponse);
-  }
-
-  Future<void> _handleErrorResponse(String description) async {
-    final message = _buildBackendErrorMessage(description);
-    final aiMessage = ChatMessage(
-      text: message,
-      user: aiUser,
-      createdAt: DateTime.now(),
-    );
-
-    chatController.addMessage(aiMessage);
-    conversationHistory.add(message);
-  }
-
-  String _buildBackendErrorMessage(String description) {
-    final clean = description.trim();
-    if (clean.isEmpty) {
-      return 'The guideline assistant could not complete your request right now. Please try again.';
-    }
-
-    final lower = clean.toLowerCase();
-    if (lower.contains('invalid token') ||
-        lower.contains('unauthorized') ||
-        lower.contains('authentication required') ||
-        lower.contains('session expired')) {
-      return 'Your session expired. Please sign in again to continue using the guideline assistant.';
-    }
-
-    if (lower.contains('timed out')) {
-      return 'The guideline assistant is taking too long to respond. Please wait a moment and try again.';
-    }
-
-    if (lower.contains('forbidden') || lower.contains('permission')) {
-      return 'Your account is not allowed to use the guideline assistant. Please contact an administrator.';
-    }
-
-    return 'The guideline assistant request failed:\n\n$clean';
   }
 
   /// Get local fallback response when all else fails
@@ -312,8 +218,8 @@ class AiAssistantController extends GetxController {
 
       final usageData = AiUsageLog.forCreate(userId: currentUser.id);
 
-      // Save to backend asynchronously (don't block UI)
-      BackendService.to.createRecord(
+      // Save to PocketBase asynchronously (don't block UI)
+      PocketBaseService.to.createRecord(
         collectionName: AiUsageLog.collection,
         data: usageData,
       );
@@ -337,9 +243,10 @@ class AiAssistantController extends GetxController {
   ];
 
   /// Get example questions to show in UI (with contextual intelligence)
-  List<String> get exampleQuestions => contextualExampleQuestions.isNotEmpty
-      ? contextualExampleQuestions.toList()
-      : defaultExampleQuestions;
+  List<String> get exampleQuestions => 
+      contextualExampleQuestions.isNotEmpty 
+          ? contextualExampleQuestions.toList()
+          : defaultExampleQuestions;
 
   /// Load contextual questions (call this after initialization)
   Future<void> loadContextualQuestions() async {

@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
@@ -20,18 +20,19 @@ class HelpCenterController extends GetxController {
   final searchQuery = ''.obs;
   final selectedStatus = 'all'.obs;
   final selectedPriority = 'all'.obs;
-
+  
+  
   // Ticket data
   final tickets = <SupportTicket>[].obs;
   final selectedTicket = Rx<SupportTicket?>(null);
   final currentTicketReplies = <SupportTicketReply>[].obs;
-
+  
   // Infinite scroll pagination
   late PagingController<int, SupportTicket> pagingController;
-
+  
   // Filter helpers
   final hasActiveFilters = false.obs;
-
+  
   // Available categories for tickets
   final List<String> availableCategories = [
     'Technical Issue',
@@ -41,10 +42,10 @@ class HelpCenterController extends GetxController {
     'General Question',
     'Other',
   ];
-
+  
   // Create ticket form state
   final formKey = GlobalKey<FormBuilderState>();
-
+  
   // Reply form state
   final replyFormKey = GlobalKey<FormBuilderState>();
 
@@ -59,32 +60,23 @@ class HelpCenterController extends GetxController {
   @override
   void onClose() {
     pagingController.dispose();
-    BackendService.to.unsubscribeFromCollection(
-      collectionName: 'support_tickets',
-    );
-    BackendService.to.unsubscribeFromCollection(
-      collectionName: 'support_ticket_replies',
-    );
+    PocketBaseService.to.unsubscribeFromCollection(collectionName: 'support_tickets');
+    PocketBaseService.to.unsubscribeFromCollection(collectionName: 'support_ticket_replies');
     super.onClose();
   }
 
   /// Initialize pagination controller
   void initializePagination() {
     pagingController = PagingController<int, SupportTicket>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : (state.keys?.last ?? 0) + 1,
+      getNextPageKey: (state) => state.lastPageIsEmpty ? null : (state.keys?.last ?? 0) + 1,
       fetchPage: (pageKey) => loadTicketsPage(pageKey),
     );
   }
 
   /// Setup search query listener with debouncing
   void setupSearchListener() {
-    debounce(
-      searchQuery,
-      (_) => pagingController.refresh(),
-      time: const Duration(milliseconds: 500),
-    );
-
+    debounce(searchQuery, (_) => pagingController.refresh(), time: const Duration(milliseconds: 500));
+    
     // Update hasActiveFilters when search or filters change
     ever(searchQuery, (_) => updateActiveFilters());
     ever(selectedStatus, (_) => updateActiveFilters());
@@ -93,10 +85,9 @@ class HelpCenterController extends GetxController {
 
   /// Update active filters indicator
   void updateActiveFilters() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedStatus.value != 'all' ||
-        selectedPriority.value != 'all';
+    hasActiveFilters.value = searchQuery.value.isNotEmpty || 
+                             selectedStatus.value != 'all' || 
+                             selectedPriority.value != 'all';
   }
 
   /// Subscribe to real-time updates for user's tickets
@@ -109,7 +100,7 @@ class HelpCenterController extends GetxController {
           selectedTicket.value = ticket;
         }
       });
-
+      
       subscribeToMyTicketReplies((reply) {
         if (selectedTicket.value?.id == reply.ticketId) {
           currentTicketReplies.add(reply);
@@ -124,7 +115,7 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('Please log in to view support tickets');
     }
-
+    
     return await searchMyTickets(
       query: searchQuery.value,
       page: pageKey,
@@ -134,41 +125,34 @@ class HelpCenterController extends GetxController {
     );
   }
 
+
+
   /// Get status filter enum
   TicketStatus? getStatusFilter() {
     if (selectedStatus.value == 'all') return null;
-
+    
     switch (selectedStatus.value) {
-      case 'open':
-        return TicketStatus.open;
-      case 'inProgress':
-        return TicketStatus.inProgress;
-      case 'resolved':
-        return TicketStatus.resolved;
-      case 'closed':
-        return TicketStatus.closed;
-      default:
-        return null;
+      case 'open': return TicketStatus.open;
+      case 'inProgress': return TicketStatus.inProgress;
+      case 'resolved': return TicketStatus.resolved;
+      case 'closed': return TicketStatus.closed;
+      default: return null;
     }
   }
 
   /// Get priority filter enum
   TicketPriority? getPriorityFilter() {
     if (selectedPriority.value == 'all') return null;
-
+    
     switch (selectedPriority.value) {
-      case 'low':
-        return TicketPriority.low;
-      case 'normal':
-        return TicketPriority.normal;
-      case 'high':
-        return TicketPriority.high;
-      case 'urgent':
-        return TicketPriority.urgent;
-      default:
-        return null;
+      case 'low': return TicketPriority.low;
+      case 'normal': return TicketPriority.normal;
+      case 'high': return TicketPriority.high;
+      case 'urgent': return TicketPriority.urgent;
+      default: return null;
     }
   }
+
 
   /// Refresh tickets list
   void refreshTickets() {
@@ -179,14 +163,14 @@ class HelpCenterController extends GetxController {
   Future<void> submitCreateTicketForm() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
       final formData = formKey.currentState!.value;
-
+      
       await createTicket(
         subject: formData['subject'] as String,
         description: formData['description'] as String,
         category: formData['category'] as String,
         priority: formData['priority'] as TicketPriority,
       );
-
+      
       // Clear form on success
       if (!isCreatingTicket.value) {
         formKey.currentState?.reset();
@@ -214,27 +198,28 @@ class HelpCenterController extends GetxController {
 
     try {
       isCreatingTicket.value = true;
-
+      
       final ticket = await createMyTicket(
         subject: subject,
         description: description,
         category: category,
         priority: priority,
       );
-
+      
       tickets.insert(0, ticket);
       refreshTickets();
-
+      
       Common.quickToast(
         type: ToastificationType.success,
         title: 'Success',
         description: 'Support ticket created successfully',
       );
+      
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Error',
-        description: Common.parseApiError(e),
+        description: 'Failed to create ticket: $e',
       );
     } finally {
       isCreatingTicket.value = false;
@@ -245,12 +230,13 @@ class HelpCenterController extends GetxController {
   Future<void> loadTicketDetails(String ticketId) async {
     try {
       isLoading.value = true;
-
+      
       final ticket = await getMyTicketById(ticketId);
       selectedTicket.value = ticket;
-
+      
       final replies = await getMyTicketReplies(ticketId: ticketId);
       currentTicketReplies.value = replies;
+      
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
@@ -269,24 +255,25 @@ class HelpCenterController extends GetxController {
 
     try {
       isAddingReply.value = true;
-
+      
       final reply = await addReplyToMyTicket(
         ticketId: ticket.id,
         message: message,
       );
-
+      
       currentTicketReplies.add(reply);
-
+      
       Common.quickToast(
         type: ToastificationType.success,
         title: 'Success',
         description: 'Reply added successfully',
       );
+      
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Error',
-        description: Common.parseApiError(e),
+        description: 'Failed to add reply: $e',
       );
     } finally {
       isAddingReply.value = false;
@@ -324,15 +311,11 @@ class HelpCenterController extends GetxController {
       context: context,
       title: 'Filter Support Tickets',
       fields: [
-        FilterField.text(
-          'search',
-          'Search Tickets',
-          hint: 'Search subject or description...',
-        ),
+        FilterField.text('search', 'Search Tickets', hint: 'Search subject or description...'),
         FilterField.dropdown('status', 'Status', [
           'all',
           'open',
-          'inProgress',
+          'inProgress', 
           'resolved',
           'closed',
         ]),
@@ -357,22 +340,22 @@ class HelpCenterController extends GetxController {
 
     if (result != null && result.hasValues) {
       final filters = result.toJson();
-
+      
       // Apply search query
       if (filters['search'] != null) {
         updateSearchQuery(filters['search'] as String);
       }
-
-      // Apply status filter
+      
+      // Apply status filter  
       if (filters['status'] != null) {
         updateStatusFilter(filters['status'] as String);
       }
-
+      
       // Apply priority filter
       if (filters['priority'] != null) {
         updatePriorityFilter(filters['priority'] as String);
       }
-
+      
       // Note: Category filtering would need to be implemented in the search method
       // if (filters['category'] != null) {
       //   updateCategoryFilter(filters['category'] as String);
@@ -381,7 +364,7 @@ class HelpCenterController extends GetxController {
   }
 
   // ==================== USER-SPECIFIC SUPPORT TICKET METHODS ====================
-
+  
   /// Get current user's support tickets only
   /// All queries are automatically filtered by the authenticated user's ID
   Future<List<SupportTicket>> getMyTickets({
@@ -396,18 +379,18 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to view tickets');
     }
-
+    
     // Build user-specific filter
     final List<String> filters = ['user_id = "${currentUser.id}"'];
-
+    
     // Add any additional filters
     if (additionalFilter != null && additionalFilter.isNotEmpty) {
       filters.add(additionalFilter);
     }
-
+    
     final combinedFilter = filters.join(' && ');
-
-    final result = await BackendService.to.getRecordList(
+    
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,
@@ -415,47 +398,40 @@ class HelpCenterController extends GetxController {
       sort: sort ?? '-updated',
       expand: expand ?? 'user_id',
     );
-
-    return result.items
-        .map((record) => SupportTicket.fromRecord(record))
-        .toList();
+    
+    return result.items.map((record) => SupportTicket.fromRecord(record)).toList();
   }
-
+  
   /// Get a specific ticket by ID (only if it belongs to current user)
-  Future<SupportTicket?> getMyTicketById(
-    String ticketId, {
-    String? expand,
-  }) async {
+  Future<SupportTicket?> getMyTicketById(String ticketId, {String? expand}) async {
     // Get current authenticated user
     final currentUser = AuthService.to.currentUser.value;
     if (currentUser == null) {
       throw Exception('User must be authenticated to view ticket');
     }
-
+    
     try {
-      final record = await BackendService.to.getRecord(
+      final record = await PocketBaseService.to.getRecord(
         collectionName: 'support_tickets',
         recordId: ticketId,
         expand: expand ?? 'user_id',
       );
-
+      
       if (record == null) return null;
-
+      
       final ticket = SupportTicket.fromRecord(record);
-
+      
       // Verify ticket belongs to current user
       if (!ticket.isOwnedBy(currentUser.id)) {
-        throw Exception(
-          'Access denied: Ticket does not belong to current user',
-        );
+        throw Exception('Access denied: Ticket does not belong to current user');
       }
-
+      
       return ticket;
     } catch (e) {
       rethrow;
     }
   }
-
+  
   /// Create a new support ticket for the current user
   Future<SupportTicket> createMyTicket({
     required String subject,
@@ -468,7 +444,7 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to create ticket');
     }
-
+    
     final ticketData = {
       'subject': subject,
       'description': description,
@@ -477,15 +453,15 @@ class HelpCenterController extends GetxController {
       'priority': priority.name,
       'user_id': currentUser.id,
     };
-
-    final record = await BackendService.to.createRecord(
+    
+    final record = await PocketBaseService.to.createRecord(
       collectionName: 'support_tickets',
       data: ticketData,
     );
-
+    
     return SupportTicket.fromRecord(record);
   }
-
+  
   /// Get replies for a specific ticket (only if ticket belongs to current user)
   /// Excludes internal replies (is_internal = false only)
   Future<List<SupportTicketReply>> getMyTicketReplies({
@@ -496,9 +472,9 @@ class HelpCenterController extends GetxController {
   }) async {
     // First verify the ticket belongs to current user
     await getMyTicketById(ticketId);
-
+    
     // Get replies for this ticket (exclude internal replies)
-    final result = await BackendService.to.getRecordList(
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: 'support_ticket_replies',
       page: page,
       perPage: perPage,
@@ -506,12 +482,10 @@ class HelpCenterController extends GetxController {
       sort: sort ?? 'created',
       expand: 'user_id',
     );
-
-    return result.items
-        .map((record) => SupportTicketReply.fromRecord(record))
-        .toList();
+    
+    return result.items.map((record) => SupportTicketReply.fromRecord(record)).toList();
   }
-
+  
   /// Add a reply to user's own ticket
   Future<SupportTicketReply> addReplyToMyTicket({
     required String ticketId,
@@ -522,25 +496,25 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to reply to ticket');
     }
-
+    
     // Verify ticket belongs to current user
     await getMyTicketById(ticketId);
-
+    
     final replyData = {
       'ticket_id': ticketId,
       'message': message,
       'user_id': currentUser.id,
       'is_internal': false, // User replies are always public
     };
-
-    final record = await BackendService.to.createRecord(
+    
+    final record = await PocketBaseService.to.createRecord(
       collectionName: 'support_ticket_replies',
       data: replyData,
     );
-
+    
     return SupportTicketReply.fromRecord(record);
   }
-
+  
   /// Search current user's tickets
   Future<List<SupportTicket>> searchMyTickets({
     required String query,
@@ -555,32 +529,32 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to search tickets');
     }
-
+    
     final List<String> filters = ['user_id = "${currentUser.id}"'];
-
+    
     // Search in subject and description
     if (query.isNotEmpty) {
       filters.add('(subject ~ "$query" || description ~ "$query")');
     }
-
+    
     // Status filter
     if (statusFilter != null) {
       filters.add('status = "${statusFilter.name}"');
     }
-
+    
     // Priority filter
     if (priorityFilter != null) {
       filters.add('priority = "${priorityFilter.name}"');
     }
-
+    
     // Category filter
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
       filters.add('category = "$categoryFilter"');
     }
-
+    
     final combinedFilter = filters.join(' && ');
-
-    final result = await BackendService.to.getRecordList(
+    
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,
@@ -588,12 +562,10 @@ class HelpCenterController extends GetxController {
       sort: '-updated',
       expand: 'user_id',
     );
-
-    return result.items
-        .map((record) => SupportTicket.fromRecord(record))
-        .toList();
+    
+    return result.items.map((record) => SupportTicket.fromRecord(record)).toList();
   }
-
+  
   /// Subscribe to real-time updates for current user's tickets
   void subscribeToMyTickets(Function(SupportTicket) onTicketUpdate) {
     // Get current authenticated user
@@ -601,18 +573,22 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to subscribe to tickets');
     }
-
-    BackendService.to.subscribeToCollection('support_tickets', (event) {
-      if (event.record != null) {
-        final ticket = SupportTicket.fromRecord(event.record!);
-        // Only notify if ticket belongs to current user
-        if (ticket.isOwnedBy(currentUser.id)) {
-          onTicketUpdate(ticket);
+    
+    PocketBaseService.to.subscribeToCollection(
+      'support_tickets',
+      (event) {
+        if (event.record != null) {
+          final ticket = SupportTicket.fromRecord(event.record!);
+          // Only notify if ticket belongs to current user
+          if (ticket.isOwnedBy(currentUser.id)) {
+            onTicketUpdate(ticket);
+          }
         }
-      }
-    }, filter: 'user_id = "${currentUser.id}"');
+      },
+      filter: 'user_id = "${currentUser.id}"',
+    );
   }
-
+  
   /// Subscribe to real-time updates for replies to current user's tickets
   void subscribeToMyTicketReplies(Function(SupportTicketReply) onReplyUpdate) {
     // Get current authenticated user
@@ -620,15 +596,20 @@ class HelpCenterController extends GetxController {
     if (currentUser == null) {
       throw Exception('User must be authenticated to subscribe to replies');
     }
-
-    BackendService.to.subscribeToCollection('support_ticket_replies', (event) {
-      if (event.record != null) {
-        final reply = SupportTicketReply.fromRecord(event.record!);
-        // Only show public replies (is_internal = false)
-        if (reply.isPublic) {
-          onReplyUpdate(reply);
+    
+    PocketBaseService.to.subscribeToCollection(
+      'support_ticket_replies',
+      (event) {
+        if (event.record != null) {
+          final reply = SupportTicketReply.fromRecord(event.record!);
+          // Only show public replies (is_internal = false)
+          if (reply.isPublic) {
+            onReplyUpdate(reply);
+          }
         }
-      }
-    }, filter: 'is_internal = false');
+      },
+      filter: 'is_internal = false',
+    );
   }
+
 }

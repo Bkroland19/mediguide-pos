@@ -1,4 +1,4 @@
-/// Consultant specialty enum based on backend consultants collection schema
+/// Consultant specialty enum based on PocketBase consultants collection schema
 enum ConsultantSpecialty {
   generalPractice(label: 'General Practice'),
   internalMedicine(label: 'Internal Medicine'),
@@ -28,11 +28,11 @@ enum ConsultantSpecialty {
   other(label: 'Other');
 
   const ConsultantSpecialty({required this.label});
-
+  
   final String label;
 }
 
-/// Consultant qualifications enum based on backend consultants collection schema
+/// Consultant qualifications enum based on PocketBase consultants collection schema
 enum ConsultantQualification {
   md(label: 'MD'),
   mbbs(label: 'MBBS'),
@@ -54,11 +54,11 @@ enum ConsultantQualification {
   doDegree(label: 'DO Degree');
 
   const ConsultantQualification({required this.label});
-
+  
   final String label;
 }
 
-/// Consultant consultation types enum based on backend consultants collection schema
+/// Consultant consultation types enum based on PocketBase consultants collection schema
 enum ConsultationType {
   inPerson(label: 'In-Person'),
   telemedicine(label: 'Telemedicine'),
@@ -72,11 +72,11 @@ enum ConsultationType {
   healthEducation(label: 'Health Education');
 
   const ConsultationType({required this.label});
-
+  
   final String label;
 }
 
-/// Consultant status enum based on backend consultants collection schema
+/// Consultant status enum based on PocketBase consultants collection schema
 enum ConsultantStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -84,6 +84,6 @@ enum ConsultantStatus {
   suspended(label: 'Suspended');
 
   const ConsultantStatus({required this.label});
-
+  
   final String label;
 }

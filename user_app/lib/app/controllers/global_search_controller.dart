@@ -8,7 +8,7 @@ import '../data/models/health_facility.dart';
 import '../data/models/abbreviation.dart';
 import '../data/models/calculator.dart';
 import '../data/models/drug_usage_log.dart';
-import '../data/services/backend_service.dart';
+import '../data/services/pocketbase_service.dart';
 import '../data/services/auth_service.dart';
 import '../modules/drug_index_module/widgets/drug_details_bottom_sheet.dart';
 import '../routes/app_pages.dart';
@@ -26,8 +26,10 @@ class GlobalSearchController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString currentQuery = ''.obs;
 
+
   // Pagination
   static const int pageSize = 10;
+
 
   @override
   void onClose() {
@@ -69,6 +71,7 @@ class GlobalSearchController extends GetxController {
       isLoading.value = false;
     }
   }
+
 
   /// Clear search and reset state
   void clearSearch() {
@@ -122,10 +125,7 @@ class GlobalSearchController extends GetxController {
         if (calculator != null) {
           Get.toNamed(AppRoutes.useCalculator, arguments: calculator);
         } else {
-          Get.toNamed(
-            AppRoutes.useCalculator,
-            arguments: {'calculatorId': result.id},
-          );
+          Get.toNamed(AppRoutes.useCalculator, arguments: {'calculatorId': result.id});
         }
         break;
 
@@ -161,30 +161,34 @@ class GlobalSearchController extends GetxController {
       if (context == null || !context.mounted) return;
 
       // Show drug details bottom sheet
-      await DrugDetailsBottomSheet.show(context: context, drug: drug);
+      await DrugDetailsBottomSheet.show(
+        context: context,
+        drug: drug,
+      );
     } catch (e) {
       Common.quickToast(title: 'errorLoadingDrugDetails'.tr);
     }
   }
 
+
   /// Track drug usage
   Future<void> _trackDrugUsage(String drugId) async {
     try {
       if (AuthService.to.currentUser.value == null) return;
-
+      
       // Create drug usage log
       final logData = DrugUsageLog.forCreate(
         userId: AuthService.to.currentUser.value!.id,
         drugId: drugId,
       );
-
-      await BackendService.to.createRecord(
+      
+      await PocketBaseService.to.createRecord(
         collectionName: DrugUsageLog.collection,
         data: logData,
       );
-
+      
       // Increment drug usage count
-      await BackendService.to.incrementUsageCount(Drug.collection, drugId);
+      await PocketBaseService.to.incrementUsageCount(Drug.collection, drugId);
     } catch (e) {
       // Handle error silently to not disrupt user experience
     }
@@ -240,42 +244,38 @@ class GlobalSearchController extends GetxController {
   /// Search all collections in parallel with error handling
   Future<List<SearchResult>> _searchAllCollections(String query) async {
     // Launch all searches in parallel with individual error handling
-    final searchFutures =
-        [
-          SearchCategory.drugs,
-          SearchCategory.guidelines,
-          SearchCategory.consultants,
-          SearchCategory.healthFacilities,
-          SearchCategory.abbreviations,
-          SearchCategory.faq,
-          SearchCategory.tools,
-        ].map((category) async {
-          try {
-            return await _searchCollection(category, query);
-          } catch (e) {
-            // Return empty list if individual search fails
-            return <SearchResult>[];
-          }
-        });
-
+    final searchFutures = [
+      SearchCategory.drugs,
+      SearchCategory.guidelines,
+      SearchCategory.consultants,
+      SearchCategory.healthFacilities,
+      SearchCategory.abbreviations,
+      SearchCategory.faq,
+      SearchCategory.tools,
+    ].map((category) async {
+      try {
+        return await _searchCollection(category, query);
+      } catch (e) {
+        // Return empty list if individual search fails
+        return <SearchResult>[];
+      }
+    });
+    
     // Wait for all searches to complete (no individual failures will break this)
     final results = await Future.wait(searchFutures);
-
+    
     // Combine all successful results
     final allResults = <SearchResult>[];
     for (final categoryResults in results) {
       allResults.addAll(categoryResults);
     }
-
+    
     // Return top results (limited to 20)
     return allResults.take(20).toList();
   }
 
   /// Generic method to search a specific collection
-  Future<List<SearchResult>> _searchCollection(
-    SearchCategory category,
-    String query,
-  ) async {
+  Future<List<SearchResult>> _searchCollection(SearchCategory category, String query) async {
     final config = _searchConfig[category];
     if (config == null) return [];
 
@@ -285,7 +285,7 @@ class GlobalSearchController extends GetxController {
       final filterParts = fields.map((field) => '$field ~ "$query"').toList();
       final filter = '(${filterParts.join(' || ')})';
 
-      final response = await BackendService.to.getRecordList(
+      final response = await PocketBaseService.to.getRecordList(
         collectionName: config['collection'],
         page: 1,
         perPage: 10,
@@ -294,9 +294,7 @@ class GlobalSearchController extends GetxController {
         expand: config['expand'],
       );
 
-      return response.items
-          .map((record) => _createSearchResult(record, category, query))
-          .toList();
+      return response.items.map((record) => _createSearchResult(record, category, query)).toList();
     } catch (e) {
       // Try fallback collection name for FAQ
       if (category == SearchCategory.faq) {
@@ -307,15 +305,10 @@ class GlobalSearchController extends GetxController {
   }
 
   /// Strip HTML tags from rich text fields
-  String _stripHtml(String html) =>
-      html.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+  String _stripHtml(String html) => html.replaceAll(RegExp(r'<[^>]*>'), '').trim();
 
-  /// Create SearchResult from backend record
-  SearchResult _createSearchResult(
-    dynamic record,
-    SearchCategory category,
-    String query,
-  ) {
+  /// Create SearchResult from PocketBase record
+  SearchResult _createSearchResult(dynamic record, SearchCategory category, String query) {
     switch (category) {
       case SearchCategory.drugs:
         final drug = Drug.fromRecord(record);
@@ -323,9 +316,7 @@ class GlobalSearchController extends GetxController {
         return SearchResult(
           id: drug.id,
           title: drug.name,
-          subtitle: drug.brandNames.isNotEmpty
-              ? _stripHtml(drug.brandNames)
-              : null,
+          subtitle: drug.brandNames.isNotEmpty ? _stripHtml(drug.brandNames) : null,
           description: drugDesc.isNotEmpty ? drugDesc : null,
           category: category,
           route: null,
@@ -348,41 +339,35 @@ class GlobalSearchController extends GetxController {
           relevanceScore: 0.0,
           item: guideline,
         );
-
+      
       case SearchCategory.consultants:
         final consultant = Consultant.fromRecord(record);
         return SearchResult(
           id: consultant.id,
           title: consultant.name,
           subtitle: consultant.specialty?.name,
-          description: consultant.department.isNotEmpty
-              ? consultant.department
-              : null,
+          description: consultant.department.isNotEmpty ? consultant.department : null,
           category: category,
           route: AppRoutes.consultants,
           routeArguments: {'consultantId': consultant.id},
           relevanceScore: 0.0,
           item: consultant,
         );
-
+      
       case SearchCategory.healthFacilities:
         final facility = HealthFacility.fromRecord(record);
         return SearchResult(
           id: facility.id,
           title: facility.name,
-          subtitle: facility.facilityLevelName.isNotEmpty
-              ? facility.facilityLevelName
-              : null,
-          description: facility.parishName.isNotEmpty
-              ? facility.parishName
-              : null,
+          subtitle: facility.facilityLevelName.isNotEmpty ? facility.facilityLevelName : null,
+          description: facility.parishName.isNotEmpty ? facility.parishName : null,
           category: category,
           route: AppRoutes.healthInfrastructure,
           routeArguments: {'facilityId': facility.id},
           relevanceScore: 0.0,
           item: facility,
         );
-
+      
       case SearchCategory.abbreviations:
         final abbreviation = Abbreviation.fromRecord(record);
         final abbrDesc = _stripHtml(abbreviation.description);
@@ -397,7 +382,7 @@ class GlobalSearchController extends GetxController {
           relevanceScore: 0.0,
           item: abbreviation,
         );
-
+      
       case SearchCategory.tools:
         final calculator = Calculator.fromRecord(record);
         final calcDesc = _stripHtml(calculator.description);
@@ -412,7 +397,7 @@ class GlobalSearchController extends GetxController {
           relevanceScore: 0.0,
           item: calculator,
         );
-
+      
       case SearchCategory.faq:
         final data = record.data;
         final faqAnswer = _stripHtml(data['answer'] ?? '');
@@ -420,16 +405,14 @@ class GlobalSearchController extends GetxController {
           id: record.id,
           title: _stripHtml(data['question'] ?? 'FAQ'),
           subtitle: null,
-          description: faqAnswer.length > 100
-              ? '${faqAnswer.substring(0, 100)}...'
-              : faqAnswer,
+          description: faqAnswer.length > 100 ? '${faqAnswer.substring(0, 100)}...' : faqAnswer,
           category: category,
           route: AppRoutes.faq,
           routeArguments: {'faqId': record.id},
           relevanceScore: 0.0,
           item: record,
         );
-
+      
       default:
         throw UnsupportedError('Unsupported search category: $category');
     }
@@ -439,7 +422,7 @@ class GlobalSearchController extends GetxController {
   Future<List<SearchResult>> _searchFAQFallback(String query) async {
     try {
       final filter = '(question ~ "$query" || answer ~ "$query")';
-      final response = await BackendService.to.getRecordList(
+      final response = await PocketBaseService.to.getRecordList(
         collectionName: 'faq',
         page: 1,
         perPage: 10,
@@ -447,13 +430,11 @@ class GlobalSearchController extends GetxController {
         sort: '-created',
       );
 
-      return response.items
-          .map(
-            (record) => _createSearchResult(record, SearchCategory.faq, query),
-          )
-          .toList();
+      return response.items.map((record) => _createSearchResult(record, SearchCategory.faq, query)).toList();
     } catch (e) {
       return [];
     }
   }
+
+
 }

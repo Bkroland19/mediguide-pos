@@ -4,16 +4,13 @@ enum SearchCategory {
   drugs(value: 'drugs', displayName: 'Drugs'),
   guidelines(value: 'guidelines', displayName: 'Guidelines'),
   consultants(value: 'consultants', displayName: 'Consultants'),
-  healthFacilities(
-    value: 'health_facilities',
-    displayName: 'Health Facilities',
-  ),
+  healthFacilities(value: 'health_facilities', displayName: 'Health Facilities'),
   abbreviations(value: 'abbreviations', displayName: 'Abbreviations'),
   faq(value: 'faq', displayName: 'FAQ'),
   tools(value: 'tools', displayName: 'Tools');
 
   const SearchCategory({required this.value, required this.displayName});
-
+  
   final String value;
   final String displayName;
 
@@ -60,8 +57,7 @@ class SearchResult {
       route: json['route'] as String?,
       routeArguments: json['routeArguments'] as Map<String, dynamic>?,
       relevanceScore: (json['relevanceScore'] as num?)?.toDouble() ?? 0.0,
-      item:
-          json['item'], // Note: item is not serialized/deserialized as it's runtime-only
+      item: json['item'], // Note: item is not serialized/deserialized as it's runtime-only
     );
   }
 
@@ -193,8 +189,8 @@ class SearchFilter {
     );
   }
 
-  /// Generate backend filter string
-  String toBackendFilter() {
+  /// Generate PocketBase filter string
+  String toPocketBaseFilter() {
     final List<String> filters = [];
 
     if (category != SearchCategory.all) {
@@ -212,10 +208,10 @@ class SearchFilter {
     return filters.join(' && ');
   }
 
-  /// Generate backend sort string
-  String toBackendSort() {
+  /// Generate PocketBase sort string
+  String toPocketBaseSort() {
     if (sortBy == null) return '-created';
-
+    
     final prefix = sortAscending ? '+' : '-';
     return '$prefix$sortBy';
   }
@@ -234,15 +230,7 @@ class SearchFilter {
   }
 
   @override
-  int get hashCode => Object.hash(
-    category,
-    dateFrom,
-    dateTo,
-    sortBy,
-    sortAscending,
-    limit,
-    offset,
-  );
+  int get hashCode => Object.hash(category, dateFrom, dateTo, sortBy, sortAscending, limit, offset);
 }
 
 /// Model for recent search item

@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import '../../data/models/backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
+
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 import '../../translations/app_translations.dart';
 
 class FaqController extends GetxController {
-  // Public reactive variables (no private with getters)
+  // Reactive state
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;
   final RxBool hasActiveFilters = false.obs;
 
-  // Infinite scroll pagination
+  // Pagination
   late PagingController<int, FAQ> pagingController;
 
   @override
@@ -26,16 +27,14 @@ class FaqController extends GetxController {
     setupSearchListener();
   }
 
-  /// Initialize pagination controller
   void initializePagination() {
     pagingController = PagingController<int, FAQ>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : (state.keys?.last ?? 0) + 1,
-      fetchPage: (pageKey) async => await loadAllFAQs(pageKey),
+      fetchPage: (pageKey) => loadAllFAQs(pageKey),
     );
   }
 
-  /// Setup search query listener with debouncing
   void setupSearchListener() {
     debounce(
       searchQuery,
@@ -43,16 +42,17 @@ class FaqController extends GetxController {
       time: const Duration(milliseconds: 500),
     );
 
-    // Update hasActiveFilters when search changes
-    ever(searchQuery, (_) => updateActiveFilters());
+    ever(searchQuery, (_) => _updateActiveFilters());
   }
 
-  /// Update active filters indicator
-  void updateActiveFilters() {
+  void _updateActiveFilters() {
     hasActiveFilters.value = searchQuery.value.isNotEmpty;
   }
 
-  // Public methods - no wrapper functions
+  // =========================
+  // DATA LOADING
+  // =========================
+
   Future<List<FAQ>> loadAllFAQs(int pageKey) async {
     try {
       final result = searchQuery.value.isNotEmpty
@@ -63,19 +63,56 @@ class FaqController extends GetxController {
             )
           : await _getFAQs(page: pageKey, perPage: pageSize);
 
-      final faqs = result.items
-          .map((item) => FAQ.fromJson(item.toJson()))
-          .toList();
-
-      return faqs;
+      return result.items.map((item) => FAQ.fromJson(item.toJson())).toList();
     } catch (error) {
       Common.quickToast(
         title: AppTranslationKey.error.tr,
-        description: 'Failed to load FAQs: ${error.toString()}',
+        description: 'Failed to load FAQs: $error',
       );
       rethrow;
     }
   }
+
+  Future<ResultList<RecordModel>> _getFAQs({
+    int page = 1,
+    int perPage = 10,
+    String? filter,
+    String? sort,
+  }) async {
+    final baseFilter = 'status = "published"';
+
+    final finalFilter = (filter != null && filter.isNotEmpty)
+        ? '$baseFilter && ($filter)'
+        : baseFilter;
+
+    return PocketBaseService.to.getRecordList(
+      collectionName: 'faqs',
+      page: page,
+      perPage: perPage,
+      filter: finalFilter,
+      sort: sort ?? 'sort_order, -created',
+    );
+  }
+
+  Future<ResultList<RecordModel>> _searchFAQs({
+    required String query,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    final searchFilter =
+        'question ~ "$query" || keywords ~ "$query" || answer ~ "$query"';
+
+    return _getFAQs(
+      page: page,
+      perPage: perPage,
+      filter: searchFilter,
+      sort: '-is_featured, sort_order, -created',
+    );
+  }
+
+  // =========================
+  // ACTIONS
+  // =========================
 
   void searchFAQs(String query) {
     searchQuery.value = query.trim();
@@ -85,22 +122,33 @@ class FaqController extends GetxController {
     searchQuery.value = '';
   }
 
-  /// Clear all filters (for consistency with other controllers)
   void clearAllFilters() {
     searchQuery.value = '';
     hasActiveFilters.value = false;
     pagingController.refresh();
   }
 
-  /// Show filter modal using generic filter bottom sheet
+  void refreshFAQs() {
+    pagingController.refresh();
+  }
+
+  void retryLastFailedRequest() {
+    pagingController.refresh();
+  }
+
+  // =========================
+  // FILTER BOTTOM SHEET
+  // =========================
+
   Future<void> showFilterModal(BuildContext context) async {
     final fields = <FilterField>[
       FilterField.text('search', 'search'.tr, hint: 'searchFAQs'.tr),
     ];
 
-    // Get initial values
     final values = <String, dynamic>{};
-    if (searchQuery.value.isNotEmpty) values['search'] = searchQuery.value;
+    if (searchQuery.value.isNotEmpty) {
+      values['search'] = searchQuery.value;
+    }
 
     if (!context.mounted) return;
 
@@ -116,108 +164,41 @@ class FaqController extends GetxController {
     }
   }
 
-  /// Apply filters from the generic filter result
   void _applyFilters(FilterResult result) {
-    // Clear existing filters first
     searchQuery.value = '';
 
-    // Apply new filters
     final search = result.getValue<String>('search');
     if (search != null && search.isNotEmpty) {
       searchQuery.value = search;
     }
 
-    hasActiveFilters.value = searchQuery.value.isNotEmpty;
+    _updateActiveFilters();
     pagingController.refresh();
   }
 
-  void refreshFAQs() {
-    pagingController.refresh();
-  }
-
-  void retryLastFailedRequest() {
-    pagingController.refresh();
-  }
-
-  // Private FAQ-specific methods using BackendService wrapper methods
-  Future<ResultList<RecordModel>> _getFAQs({
-    int page = 1,
-    int perPage = 10,
-    String? filter,
-    String? sort,
-    String? expand,
-  }) async {
-    // Base filter for published FAQs
-    String baseFilter = 'status = "published"';
-
-    // Combine with additional filter if provided
-    String finalFilter = filter != null && filter.isNotEmpty
-        ? '$baseFilter && ($filter)'
-        : baseFilter;
-
-    // Default sort by sort_order (ascending) then by created date (descending)
-    String finalSort = sort ?? 'sort_order, -created';
-
-    return await BackendService.to.getRecordList(
-      collectionName: 'faqs',
-      page: page,
-      perPage: perPage,
-      filter: finalFilter,
-      sort: finalSort,
-      expand: expand,
-    );
-  }
-
-  Future<ResultList<RecordModel>> _searchFAQs({
-    required String query,
-    int page = 1,
-    int perPage = 10,
-  }) async {
-    if (query.isEmpty) {
-      return await _getFAQs(page: page, perPage: perPage);
-    }
-
-    // Search in question, answer, and keywords fields
-    String searchFilter =
-        'question ~ "$query" || keywords ~ "$query" || answer ~ "$query"';
-
-    return await _getFAQs(
-      page: page,
-      perPage: perPage,
-      filter: searchFilter,
-      sort: '-is_featured, sort_order, -created', // Featured first
-    );
-  }
+  // =========================
+  // DETAILS
+  // =========================
 
   Future<List<FAQ>> getFeaturedFAQs({int limit = 5}) async {
-    try {
-      String filter = 'is_featured = true';
+    final result = await PocketBaseService.to.getRecordList(
+      collectionName: 'faqs',
+      page: 1,
+      perPage: limit,
+      filter: 'is_featured = true',
+      sort: 'sort_order, -created',
+    );
 
-      final result = await BackendService.to.getRecordList(
-        collectionName: 'faqs',
-        page: 1,
-        perPage: limit,
-        filter: filter,
-        sort: 'sort_order, -created',
-      );
-
-      return result.items.map((item) => FAQ.fromJson(item.toJson())).toList();
-    } catch (e) {
-      rethrow;
-    }
+    return result.items.map((e) => FAQ.fromJson(e.toJson())).toList();
   }
 
   Future<FAQ?> getFAQById({required String faqId}) async {
-    try {
-      final record = await BackendService.to.getRecord(
-        collectionName: 'faqs',
-        recordId: faqId,
-      );
+    final record = await PocketBaseService.to.getRecord(
+      collectionName: 'faqs',
+      recordId: faqId,
+    );
 
-      return record != null ? FAQ.fromJson(record.toJson()) : null;
-    } catch (e) {
-      rethrow;
-    }
+    return record != null ? FAQ.fromJson(record.toJson()) : null;
   }
 
   @override

@@ -1,4 +1,4 @@
-/// Route of administration enum based on backend drugs collection schema
+/// Route of administration enum based on PocketBase drugs collection schema
 enum RouteOfAdministration {
   oral(label: 'Oral'),
   iv(label: 'IV'),
@@ -12,11 +12,11 @@ enum RouteOfAdministration {
   subcutaneous(label: 'Subcutaneous');
 
   const RouteOfAdministration({required this.label});
-
+  
   final String label;
 }
 
-/// Pregnancy category enum based on backend drugs collection schema
+/// Pregnancy category enum based on PocketBase drugs collection schema
 enum PregnancyCategory {
   a(label: 'Category A'),
   b(label: 'Category B'),
@@ -26,11 +26,11 @@ enum PregnancyCategory {
   unknown(label: 'Unknown');
 
   const PregnancyCategory({required this.label});
-
+  
   final String label;
 }
 
-/// Controlled substance enum based on backend drugs collection schema
+/// Controlled substance enum based on PocketBase drugs collection schema
 enum ControlledSubstance {
   none(label: 'None'),
   scheduleI(label: 'Schedule I'),
@@ -40,11 +40,11 @@ enum ControlledSubstance {
   scheduleV(label: 'Schedule V');
 
   const ControlledSubstance({required this.label});
-
+  
   final String label;
 }
 
-/// Drug status enum based on backend drugs collection schema
+/// Drug status enum based on PocketBase drugs collection schema
 enum DrugStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -52,17 +52,17 @@ enum DrugStatus {
   archived(label: 'Archived');
 
   const DrugStatus({required this.label});
-
+  
   final String label;
 }
 
-/// Review status enum based on backend drugs collection schema
+/// Review status enum based on PocketBase drugs collection schema
 enum ReviewStatus {
   approved(label: 'Approved'),
   pending(label: 'Pending'),
   needsUpdate(label: 'Needs Update');
 
   const ReviewStatus({required this.label});
-
+  
   final String label;
 }

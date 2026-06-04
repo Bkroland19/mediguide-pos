@@ -1,38 +1,128 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
-import '../../data/services/backend_service.dart';
+
+import '../../data/services/pocketbase_service.dart';
 import '../../models/generic_page.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 
-class AllActionsController extends GetxController {
-  // Tab management
-  final RxInt currentTabIndex = 0.obs;
+enum ActionCategory {
+  clinicalTools,
+  aiAndReference,
+  healthServices,
+  additionalContent,
+}
 
-  // Generic pages state
+class AppAction {
+  final String id;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final ActionCategory category;
+  final bool enabled;
+
+  const AppAction({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    required this.category,
+    this.enabled = true,
+  });
+}
+
+class AllActionsController extends GetxController {
+  final RxList<AppAction> actions = <AppAction>[].obs;
+
   final RxList<GenericPage> genericPages = <GenericPage>[].obs;
   final RxBool isLoadingPages = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+
+    _loadStaticActions();
     loadGenericPages();
   }
 
-  /// Switch to a specific tab
-  void switchTab(int index) {
-    currentTabIndex.value = index;
+  // =========================
+  // STATIC ACTIONS
+  // =========================
+
+  void _loadStaticActions() {
+    actions.assignAll([
+      AppAction(
+        id: 'essential_medicines',
+        title: 'Essential Medicines',
+        subtitle: 'WHO essential medicines reference',
+        icon: LucideIcons.pill,
+        color: Colors.blue,
+        category: ActionCategory.clinicalTools,
+        onTap: () => Get.toNamed(AppRoutes.drugIndex),
+      ),
+
+      AppAction(
+        id: 'clinical_algorithms',
+        title: 'Clinical Care Algorithms',
+        subtitle: 'Clinical decision support tools',
+        icon: LucideIcons.fileText,
+        color: Colors.teal,
+        category: ActionCategory.clinicalTools,
+        onTap: () {
+          Get.toNamed(AppRoutes.tools, arguments: {'initialTab': 2});
+        },
+      ),
+
+      AppAction(
+        id: 'ai_assistant',
+        title: AppTranslationKey.aiChatAssistant,
+        subtitle: AppTranslationKey.getInstantMedicalAssistance,
+        icon: LucideIcons.bot,
+        color: Colors.deepPurple,
+        category: ActionCategory.aiAndReference,
+        onTap: () => Get.toNamed(AppRoutes.aiAssistant),
+      ),
+
+      AppAction(
+        id: 'abbreviations',
+        title: AppTranslationKey.medicalAbbreviations,
+        subtitle: AppTranslationKey.lookupMedicalTerms,
+        icon: LucideIcons.bookText,
+        color: Colors.indigo,
+        category: ActionCategory.aiAndReference,
+        onTap: () => Get.toNamed(AppRoutes.abbreviations),
+      ),
+
+      AppAction(
+        id: 'guidelines',
+        title: 'Clinical Guidelines',
+        subtitle: 'Access medical guidelines',
+        icon: LucideIcons.bookOpen,
+        color: Colors.green,
+        category: ActionCategory.clinicalTools,
+        onTap: () => Get.toNamed(AppRoutes.guidelines),
+      ),
+    ]);
   }
 
-  /// Load generic pages from backend
+  // =========================
+  // DYNAMIC PAGES
+  // =========================
+
   Future<void> loadGenericPages() async {
     try {
       isLoadingPages.value = true;
 
-      final records = await BackendService.to.getRecordList(
+      final records = await PocketBaseService.to.getRecordList(
         collectionName: 'generic_pages',
-        perPage: 50, // Load all pages
+        perPage: 50,
       );
 
       final pages = records.items
@@ -51,98 +141,17 @@ class AllActionsController extends GetxController {
     }
   }
 
-  /// Navigate to generic page viewer with actual model
-  void navigateToGenericPage(GenericPage page) {
+  // =========================
+  // HELPERS
+  // =========================
+
+  List<AppAction> actionsByCategory(ActionCategory category) {
+    return actions
+        .where((action) => action.category == category && action.enabled)
+        .toList();
+  }
+
+  void openGenericPage(GenericPage page) {
     Get.toNamed(AppRoutes.genericViewer, arguments: page);
-  }
-
-  // Navigation methods for essential medical resources
-  void navigateToEssentialMedicines() {
-    Get.toNamed(AppRoutes.drugIndex);
-  }
-
-  void navigateToLabTestMenu() {
-    Get.snackbar(
-      'Laboratory Test Menu',
-      'Opening laboratory testing guidelines...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to lab test menu page
-  }
-
-  void navigateToClinicalAlgorithms() {
-    // Navigate to Tools page with Decision Tool tab selected (tab index 2)
-    Get.toNamed(AppRoutes.tools, arguments: {'initialTab': 2});
-  }
-
-  void navigateToInfectionPrevention() {
-    Get.snackbar(
-      'Infection Prevention',
-      'Opening infection control guidelines...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to infection prevention page
-  }
-
-  // Navigation methods for core health services
-  void navigateToConsultants() {
-    Get.snackbar(
-      AppTranslationKey.chatWithConsultant,
-      'Opening consultant list...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to consultants page
-  }
-
-  void navigateToHealthInfrastructure() {
-    Get.snackbar(
-      AppTranslationKey.healthInfrastructure,
-      'Opening health facility map...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to map page
-  }
-
-  void navigateToEmergencyContacts() {
-    Get.snackbar(
-      AppTranslationKey.emergencyContacts,
-      'Opening emergency directory...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to emergency contacts page
-  }
-
-  void navigateToDrugIndex() {
-    Get.toNamed(AppRoutes.drugIndex);
-  }
-
-  void navigateToAIChat() {
-    Get.toNamed(AppRoutes.aiAssistant);
-  }
-
-  void navigateToMedicalCalculators() {
-    Get.snackbar(
-      AppTranslationKey.medicalCalculators,
-      'Opening medical calculators...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to calculators page
-  }
-
-  void navigateToGuidelines() {
-    Get.toNamed(AppRoutes.guidelines);
-  }
-
-  void navigateToTools() {
-    Get.toNamed(AppRoutes.tools);
-  }
-
-  void navigateToAbbreviations() {
-    Get.snackbar(
-      AppTranslationKey.medicalAbbreviations,
-      'Opening medical abbreviations dictionary...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // TODO: Navigate to abbreviations page
   }
 }

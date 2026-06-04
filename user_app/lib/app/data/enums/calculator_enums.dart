@@ -5,7 +5,7 @@ enum CalculatorType {
   checklist(label: 'Checklist');
 
   const CalculatorType({required this.label});
-
+  
   final String label;
 }
 
@@ -16,6 +16,6 @@ enum CalculatorStatus {
   archived(label: 'Archived');
 
   const CalculatorStatus({required this.label});
-
+  
   final String label;
 }

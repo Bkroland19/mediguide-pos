@@ -90,7 +90,7 @@ class UseCalculatorPage extends GetWidget<UseCalculatorController> {
               onLoadStart: controller.onLoadStart,
               onLoadStop: controller.onLoadStop,
               onConsoleMessage: (webController, consoleMessage) {
-                debugPrint(
+                print(
                   'WebView Console [${consoleMessage.messageLevel}]: ${consoleMessage.message}',
                 );
               },

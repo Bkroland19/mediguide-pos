@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
-import 'package:user_app/app/data/services/backend_service.dart';
+import 'package:user_app/app/data/services/pocketbase_service.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
 import 'package:user_app/app/data/services/main_service.dart';
+import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/themes/app_theme.dart';
@@ -32,37 +33,21 @@ Future<void> _initServices() async {
   // Initialize core services in order
   await Get.putAsync(() => AuthService().init());
 
-  // Initialize MainService first for connectivity monitoring.
+  // Initialize MainService first (connectivity monitoring needed by PocketBase)
   await Get.putAsync(() => MainService().init());
 
-  // Initialize backend service.
-  await Get.putAsync(() => BackendService().init());
-  BackendService.to.setErrorInterceptor((error) async {
-    if (!BackendService.to.isAuthenticationError(error)) {
-      return;
-    }
+  // Initialize PocketBase service (offline-first via pocketbase_drift)
+  await Get.putAsync(() => PocketBaseService().init());
 
-    final hadUser = AuthService.to.currentUser.value != null;
-    await AuthService.to.clearUser();
-
-    if (hadUser) {
-      Common.quickToast(
-        type: ToastificationType.info,
-        title: 'Session expired',
-        description: 'Please sign in again.',
-      );
-    }
-
-    if (Get.currentRoute != AppRoutes.login) {
-      Get.offAllNamed(AppRoutes.login);
-    }
-  });
+  // Initialize OpenAI service for AI assistant
+  await Get.putAsync(() => OpenAiService().init());
 
   // Initialize AI Context service for context-aware AI assistance
   await Get.putAsync(() => AiContextService().init());
 
   // Initialize LanguageController for language management
   // Get.put<LanguageController>(LanguageController(), permanent: true);
+
 }
 
 class MyApp extends StatelessWidget {

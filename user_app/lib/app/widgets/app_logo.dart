@@ -63,8 +63,7 @@ class AppLogo extends StatelessWidget {
           AppSpacing.sm.gap,
           Text(
             customSubtitle ?? AppTranslationKey.welcomeBody.tr,
-            style:
-                subtitleStyle ??
+            style: subtitleStyle ??
                 theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

@@ -6,7 +6,7 @@ import 'package:toastification/toastification.dart';
 import 'package:http/http.dart' as http;
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 
@@ -34,35 +34,27 @@ class EditProfileController extends GetxController {
       if (user == null) throw Exception('User not found');
 
       final formValues = formKey.currentState!.value;
-
-      debugPrint('Form values: $formValues');
+      
+      // Debug: Print all form values to see what's being sent
+      print('Form values: $formValues');
 
       // Create a clean update data with only the fields we want to update
       final allowedFields = [
-        'name',
-        'phone',
-        'alternativePhone',
-        'address',
-        'city',
-        'state',
-        'country',
-        'postalCode',
-        'organization',
-        'department',
-        'jobTitle',
-        'specialization',
+        'name', 'phone', 'alternativePhone', 'address', 'city', 
+        'state', 'country', 'postalCode', 'organization', 
+        'department', 'jobTitle', 'specialization'
       ];
-
+      
       final updateData = <String, dynamic>{};
-
+      
       for (final fieldName in allowedFields) {
         final value = formValues[fieldName]?.toString().trim();
         if (value != null && value.isNotEmpty) {
           updateData[fieldName] = value;
         }
       }
-
-      // backend seems to validate enum fields even when not being updated
+      
+      // PocketBase seems to validate enum fields even when not being updated
       // Include current enum values to prevent validation errors
       if (user.role != null) {
         updateData['role'] = user.role!.name;
@@ -74,10 +66,11 @@ class EditProfileController extends GetxController {
         updateData['preferredLanguage'] = user.preferredLanguage!.name;
       }
 
-      debugPrint('Update data being sent: $updateData');
-
-      // Update user profile via backend
-      final updatedRecord = await BackendService.to.updateRecord(
+      // Debug: Print the final update data being sent
+      print('Update data being sent: $updateData');
+      
+      // Update user profile via PocketBase
+      final updatedRecord = await PocketBaseService.to.updateRecord(
         collectionName: User.collection,
         recordId: user.id,
         data: updateData,
@@ -97,11 +90,11 @@ class EditProfileController extends GetxController {
       // Close dialog
       Get.back(result: true);
     } catch (e) {
-      debugPrint(e.toString());
+      print(e.toString());
       Common.quickToast(
         type: ToastificationType.error,
         title: AppTranslationKey.error.tr,
-        description: Common.parseApiError(e),
+        description: AppTranslationKey.failedToUpdateProfile.tr,
       );
     } finally {
       isLoading.value = false;
@@ -138,7 +131,7 @@ class EditProfileController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: AppTranslationKey.error.tr,
-        description: Common.parseApiError(e),
+        description: 'Failed to update profile photo. Please try again.',
       );
     } finally {
       isUploadingAvatar.value = false;
@@ -157,7 +150,7 @@ class EditProfileController extends GetxController {
       avatarFile.path,
     );
 
-    final record = await BackendService.to.updateRecord(
+    final record = await PocketBaseService.to.updateRecord(
       collectionName: User.collection,
       recordId: userId,
       data: {},

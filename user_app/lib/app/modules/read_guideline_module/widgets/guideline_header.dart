@@ -8,7 +8,10 @@ import '../../../widgets/custom_chip.dart';
 class GuidelineHeader extends StatelessWidget {
   final Guideline guideline;
 
-  const GuidelineHeader({super.key, required this.guideline});
+  const GuidelineHeader({
+    super.key,
+    required this.guideline,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +33,7 @@ class GuidelineHeader extends StatelessWidget {
             ),
           ),
         ],
-        if (guideline.hasTargetPopulation ||
-            guideline.healthcareLevelRequired.isNotEmpty) ...[
+        if (guideline.hasTargetPopulation || guideline.healthcareLevelRequired.isNotEmpty) ...[
           AppSpacing.gapMd,
           Wrap(
             spacing: AppSpacing.sm,

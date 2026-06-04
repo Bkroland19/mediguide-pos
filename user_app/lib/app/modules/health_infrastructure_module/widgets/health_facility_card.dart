@@ -26,10 +26,7 @@ class HealthFacilityCard extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm + 2,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
             child: Row(
               children: [
                 Container(
@@ -39,11 +36,7 @@ class HealthFacilityCard extends StatelessWidget {
                     color: cs.primaryContainer.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    LucideIcons.building2,
-                    size: 22,
-                    color: cs.primary,
-                  ),
+                  child: Icon(LucideIcons.building2, size: 22, color: cs.primary),
                 ),
                 AppSpacing.hGapMd,
                 Expanded(
@@ -52,38 +45,28 @@ class HealthFacilityCard extends StatelessWidget {
                     children: [
                       Text(
                         facility.name,
-                        style: context.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         [
-                          if (facility.facilityLevelName.isNotEmpty)
-                            facility.facilityLevelName,
+                          if (facility.facilityLevelName.isNotEmpty) facility.facilityLevelName,
                           facility.ownershipDisplay,
                         ].join(' · '),
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                        style: context.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (facility.parishName.isNotEmpty ||
-                          facility.subcountyName.isNotEmpty) ...[
+                      if (facility.parishName.isNotEmpty || facility.subcountyName.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           [
-                            if (facility.parishName.isNotEmpty)
-                              facility.parishName,
-                            if (facility.subcountyName.isNotEmpty)
-                              facility.subcountyName,
+                            if (facility.parishName.isNotEmpty) facility.parishName,
+                            if (facility.subcountyName.isNotEmpty) facility.subcountyName,
                           ].join(', '),
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                          ),
+                          style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -92,11 +75,7 @@ class HealthFacilityCard extends StatelessWidget {
                   ),
                 ),
                 AppSpacing.hGapSm,
-                Icon(
-                  LucideIcons.chevronRight,
-                  size: 16,
-                  color: cs.onSurfaceVariant,
-                ),
+                Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
               ],
             ),
           ),

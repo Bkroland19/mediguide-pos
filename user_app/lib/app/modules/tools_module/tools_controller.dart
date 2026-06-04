@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
 class ToolsController extends GetxController {
-  // Dependencies
-  final BackendService _pbService = BackendService.to;
+  final PocketBaseService _pbService = PocketBaseService.to;
 
-  // Controllers
   late final PagingController<int, Calculator> pagingController;
 
-  // Filter state
   final hasActiveFilters = false.obs;
+
   final searchQuery = ''.obs;
   final selectedTypes = <CalculatorType>[].obs;
   final selectedStatuses = <CalculatorStatus>[].obs;
@@ -25,142 +24,129 @@ class ToolsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _initializePagingController();
-    _handleNavigationArguments();
+    _initPaging();
+    _handleArgs();
   }
 
-  /// Handle navigation arguments for initial tab selection
-  void _handleNavigationArguments() {
+  void _handleArgs() {
     final args = Get.arguments;
-    if (args is Map<String, dynamic> && args.containsKey('initialTab')) {
-      final initialTab = args['initialTab'] as int?;
-      if (initialTab != null && initialTab >= 0 && initialTab <= 3) {
-        selectedTabIndex.value = initialTab;
-        _updateActiveFiltersState();
+    if (args is Map<String, dynamic>) {
+      final tab = args['initialTab'];
+      if (tab is int && tab >= 0 && tab <= 3) {
+        selectedTabIndex.value = tab;
+        _updateFilterState();
       }
     }
   }
 
-  /// Initialize the paging controller with v5 constructor API
-  void _initializePagingController() {
+  void _initPaging() {
     pagingController = PagingController<int, Calculator>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
-      fetchPage: (pageKey) => _fetchPage(pageKey),
+      fetchPage: _fetchPage,
     );
   }
 
-  @override
-  void onClose() {
-    pagingController.dispose();
-    super.onClose();
-  }
-
-  /// Fetch calculators from backend
-  Future<List<Calculator>> _fetchPage(int pageKey) async {
+  // ================================
+  // FETCH
+  // ================================
+  Future<List<Calculator>> _fetchPage(int page) async {
     try {
-      final filters = <String>[];
+      final filter = _buildFilter();
 
-      // Search filter
-      if (searchQuery.value.isNotEmpty) {
-        filters.add(
-          'name ~ "${searchQuery.value}" || description ~ "${searchQuery.value}"',
-        );
-      }
-
-      // Tab-based type filter (primary)
-      if (selectedTabIndex.value > 0) {
-        final tabType = _getTabType(selectedTabIndex.value);
-        if (tabType != null) {
-          filters.add('type = "${_typeToString(tabType)}"');
-        }
-      }
-
-      // Additional type filters from filter modal
-      if (selectedTypes.isNotEmpty) {
-        final typeFilters = selectedTypes
-            .map((type) => 'type = "${_typeToString(type)}"')
-            .join(' || ');
-        filters.add('($typeFilters)');
-      }
-
-      // Status filters
-      if (selectedStatuses.isNotEmpty) {
-        final statusFilters = selectedStatuses
-            .map((status) => 'status = "${_statusToString(status)}"')
-            .join(' || ');
-        filters.add('($statusFilters)');
-      }
-
-      // Only show active calculators by default unless status filter is applied
-      if (selectedStatuses.isEmpty) {
-        filters.add('status = "active"');
-      }
-
-      final filterString = filters.isNotEmpty ? filters.join(' && ') : '';
-
-      final calculators = await getCalculators(
-        page: pageKey,
+      final result = await _pbService.getRecordList(
+        collectionName: Calculator.collection,
+        page: page,
         perPage: pageSize,
-        filter: filterString,
+        filter: filter.isEmpty ? null : filter,
         sort: '-created',
         expand: 'addedBy',
       );
 
-      return calculators;
-    } catch (error) {
+      return result.items.map((r) => Calculator.fromRecord(r)).toList();
+    } catch (e) {
       Common.quickToast(title: 'Failed to load calculators');
       rethrow;
     }
   }
 
-  /// Refresh data
-  void refreshData() {
-    pagingController.refresh();
+  // ================================
+  // FILTER ENGINE (FIXED)
+  // ================================
+  String _buildFilter() {
+    final parts = <String>[];
+
+    // search
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value;
+      parts.add('(name ~ "$q" || description ~ "$q")');
+    }
+
+    // tab filter
+    final tabType = _getTabType(selectedTabIndex.value);
+    if (tabType != null) {
+      parts.add('type = "${_typeToString(tabType)}"');
+    }
+
+    // multi type filter
+    if (selectedTypes.isNotEmpty) {
+      final types = selectedTypes
+          .map((t) => 'type = "${_typeToString(t)}"')
+          .join(' || ');
+      parts.add('($types)');
+    }
+
+    // status filter
+    if (selectedStatuses.isNotEmpty) {
+      final statuses = selectedStatuses
+          .map((s) => 'status = "${_statusToString(s)}"')
+          .join(' || ');
+      parts.add('($statuses)');
+    } else {
+      parts.add('status = "active"');
+    }
+
+    return parts.join(' && ');
   }
 
-  /// Handle tab change
+  // ================================
+  // EVENTS
+  // ================================
+  void refreshData() => pagingController.refresh();
+
   void onTabChanged(int index) {
     selectedTabIndex.value = index;
-    _updateActiveFiltersState();
+    _updateFilterState();
     pagingController.refresh();
   }
 
-  /// Show filter modal using generic filter bottom sheet
+  // ================================
+  // FILTER MODAL
+  // ================================
   Future<void> showFilterModal(BuildContext context) async {
     final fields = <FilterField>[
-      FilterField.text('search', 'Search', hint: 'Search calculators'),
+      FilterField.text('search', 'Search'),
+      FilterField.multiSelect(
+        'types',
+        'Calculator Type',
+        CalculatorType.values.map((e) => e.name).toList(),
+      ),
+      FilterField.multiSelect(
+        'statuses',
+        'Status',
+        CalculatorStatus.values.map((e) => e.name).toList(),
+      ),
     ];
-
-    // Calculator type multi-select
-    final typeValues = CalculatorType.values.map((type) => type.name).toList();
-    fields.add(FilterField.multiSelect('types', 'Calculator Type', typeValues));
-
-    // Status multi-select
-    final statusValues = CalculatorStatus.values
-        .map((status) => status.name)
-        .toList();
-    fields.add(FilterField.multiSelect('statuses', 'Status', statusValues));
-
-    // Get initial values
-    final values = <String, dynamic>{};
-    if (searchQuery.value.isNotEmpty) {
-      values['search'] = searchQuery.value;
-    }
-    if (selectedTypes.isNotEmpty) {
-      values['types'] = selectedTypes.map((t) => t.name).toList();
-    }
-    if (selectedStatuses.isNotEmpty) {
-      values['statuses'] = selectedStatuses.map((s) => s.name).toList();
-    }
-
-    if (!context.mounted) return;
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'Filter Calculators',
       fields: fields,
-      initialValues: values,
+      initialValues: {
+        'search': searchQuery.value,
+        'types': selectedTypes.map((e) => e.name).toList(),
+        'statuses': selectedStatuses.map((e) => e.name).toList(),
+      },
     );
 
     if (result != null && result.isNotEmpty) {
@@ -168,53 +154,49 @@ class ToolsController extends GetxController {
     }
   }
 
-  /// Apply filters from the generic filter result
   void _applyFilters(FilterResult result) {
-    // Clear existing filters first
     searchQuery.value = '';
+
     selectedTypes.clear();
     selectedStatuses.clear();
 
-    // Apply new filters
     final search = result.getValue<String>('search');
-    if (search != null && search.isNotEmpty) {
-      searchQuery.value = search;
-    }
+    if (search != null) searchQuery.value = search;
 
-    final typesList = result.getValue<List>('types');
-    if (typesList != null && typesList.isNotEmpty) {
+    final types = result.getValue<List>('types');
+    if (types != null) {
       selectedTypes.addAll(
-        typesList.cast<String>().map(
-          (name) => CalculatorType.values.firstWhere((t) => t.name == name),
-        ),
+        types.map((e) => CalculatorType.values.firstWhere((t) => t.name == e)),
       );
     }
 
-    final statusesList = result.getValue<List>('statuses');
-    if (statusesList != null && statusesList.isNotEmpty) {
+    final statuses = result.getValue<List>('statuses');
+    if (statuses != null) {
       selectedStatuses.addAll(
-        statusesList.cast<String>().map(
-          (name) => CalculatorStatus.values.firstWhere((s) => s.name == name),
+        statuses.map(
+          (e) => CalculatorStatus.values.firstWhere((s) => s.name == e),
         ),
       );
     }
 
-    _updateActiveFiltersState();
+    _updateFilterState();
     pagingController.refresh();
   }
 
-  /// Clear all filters
   void clearAllFilters() {
     searchQuery.value = '';
     selectedTypes.clear();
     selectedStatuses.clear();
     selectedTabIndex.value = 0;
-    _updateActiveFiltersState();
-    refreshData();
+
+    _updateFilterState();
+    pagingController.refresh();
   }
 
-  /// Update active filters state
-  void _updateActiveFiltersState() {
+  // ================================
+  // STATE
+  // ================================
+  void _updateFilterState() {
     hasActiveFilters.value =
         searchQuery.value.isNotEmpty ||
         selectedTypes.isNotEmpty ||
@@ -222,9 +204,11 @@ class ToolsController extends GetxController {
         selectedTabIndex.value > 0;
   }
 
-  /// Get calculator type for tab index
-  CalculatorType? _getTabType(int tabIndex) {
-    switch (tabIndex) {
+  // ================================
+  // TAB MAPPING
+  // ================================
+  CalculatorType? _getTabType(int tab) {
+    switch (tab) {
       case 1:
         return CalculatorType.calculator;
       case 2:
@@ -232,36 +216,25 @@ class ToolsController extends GetxController {
       case 3:
         return CalculatorType.checklist;
       default:
-        return null; // All tab
+        return null;
     }
   }
 
-  // Helper methods for enum conversion
-  String _typeToString(CalculatorType type) {
-    switch (type) {
-      case CalculatorType.calculator:
-        return 'calculator';
-      case CalculatorType.decisionTool:
-        return 'decision_tool';
-      case CalculatorType.checklist:
-        return 'checklist';
-    }
-  }
+  String _typeToString(CalculatorType t) => switch (t) {
+    CalculatorType.calculator => 'calculator',
+    CalculatorType.decisionTool => 'decision_tool',
+    CalculatorType.checklist => 'checklist',
+  };
 
-  String _statusToString(CalculatorStatus status) {
-    switch (status) {
-      case CalculatorStatus.active:
-        return 'active';
-      case CalculatorStatus.draft:
-        return 'draft';
-      case CalculatorStatus.archived:
-        return 'archived';
-    }
-  }
+  String _statusToString(CalculatorStatus s) => switch (s) {
+    CalculatorStatus.active => 'active',
+    CalculatorStatus.draft => 'draft',
+    CalculatorStatus.archived => 'archived',
+  };
 
-  // ==================== CALCULATOR-SPECIFIC METHODS ====================
-
-  /// Get calculators with optional filtering and pagination
+  // ================================
+  // API LAYER
+  // ================================
   Future<List<Calculator>> getCalculators({
     int page = 1,
     int perPage = 30,
@@ -277,30 +250,7 @@ class ToolsController extends GetxController {
       sort: sort,
       expand: expand,
     );
-    return result.items.map((record) => Calculator.fromRecord(record)).toList();
-  }
 
-  /// Create a new calculator
-  Future<Calculator> createCalculator(
-    Map<String, dynamic> calculatorData,
-  ) async {
-    final record = await _pbService.createRecord(
-      collectionName: Calculator.collection,
-      data: calculatorData,
-    );
-    return Calculator.fromRecord(record);
-  }
-
-  /// Update an existing calculator
-  Future<Calculator> updateCalculator(
-    String calculatorId,
-    Map<String, dynamic> calculatorData,
-  ) async {
-    final record = await _pbService.updateRecord(
-      collectionName: Calculator.collection,
-      recordId: calculatorId,
-      data: calculatorData,
-    );
-    return Calculator.fromRecord(record);
+    return result.items.map((e) => Calculator.fromRecord(e)).toList();
   }
 }

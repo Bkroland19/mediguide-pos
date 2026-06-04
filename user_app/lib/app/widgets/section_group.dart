@@ -26,19 +26,13 @@ class ActionItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 2,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
         child: Row(
           children: [
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, size: 20, color: Colors.white),
             ),
             AppSpacing.hGapMd,
@@ -48,18 +42,14 @@ class ActionItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: context.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 1),
                   Text(
                     subtitle,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: context.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -67,11 +57,7 @@ class ActionItem extends StatelessWidget {
               ),
             ),
             AppSpacing.hGapSm,
-            Icon(
-              LucideIcons.chevronRight,
-              size: 16,
-              color: context.theme.colorScheme.onSurfaceVariant,
-            ),
+            Icon(LucideIcons.chevronRight, size: 16, color: context.theme.colorScheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -87,12 +73,7 @@ class SectionGroup extends StatelessWidget {
   final List<Widget> items;
   final Widget? trailing;
 
-  const SectionGroup({
-    super.key,
-    required this.title,
-    required this.items,
-    this.trailing,
-  });
+  const SectionGroup({super.key, required this.title, required this.items, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -103,11 +84,7 @@ class SectionGroup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-            right: AppSpacing.xs,
-          ),
+          padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm, right: AppSpacing.xs),
           child: Row(
             children: [
               Expanded(
@@ -128,9 +105,7 @@ class SectionGroup extends StatelessWidget {
           decoration: BoxDecoration(
             color: isDark ? cs.surfaceContainerHigh : cs.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.25),
-            ),
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.25)),
             boxShadow: [
               if (!isDark)
                 BoxShadow(

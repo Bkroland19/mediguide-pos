@@ -1,4 +1,4 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import '../enums/drug_enums.dart';
 import 'base_model.dart';
 import 'drug_category.dart';
@@ -6,26 +6,22 @@ import 'drug_tag.dart';
 import 'drug_class.dart';
 import 'therapeutic_category.dart';
 
-/// Drug model based on backend drugs collection
+/// Drug model based on PocketBase drugs collection
 class Drug extends BaseModel {
-  Drug(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  Drug(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'drugs';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => Drug(data));
-    _didRegister = true;
-  }
-
-  /// Create Drug from backend record
+    return true;
+  })();
+  
+  /// Create Drug from PocketBase record
   static Drug fromRecord(RecordModel record) => Drug(record.data);
-
+  
   /// Create JSON for new drug record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -60,44 +56,37 @@ class Drug extends BaseModel {
   }) {
     return {
       'name': name,
-      'brand_names': ?brandNames,
-      'description': ?description,
-      'mechanism_of_action': ?mechanismOfAction,
-      'adult_dose': ?adultDose,
-      'pediatric_dose': ?pediatricDose,
-      'elderly_dose': ?elderlyDose,
-      'max_daily_dose': ?maxDailyDose,
-      if (routeOfAdministration != null)
-        'route_of_administration': routeOfAdministration
-            .map((r) => r.name)
-            .toList(),
-      'frequency': ?frequency,
-      'duration': ?duration,
-      'indications': ?indications,
-      'contraindications': ?contraindications,
-      'side_effects': ?sideEffects,
-      'warnings': ?warnings,
-      'monitoring_parameters': ?monitoringParameters,
-      if (pregnancyCategory != null)
-        'pregnancy_category': pregnancyCategory.name.toUpperCase(),
-      'clinical_notes': ?clinicalNotes,
-      'categories': ?categoryIds,
-      'tags': ?tagIds,
-      'drug_class': ?drugClassId,
-      'therapeutic_category': ?therapeuticCategoryId,
-      'who_eml_status': ?whoEmlStatus,
-      'antimicrobial_status': ?antimicrobialStatus,
-      if (controlledSubstance != null)
-        'controlled_substance': _controlledSubstanceToString(
-          controlledSubstance,
-        ),
+      if (brandNames != null) 'brand_names': brandNames,
+      if (description != null) 'description': description,
+      if (mechanismOfAction != null) 'mechanism_of_action': mechanismOfAction,
+      if (adultDose != null) 'adult_dose': adultDose,
+      if (pediatricDose != null) 'pediatric_dose': pediatricDose,
+      if (elderlyDose != null) 'elderly_dose': elderlyDose,
+      if (maxDailyDose != null) 'max_daily_dose': maxDailyDose,
+      if (routeOfAdministration != null) 'route_of_administration': routeOfAdministration.map((r) => r.name).toList(),
+      if (frequency != null) 'frequency': frequency,
+      if (duration != null) 'duration': duration,
+      if (indications != null) 'indications': indications,
+      if (contraindications != null) 'contraindications': contraindications,
+      if (sideEffects != null) 'side_effects': sideEffects,
+      if (warnings != null) 'warnings': warnings,
+      if (monitoringParameters != null) 'monitoring_parameters': monitoringParameters,
+      if (pregnancyCategory != null) 'pregnancy_category': pregnancyCategory.name.toUpperCase(),
+      if (clinicalNotes != null) 'clinical_notes': clinicalNotes,
+      if (categoryIds != null) 'categories': categoryIds,
+      if (tagIds != null) 'tags': tagIds,
+      if (drugClassId != null) 'drug_class': drugClassId,
+      if (therapeuticCategoryId != null) 'therapeutic_category': therapeuticCategoryId,
+      if (whoEmlStatus != null) 'who_eml_status': whoEmlStatus,
+      if (antimicrobialStatus != null) 'antimicrobial_status': antimicrobialStatus,
+      if (controlledSubstance != null) 'controlled_substance': _controlledSubstanceToString(controlledSubstance),
       'status': (status ?? DrugStatus.active).name,
       'review_status': (reviewStatus ?? ReviewStatus.pending).name,
-      'search_keywords': ?searchKeywords,
-      'references': ?references,
+      if (searchKeywords != null) 'search_keywords': searchKeywords,
+      if (references != null) 'references': references,
     };
   }
-
+  
   // Direct string properties - late final for performance
   late final String name = get<String>("name", "");
   late final String brandNames = get<String>("brand_names", "");
@@ -113,48 +102,33 @@ class Drug extends BaseModel {
   late final String contraindications = get<String>("contraindications", "");
   late final String sideEffects = get<String>("side_effects", "");
   late final String warnings = get<String>("warnings", "");
-  late final String monitoringParameters = get<String>(
-    "monitoring_parameters",
-    "",
-  );
+  late final String monitoringParameters = get<String>("monitoring_parameters", "");
   late final String clinicalNotes = get<String>("clinical_notes", "");
   late final String searchKeywords = get<String>("search_keywords", "");
   late final String references = get<String>("references", "");
-
+  
   // Boolean properties
   late final bool whoEmlStatus = get<bool>("who_eml_status", false);
-  late final bool antimicrobialStatus = get<bool>(
-    "antimicrobial_status",
-    false,
-  );
-
+  late final bool antimicrobialStatus = get<bool>("antimicrobial_status", false);
+  
   // Enum properties
-  late final List<RouteOfAdministration> routeOfAdministration =
-      getEnumList<RouteOfAdministration>(
-        "route_of_administration",
-        RouteOfAdministration.values,
-      );
-  late final PregnancyCategory? pregnancyCategory = getEnum<PregnancyCategory>(
-    "pregnancy_category",
-    PregnancyCategory.values,
-  );
-  late final ControlledSubstance? controlledSubstance =
-      _parseControlledSubstance(get<String>("controlled_substance", ""));
-  late final DrugStatus status =
-      getEnum<DrugStatus>("status", DrugStatus.values) ?? DrugStatus.active;
-  late final ReviewStatus reviewStatus =
-      getEnum<ReviewStatus>("review_status", ReviewStatus.values) ??
-      ReviewStatus.pending;
-
+  late final List<RouteOfAdministration> routeOfAdministration = 
+    getEnumList<RouteOfAdministration>("route_of_administration", RouteOfAdministration.values);
+  late final PregnancyCategory? pregnancyCategory = 
+    getEnum<PregnancyCategory>("pregnancy_category", PregnancyCategory.values);
+  late final ControlledSubstance? controlledSubstance = 
+    _parseControlledSubstance(get<String>("controlled_substance", ""));
+  late final DrugStatus status = 
+    getEnum<DrugStatus>("status", DrugStatus.values) ?? DrugStatus.active;
+  late final ReviewStatus reviewStatus = 
+    getEnum<ReviewStatus>("review_status", ReviewStatus.values) ?? ReviewStatus.pending;
+  
   // Relationship properties - will be implemented when all models are ready
-  late final List<DrugCategory> categories = getRelationList<DrugCategory>(
-    "categories",
-  );
+  late final List<DrugCategory> categories = getRelationList<DrugCategory>("categories");
   late final List<DrugTag> tags = getRelationList<DrugTag>("tags");
   late final DrugClass? drugClass = getRelation<DrugClass>("drug_class");
-  late final TherapeuticCategory? therapeuticCategory =
-      getRelation<TherapeuticCategory>("therapeutic_category");
-
+  late final TherapeuticCategory? therapeuticCategory = getRelation<TherapeuticCategory>("therapeutic_category");
+  
   // Helper methods for controlled substance conversion
   static String _controlledSubstanceToString(ControlledSubstance substance) {
     switch (substance) {
@@ -172,7 +146,7 @@ class Drug extends BaseModel {
         return 'Schedule V';
     }
   }
-
+  
   static ControlledSubstance? _parseControlledSubstance(String value) {
     switch (value.toLowerCase()) {
       case 'none':

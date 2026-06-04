@@ -1,27 +1,23 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'base_model.dart';
 import 'district.dart';
 
-/// County model based on backend counties collection
+/// County model based on PocketBase counties collection
 class County extends BaseModel {
-  County(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  County(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'counties';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => County(data));
-    _didRegister = true;
-  }
-
-  /// Create County from backend record
+    return true;
+  })();
+  
+  /// Create County from PocketBase record
   static County fromRecord(RecordModel record) => County(record.data);
-
+  
   /// Create JSON for new county record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -32,16 +28,16 @@ class County extends BaseModel {
     return {
       'name': name,
       'district': districtId,
-      'nhpi_code': ?nhpiCode,
-      'hsdt_code': ?hsdtCode,
+      if (nhpiCode != null) 'nhpi_code': nhpiCode,
+      if (hsdtCode != null) 'hsdt_code': hsdtCode,
     };
   }
-
+  
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String nhpiCode = get<String>("nhpi_code", "");
   late final String hsdtCode = get<String>("hsdt_code", "");
-
+  
   // Relationship properties
   late final District? district = getRelation<District>("district");
 }

@@ -1,8 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:user_app/app/data/models/models.dart';
-import 'package:user_app/app/data/services/backend_service.dart';
+import 'package:user_app/app/data/services/pocketbase_service.dart';
 import 'package:user_app/app/utils/preference_utils.dart';
 import 'package:user_app/app/utils/constants.dart';
 import 'package:user_app/app/translations/app_translations.dart';
@@ -33,7 +32,7 @@ class AuthService extends GetxService {
   String? get userProfilePicture {
     final user = currentUser.value;
     if (user?.avatar.isNotEmpty == true) {
-      return BackendService.to.getFileUrl(
+      return PocketBaseService.to.getFileUrl(
         collectionName: 'users',
         recordId: user!.id,
         filename: user.avatar,
@@ -73,7 +72,7 @@ class AuthService extends GetxService {
       }
       return success;
     } catch (e) {
-      debugPrint('Error saving user: $e');
+      print('Error saving user: $e');
       return false;
     }
   }
@@ -90,7 +89,7 @@ class AuthService extends GetxService {
         }
       }
     } catch (e) {
-      debugPrint('Error loading user: $e');
+      print('Error loading user: $e');
       // Clear corrupted data
       await clearUser();
     }
@@ -107,7 +106,7 @@ class AuthService extends GetxService {
       }
       return success;
     } catch (e) {
-      debugPrint('Error clearing user: $e');
+      print('Error clearing user: $e');
       return false;
     }
   }
@@ -126,7 +125,7 @@ class AuthService extends GetxService {
   Future<void> logout() async {
     try {
       // Clear all authentication-related shared preferences
-      await BackendService.to.logout();
+      PocketBaseService.to.logout();
     } catch (_) {
     } finally {
       await clearUser();
@@ -155,7 +154,7 @@ class AuthService extends GetxService {
         await authenticateWithBiometrics();
       }
     } catch (e) {
-      debugPrint('Error initializing biometrics: $e');
+      print('Error initializing biometrics: $e');
       isBiometricAvailable.value = false;
     }
   }
@@ -169,7 +168,7 @@ class AuthService extends GetxService {
       isBiometricAvailable.value = isAvailable && isDeviceSupported;
       return isBiometricAvailable.value;
     } catch (e) {
-      debugPrint('Error checking biometric availability: $e');
+      print('Error checking biometric availability: $e');
       return false;
     }
   }
@@ -179,7 +178,7 @@ class AuthService extends GetxService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      debugPrint('Error getting available biometrics: $e');
+      print('Error getting available biometrics: $e');
       return [];
     }
   }
@@ -205,7 +204,7 @@ class AuthService extends GetxService {
 
       return didAuthenticate;
     } catch (e) {
-      debugPrint('Error during biometric authentication: $e');
+      print('Error during biometric authentication: $e');
       return false;
     }
   }
@@ -228,7 +227,7 @@ class AuthService extends GetxService {
 
       return success;
     } catch (e) {
-      debugPrint('Error toggling biometric setting: $e');
+      print('Error toggling biometric setting: $e');
       return false;
     }
   }

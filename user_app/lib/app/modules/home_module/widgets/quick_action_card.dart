@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../../utils/app_spacing.dart';
 import '../../../utils/responsive.dart';
 import '../../../widgets/glass_card.dart';
 
-/// A card widget for displaying quick action buttons on the home page
+/// =======================
+/// QUICK ACTION CARD
+/// =======================
 class QuickActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color? iconColor;
   final Color? backgroundColor;
   final Color? textColor;
@@ -32,9 +35,13 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ?? context.theme.colorScheme.primary;
+    final theme = context.theme;
+    final baseTextColor = textColor ?? theme.colorScheme.onSurface;
+    final effectiveIconColor = iconColor ?? theme.colorScheme.primary;
 
-    final cardPadding = EdgeInsets.symmetric(
+    final disabled = !isEnabled || onTap == null;
+
+    final padding = EdgeInsets.symmetric(
       horizontal: Responsive.horizontalPadding(context) * 0.75,
       vertical: Responsive.doubleValue(
         context,
@@ -44,125 +51,119 @@ class QuickActionCard extends StatelessWidget {
       ),
     );
 
-    final cardContent = Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Icon container
-        Container(
-          padding: EdgeInsets.all(
-            Responsive.doubleValue(
-              context,
-              mobile: 8.0,
-              tablet: 10.0,
-              desktop: 12.0,
-            ),
-          ),
-          decoration: BoxDecoration(
-            color: effectiveIconColor == Colors.white
-                ? Colors.white.withValues(alpha: 0.2)
-                : effectiveIconColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(
-              Responsive.doubleValue(
-                context,
-                mobile: 8.0,
-                tablet: 10.0,
-                desktop: 12.0,
-              ),
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: Responsive.iconSize(
-              context,
-              mobile: 20.0,
-              tablet: 22.0,
-              desktop: 24.0,
-            ),
-            color: effectiveIconColor,
-          ),
-        ),
-
-        AppSpacing.sm.gap,
-        // Title and description column
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title
-              Text(
-                title,
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: Responsive.fontSize(
-                    context,
-                    mobile: 14.0,
-                    tablet: 15.0,
-                    desktop: 16.0,
-                  ),
-                  color: isEnabled
-                      ? (textColor ?? context.theme.colorScheme.onSurface)
-                      : (textColor ?? context.theme.colorScheme.onSurface)
-                            .withValues(alpha: 0.5),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              AppSpacing.xs.gap,
-              // Description
-              Flexible(
-                child: Text(
-                  subtitle,
-                  style: context.textTheme.bodySmall?.copyWith(
+    Widget content() {
+      return Row(
+        children: [
+          _IconBox(icon: icon, color: effectiveIconColor, enabled: !disabled),
+          AppSpacing.sm.gap,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
                     fontSize: Responsive.fontSize(
                       context,
-                      mobile: 12.0,
-                      tablet: 13.0,
-                      desktop: 14.0,
+                      mobile: 14,
+                      tablet: 15,
+                      desktop: 16,
                     ),
-                    color: isEnabled
-                        ? (textColor?.withValues(alpha: 0.8) ??
-                              context.theme.colorScheme.onSurfaceVariant)
-                        : (textColor ?? context.theme.colorScheme.onSurface)
-                              .withValues(alpha: 0.4),
+                    color: disabled
+                        ? baseTextColor.withValues(alpha: 0.4)
+                        : baseTextColor,
                   ),
+                ),
+                AppSpacing.xs.gap,
+                Text(
+                  subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: Responsive.fontSize(
+                      context,
+                      mobile: 12,
+                      tablet: 13,
+                      desktop: 14,
+                    ),
+                    color: disabled
+                        ? baseTextColor.withValues(alpha: 0.3)
+                        : baseTextColor.withValues(alpha: 0.75),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    return GestureDetector(
-      onTap: isEnabled ? onTap : null,
-      child: useSolidBackground
-          ? Container(
-              padding: cardPadding,
-              decoration: BoxDecoration(
-                color:
-                    backgroundColor ??
-                    context.theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: cardContent,
-            )
-          : GlassCard.compact(
-              baseColor:
-                  backgroundColor ?? context.theme.colorScheme.primaryContainer,
-              padding: cardPadding,
-              child: cardContent,
+              ],
             ),
+          ),
+        ],
+      );
+    }
+
+    final child = Padding(padding: padding, child: content());
+
+    final decoratedChild = useSolidBackground
+        ? Container(
+            decoration: BoxDecoration(
+              color: backgroundColor ?? theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: child,
+          )
+        : GlassCard.compact(
+            baseColor: backgroundColor ?? theme.colorScheme.primaryContainer,
+            padding: EdgeInsets.zero,
+            child: child,
+          );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: disabled ? null : onTap,
+        child: Opacity(opacity: disabled ? 0.6 : 1, child: decoratedChild),
+      ),
     );
   }
 }
 
-/// Specialized quick action cards for different actions
+/// =======================
+/// ICON BOX
+/// =======================
+class _IconBox extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool enabled;
+
+  const _IconBox({
+    required this.icon,
+    required this.color,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        icon,
+        size: Responsive.iconSize(context, mobile: 20, tablet: 22, desktop: 24),
+        color: enabled ? color : color.withValues(alpha: 0.4),
+      ),
+    );
+  }
+}
+
+/// =======================
+/// QUICK ACTION FACTORY
+/// =======================
 class QuickActionCards {
-  /// Chat with consultant card
   static Widget consultant({
     required String title,
     required String subtitle,
@@ -178,7 +179,6 @@ class QuickActionCards {
     );
   }
 
-  /// Health infrastructure card
   static Widget healthInfrastructure({
     required String title,
     required String subtitle,
@@ -194,7 +194,6 @@ class QuickActionCards {
     );
   }
 
-  /// Emergency contacts card
   static Widget emergencyContacts({
     required String title,
     required String subtitle,
@@ -210,7 +209,6 @@ class QuickActionCards {
     );
   }
 
-  /// Drug index card
   static Widget drugIndex({
     required String title,
     required String subtitle,
@@ -226,11 +224,14 @@ class QuickActionCards {
     );
   }
 
-  /// Blue Channel card (Primary guidelines)
-  static Widget blueChannel({
+  /// =======================
+  /// NEW: GUIDELINE TILE
+  /// =======================
+  static Widget guidelineTile({
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required Color color,
     bool isEnabled = true,
   }) {
     return QuickActionCard(
@@ -239,30 +240,10 @@ class QuickActionCards {
       icon: LucideIcons.bookOpen,
       onTap: onTap,
       isEnabled: isEnabled,
-      iconColor: Colors.white, // White icon
-      textColor: Colors.white, // White text
-      backgroundColor: const Color(0xFF1E3A8A), // Deep vibrant blue
-      useSolidBackground: true, // Use solid background instead of glass effect
-    );
-  }
-
-  /// Red Channel card (Emergency protocols)
-  static Widget redChannel({
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isEnabled = true,
-  }) {
-    return QuickActionCard(
-      title: title,
-      subtitle: subtitle,
-      icon: LucideIcons.bookOpen,
-      onTap: onTap,
-      isEnabled: isEnabled,
-      iconColor: Colors.white, // White icon
-      textColor: Colors.white, // White text
-      backgroundColor: const Color(0xFFB91C1C), // Deep vibrant red
-      useSolidBackground: true, // Use solid background instead of glass effect
+      iconColor: Colors.white,
+      textColor: Colors.white,
+      backgroundColor: color,
+      useSolidBackground: true,
     );
   }
 }

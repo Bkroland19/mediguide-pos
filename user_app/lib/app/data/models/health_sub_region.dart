@@ -1,28 +1,23 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'base_model.dart';
 import 'region.dart';
 
-/// Health sub-region model based on backend health_sub_regions collection
+/// Health sub-region model based on PocketBase health_sub_regions collection
 class HealthSubRegion extends BaseModel {
-  HealthSubRegion(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  HealthSubRegion(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'health_sub_regions';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => HealthSubRegion(data));
-    _didRegister = true;
-  }
-
-  /// Create HealthSubRegion from backend record
-  static HealthSubRegion fromRecord(RecordModel record) =>
-      HealthSubRegion(record.data);
-
+    return true;
+  })();
+  
+  /// Create HealthSubRegion from PocketBase record
+  static HealthSubRegion fromRecord(RecordModel record) => HealthSubRegion(record.data);
+  
   /// Create JSON for new health sub-region record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -37,12 +32,12 @@ class HealthSubRegion extends BaseModel {
       'region': regionId,
     };
   }
-
+  
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String nhpiCode = get<String>("nhpi_code", "");
   late final String hsdtCode = get<String>("hsdt_code", "");
-
+  
   // Relationship properties
   late final Region? region = getRelation<Region>("region");
 }

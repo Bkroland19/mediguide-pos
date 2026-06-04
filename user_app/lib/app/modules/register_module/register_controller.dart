@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'package:toastification/toastification.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../data/models/models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/common.dart';
 
@@ -41,7 +42,7 @@ class RegisterController extends GetxController {
       isLoading.value = true;
 
       try {
-        // Create user data using backend model - only essential fields
+        // Create user data using PocketBase model - only essential fields
         final userData = User.forCreate(
           email: formData['email'] as String,
           password: formData['password'] as String,
@@ -55,26 +56,33 @@ class RegisterController extends GetxController {
           preferredLanguage: PreferredLanguage.english,
         );
 
-        // Register with backend
-        final userRecord = await BackendService.to.register(
+        // Register with PocketBase
+        final userRecord = await PocketBaseService.to.register(
           email: formData['email'] as String,
           password: formData['password'] as String,
           passwordConfirm: formData['password'] as String,
           additionalData: userData,
         );
 
-        // Convert backend RecordModel to User model and save via AuthService
+        // Convert PocketBase RecordModel to User model and save via AuthService
         final user = User.fromRecord(userRecord);
         await AuthService.to.saveUser(user);
 
         // Navigate to main screen since user is now registered and logged in
         Get.offNamed(AppRoutes.main);
-      } catch (e) {
-        final errorMessage = Common.parseApiError(e);
+      } on ClientException catch (e) {
+        // Handle PocketBase specific errors
+        final errorMessage = Common.parsePocketBaseError(e);
         Common.quickToast(
           type: ToastificationType.error,
           title: AppTranslationKey.registrationError,
           description: errorMessage,
+        );
+      } catch (e) {
+        Common.quickToast(
+          type: ToastificationType.error,
+          title: AppTranslationKey.registrationError,
+          description: 'An unexpected error occurred',
         );
       } finally {
         isLoading.value = false;

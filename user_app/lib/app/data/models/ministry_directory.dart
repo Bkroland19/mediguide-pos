@@ -1,30 +1,25 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import '../enums/ministry_directory_enums.dart';
 import 'base_model.dart';
 import 'district.dart';
 import 'region.dart';
 
-/// MinistryDirectory model based on backend ministry_directory collection
+/// MinistryDirectory model based on PocketBase ministry_directory collection
 class MinistryDirectory extends BaseModel {
-  MinistryDirectory(super.data) {
-    _register();
-  }
-
-  /// backend collection name
+  MinistryDirectory(super.data);
+  
+  /// PocketBase collection name
   static const String collection = 'ministry_directory';
+  
   // Self-registration for dynamic model creation
-  static bool _didRegister = false;
-
-  static void _register() {
-    if (_didRegister) return;
+  static final _registered = (() {
     BaseModel.registerModel(collection, (data) => MinistryDirectory(data));
-    _didRegister = true;
-  }
-
-  /// Create MinistryDirectory from backend record
-  static MinistryDirectory fromRecord(RecordModel record) =>
-      MinistryDirectory(record.data);
-
+    return true;
+  })();
+  
+  /// Create MinistryDirectory from PocketBase record
+  static MinistryDirectory fromRecord(RecordModel record) => MinistryDirectory(record.data);
+  
   /// Create JSON for new ministry directory record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -50,28 +45,25 @@ class MinistryDirectory extends BaseModel {
       'phone': phone,
       'district': districtId,
       'status': status.name,
-      'department': ?department,
-      'alternativePhone': ?alternativePhone,
-      'email': ?email,
-      'office_address': ?officeAddress,
-      'region': ?regionId,
-      'priority_level': ?priorityLevel,
-      'availability_hours': ?availabilityHours,
-      'specialization': ?specialization,
-      'notes': ?notes,
+      if (department != null) 'department': department,
+      if (alternativePhone != null) 'alternativePhone': alternativePhone,
+      if (email != null) 'email': email,
+      if (officeAddress != null) 'office_address': officeAddress,
+      if (regionId != null) 'region': regionId,
+      if (priorityLevel != null) 'priority_level': priorityLevel,
+      if (availabilityHours != null) 'availability_hours': availabilityHours,
+      if (specialization != null) 'specialization': specialization,
+      if (notes != null) 'notes': notes,
     };
   }
-
+  
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String title = get<String>("title", "");
   late final String ministryValue = get<String>("ministry", "");
   late final String department = get<String>("department", "");
   late final String phone = get<String>("phone", "");
-  late final String alternativePhone = get<String>(
-    "alternativePhone",
-    get<String>("alternative_phone", ""),
-  );
+  late final String alternativePhone = get<String>("alternativePhone", "");
   late final String email = get<String>("email", "");
   late final String officeAddress = get<String>("office_address", "");
   late final double priorityLevel = get<double>("priority_level", 0.0);
@@ -79,11 +71,11 @@ class MinistryDirectory extends BaseModel {
   late final String specialization = get<String>("specialization", "");
   late final String statusValue = get<String>("status", "");
   late final String notes = get<String>("notes", "");
-
+  
   // Relationship properties
   late final District? district = getRelation<District>("district");
   late final Region? region = getRelation<Region>("region");
-
+  
   // Computed properties
   Ministry get ministry {
     try {
@@ -92,20 +84,18 @@ class MinistryDirectory extends BaseModel {
       return Ministry.other;
     }
   }
-
+  
   MinistryDirectoryStatus get status {
     try {
-      return MinistryDirectoryStatus.values.firstWhere(
-        (s) => s.name == statusValue,
-      );
+      return MinistryDirectoryStatus.values.firstWhere((s) => s.name == statusValue);
     } catch (e) {
       return MinistryDirectoryStatus.inactive;
     }
   }
-
+  
   /// Get display name with title
   String get displayName => '$name - $title';
-
+  
   /// Get formatted contact info
   String get contactInfo {
     final List<String> contacts = [phone];
@@ -113,20 +103,9 @@ class MinistryDirectory extends BaseModel {
     if (email.isNotEmpty) contacts.add(email);
     return contacts.join(' • ');
   }
-
+  
   /// Get location string
   String get locationString {
-    final districtName = district?.name ?? get<String>("district_name", "");
-    final regionName = region?.name ?? get<String>("region_name", "");
-
-    if (districtName.isNotEmpty && regionName.isNotEmpty) {
-      return '$districtName, $regionName';
-    } else if (districtName.isNotEmpty) {
-      return districtName;
-    } else if (regionName.isNotEmpty) {
-      return regionName;
-    }
-
     if (district != null && region != null) {
       return '${district!.name}, ${region!.name}';
     } else if (district != null) {
@@ -136,10 +115,10 @@ class MinistryDirectory extends BaseModel {
     }
     return '';
   }
-
+  
   /// Check if this is an emergency contact
   bool get isEmergencyContact => priorityLevel == 1.0;
-
+  
   /// Check if contact is currently available (basic check - could be enhanced)
   bool get isAvailable => status == MinistryDirectoryStatus.active;
 }

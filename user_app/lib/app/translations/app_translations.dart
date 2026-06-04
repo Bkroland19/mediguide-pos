@@ -53,12 +53,10 @@ class AppTranslationKey {
   static String get passwordResetSent => "passwordResetSent".tr;
   static String get passwordResetError => "passwordResetError".tr;
   static String get doctorDescription => "doctorDescription".tr;
-  static String get clinicalOfficerDescription =>
-      "clinicalOfficerDescription".tr;
+  static String get clinicalOfficerDescription => "clinicalOfficerDescription".tr;
   static String get nurseDescription => "nurseDescription".tr;
   static String get midwifeDescription => "midwifeDescription".tr;
-  static String get communityHealthWorkerDescription =>
-      "communityHealthWorkerDescription".tr;
+  static String get communityHealthWorkerDescription => "communityHealthWorkerDescription".tr;
   static String get medicalStudentDescription => "medicalStudentDescription".tr;
   static String get invalidUserRole => "invalidUserRole".tr;
   static String get authenticationRequired => "authenticationRequired".tr;
@@ -71,14 +69,10 @@ class AppTranslationKey {
   static String get guidelines => "guidelines".tr;
   static String get tools => "tools".tr;
   static String get profile => "profile".tr;
-
   /// Parameters: name app
-  static String userGreeting(Map<String, String> params) =>
-      "userGreeting".trParams(params);
-
+  static String userGreeting(Map<String, String> params) => "userGreeting".trParams(params);
   /// Parameters: name date time
-  static String loginSuccess(Map<String, String> params) =>
-      "loginSuccess".trParams(params);
+  static String loginSuccess(Map<String, String> params) => "loginSuccess".trParams(params);
   static String get editProfile => "editProfile".tr;
   static String get changePassword => "changePassword".tr;
   static String get notifications => "notifications".tr;
@@ -112,8 +106,7 @@ class AppTranslationKey {
   static String get analyticsDisabled => "analyticsDisabled".tr;
   static String get storageUsage => "storageUsage".tr;
   static String get storage => "storage".tr;
-  static String get storageManagementComingSoon =>
-      "storageManagementComingSoon".tr;
+  static String get storageManagementComingSoon => "storageManagementComingSoon".tr;
   static String get syncData => "syncData".tr;
   static String get manualSync => "manualSync".tr;
   static String get syncInProgress => "syncInProgress".tr;
@@ -132,8 +125,7 @@ class AppTranslationKey {
   static String get calculatingStorage => "calculatingStorage".tr;
   static String get syncNow => "syncNow".tr;
   static String get resyncAfterClear => "resyncAfterClear".tr;
-  static String get manageDownloadedGuidelines =>
-      "manageDownloadedGuidelines".tr;
+  static String get manageDownloadedGuidelines => "manageDownloadedGuidelines".tr;
   static String get offlineContentFeature => "offlineContentFeature".tr;
   static String get featureComingSoon => "featureComingSoon".tr;
   static String get helpCenter => "helpCenter".tr;
@@ -169,8 +161,7 @@ class AppTranslationKey {
   static String get kiswahili => "kiswahili".tr;
   static String get luganda => "luganda".tr;
   static String get sound => "sound".tr;
-  static String get playSoundsForNotifications =>
-      "playSoundsForNotifications".tr;
+  static String get playSoundsForNotifications => "playSoundsForNotifications".tr;
   static String get vibration => "vibration".tr;
   static String get vibrateForNotifications => "vibrateForNotifications".tr;
   static String get done => "done".tr;
@@ -184,8 +175,7 @@ class AppTranslationKey {
   static String get thisActionCannotBeUndone => "thisActionCannotBeUndone".tr;
   static String get areYouSureDeleteAccount => "areYouSureDeleteAccount".tr;
   static String get finalConfirmation => "finalConfirmation".tr;
-  static String get permanentlyDeleteAccountAndData =>
-      "permanentlyDeleteAccountAndData".tr;
+  static String get permanentlyDeleteAccountAndData => "permanentlyDeleteAccountAndData".tr;
   static String get typeDeleteToConfirm => "typeDeleteToConfirm".tr;
   static String get typeDelete => "typeDelete".tr;
   static String get accountDeleted => "accountDeleted".tr;
@@ -193,8 +183,7 @@ class AppTranslationKey {
   static String get failedToDeleteAccount => "failedToDeleteAccount".tr;
   static String get failedToSignOut => "failedToSignOut".tr;
   static String get mediGuideVersion => "mediGuideVersion".tr;
-  static String get digitalCompanionDescription =>
-      "digitalCompanionDescription".tr;
+  static String get digitalCompanionDescription => "digitalCompanionDescription".tr;
   static String get copyrightMediGuide => "copyrightMediGuide".tr;
   static String get error => "error".tr;
   static String get ok => "ok".tr;
@@ -224,22 +213,18 @@ class AppTranslationKey {
   static String get openingReadingLibrary => "openingReadingLibrary".tr;
   static String get openingNewsFeed => "openingNewsFeed".tr;
   static String get latestHealthUpdates => "latestHealthUpdates".tr;
-  static String get yourLearningProgressAndModules =>
-      "yourLearningProgressAndModules".tr;
+  static String get yourLearningProgressAndModules => "yourLearningProgressAndModules".tr;
   static String get seeAll => "seeAll".tr;
   static String get searchMediguide => "searchMediguide".tr;
   static String get quickStats => "quickStats".tr;
   static String get drugs => "drugs".tr;
   static String get healthcareFacilities => "healthcareFacilities".tr;
   static String get drugIndex => "drugIndex".tr;
-  static String get browseComprehensiveDrugDatabase =>
-      "browseComprehensiveDrugDatabase".tr;
+  static String get browseComprehensiveDrugDatabase => "browseComprehensiveDrugDatabase".tr;
   static String get pregnancyCategory => "pregnancyCategory".tr;
   static String get allActions => "allActions".tr;
-  static String get accessAllEssentialFeatures =>
-      "accessAllEssentialFeatures".tr;
-  static String get getInstantMedicalAssistance =>
-      "getInstantMedicalAssistance".tr;
+  static String get accessAllEssentialFeatures => "accessAllEssentialFeatures".tr;
+  static String get getInstantMedicalAssistance => "getInstantMedicalAssistance".tr;
   static String get medicalCalculators => "medicalCalculators".tr;
   static String get accessClinicalCalculators => "accessClinicalCalculators".tr;
   static String get accessTreatmentGuidelines => "accessTreatmentGuidelines".tr;
@@ -248,21 +233,15 @@ class AppTranslationKey {
   static String get medicalAbbreviations => "medicalAbbreviations".tr;
   static String get lookupMedicalTerms => "lookupMedicalTerms".tr;
   static String get failedToLoadAbbreviations => "failedToLoadAbbreviations".tr;
-  static String get pleaseCheckConnectionAndTryAgain =>
-      "pleaseCheckConnectionAndTryAgain".tr;
-  static String get failedToLoadMoreAbbreviations =>
-      "failedToLoadMoreAbbreviations".tr;
-  static String get noAbbreviationsMatchFilters =>
-      "noAbbreviationsMatchFilters".tr;
-  static String get tryAdjustingSearchOrFilters =>
-      "tryAdjustingSearchOrFilters".tr;
+  static String get pleaseCheckConnectionAndTryAgain => "pleaseCheckConnectionAndTryAgain".tr;
+  static String get failedToLoadMoreAbbreviations => "failedToLoadMoreAbbreviations".tr;
+  static String get noAbbreviationsMatchFilters => "noAbbreviationsMatchFilters".tr;
+  static String get tryAdjustingSearchOrFilters => "tryAdjustingSearchOrFilters".tr;
   static String get noAbbreviationsFound => "noAbbreviationsFound".tr;
-  static String get abbreviationsWillAppearHere =>
-      "abbreviationsWillAppearHere".tr;
+  static String get abbreviationsWillAppearHere => "abbreviationsWillAppearHere".tr;
   static String get clearFilters => "clearFilters".tr;
   static String get failedToLoadGuidelines => "failedToLoadGuidelines".tr;
-  static String get failedToLoadMoreGuidelines =>
-      "failedToLoadMoreGuidelines".tr;
+  static String get failedToLoadMoreGuidelines => "failedToLoadMoreGuidelines".tr;
   static String get noGuidelinesMatchFilters => "noGuidelinesMatchFilters".tr;
   static String get noGuidelinesFound => "noGuidelinesFound".tr;
   static String get guidelinesWillAppearHere => "guidelinesWillAppearHere".tr;
@@ -279,8 +258,7 @@ class AppTranslationKey {
   static String get errorLoadingGuidelines => "errorLoadingGuidelines".tr;
   static String get guidelineDetails => "guidelineDetails".tr;
   static String get failedToLoadFacilities => "failedToLoadFacilities".tr;
-  static String get failedToLoadMoreFacilities =>
-      "failedToLoadMoreFacilities".tr;
+  static String get failedToLoadMoreFacilities => "failedToLoadMoreFacilities".tr;
   static String get noFacilitiesMatchFilters => "noFacilitiesMatchFilters".tr;
   static String get noFacilitiesFound => "noFacilitiesFound".tr;
   static String get facilitiesWillAppearHere => "facilitiesWillAppearHere".tr;
@@ -306,8 +284,7 @@ class AppTranslationKey {
   static String get consultantAvailable => "consultantAvailable".tr;
   static String get consultantOffline => "consultantOffline".tr;
   static String get failedToLoadConsultants => "failedToLoadConsultants".tr;
-  static String get failedToLoadMoreConsultants =>
-      "failedToLoadMoreConsultants".tr;
+  static String get failedToLoadMoreConsultants => "failedToLoadMoreConsultants".tr;
   static String get noConsultantsMatchFilters => "noConsultantsMatchFilters".tr;
   static String get noConsultantsFound => "noConsultantsFound".tr;
   static String get consultantsWillAppearHere => "consultantsWillAppearHere".tr;
@@ -336,8 +313,7 @@ class AppTranslationKey {
   static String get developmentTeam => "developmentTeam".tr;
   static String get builtWith => "builtWith".tr;
   static String get accessToClinicGuidelines => "accessToClinicGuidelines".tr;
-  static String get comprehensiveMedicationDatabase =>
-      "comprehensiveMedicationDatabase".tr;
+  static String get comprehensiveMedicationDatabase => "comprehensiveMedicationDatabase".tr;
   static String get medicalExpertsDirectory => "medicalExpertsDirectory".tr;
   static String get healthcareFacilitiesList => "healthcareFacilitiesList".tr;
   static String get emailSupport => "emailSupport".tr;
@@ -348,8 +324,7 @@ class AppTranslationKey {
   static String get decisionTool => "decisionTool".tr;
   static String get checklist => "checklist".tr;
   static String get featuredTools => "featuredTools".tr;
-  static String get essentialCalculatorsAndTools =>
-      "essentialCalculatorsAndTools".tr;
+  static String get essentialCalculatorsAndTools => "essentialCalculatorsAndTools".tr;
   static String get blueChannel => "blueChannel".tr;
   static String get redChannel => "redChannel".tr;
   static String get primaryGuidelines => "primaryGuidelines".tr;
@@ -358,15 +333,12 @@ class AppTranslationKey {
   static String get allChannels => "allChannels".tr;
   static String get nameRequired => "nameRequired".tr;
   static String get invalidPhoneFormat => "invalidPhoneFormat".tr;
-  static String get invalidAlternativePhoneFormat =>
-      "invalidAlternativePhoneFormat".tr;
+  static String get invalidAlternativePhoneFormat => "invalidAlternativePhoneFormat".tr;
   static String get profileUpdated => "profileUpdated".tr;
-  static String get profileUpdatedSuccessfully =>
-      "profileUpdatedSuccessfully".tr;
+  static String get profileUpdatedSuccessfully => "profileUpdatedSuccessfully".tr;
   static String get failedToUpdateProfile => "failedToUpdateProfile".tr;
   static String get discardChanges => "discardChanges".tr;
-  static String get discardChangesConfirmation =>
-      "discardChangesConfirmation".tr;
+  static String get discardChangesConfirmation => "discardChangesConfirmation".tr;
   static String get discard => "discard".tr;
   static String get french => "french".tr;
   static String get spanish => "spanish".tr;
@@ -388,12 +360,10 @@ class AppTranslationKey {
   static String get confirmPasswordRequired => "confirmPasswordRequired".tr;
   static String get passwordsDoNotMatch => "passwordsDoNotMatch".tr;
   static String get passwordRequirements => "passwordRequirements".tr;
-  static String get passwordRequirementsDetails =>
-      "passwordRequirementsDetails".tr;
+  static String get passwordRequirementsDetails => "passwordRequirementsDetails".tr;
   static String get changing => "changing".tr;
   static String get success => "success".tr;
-  static String get passwordChangedSuccessfully =>
-      "passwordChangedSuccessfully".tr;
+  static String get passwordChangedSuccessfully => "passwordChangedSuccessfully".tr;
   static String get passwordChangeError => "passwordChangeError".tr;
   static String get currentPasswordIncorrect => "currentPasswordIncorrect".tr;
   static String get passwordValidationError => "passwordValidationError".tr;
@@ -402,13 +372,11 @@ class AppTranslationKey {
   static String get biometricAuthDesc => "biometricAuthDesc".tr;
   static String get useFaceIdToAccess => "useFaceIdToAccess".tr;
   static String get useFingerprintToAccess => "useFingerprintToAccess".tr;
-  static String get pleaseAuthenticateToAccess =>
-      "pleaseAuthenticateToAccess".tr;
+  static String get pleaseAuthenticateToAccess => "pleaseAuthenticateToAccess".tr;
   static String get biometricNotAvailable => "biometricNotAvailable".tr;
   static String get biometricEnabled => "biometricEnabled".tr;
   static String get biometricDisabled => "biometricDisabled".tr;
-  static String get failedToUpdateBiometricSettings =>
-      "failedToUpdateBiometricSettings".tr;
+  static String get failedToUpdateBiometricSettings => "failedToUpdateBiometricSettings".tr;
   static String get lightModeDesc => "lightModeDesc".tr;
   static String get darkModeDesc => "darkModeDesc".tr;
   static String get systemDefaultDesc => "systemDefaultDesc".tr;
@@ -423,8 +391,7 @@ class AppTranslationKey {
   static String get noUpdateAvailable => "noUpdateAvailable".tr;
   static String get updateFailed => "updateFailed".tr;
   static String get downloadingUpdate => "downloadingUpdate".tr;
-  static String get updateDownloadingInBackground =>
-      "updateDownloadingInBackground".tr;
+  static String get updateDownloadingInBackground => "updateDownloadingInBackground".tr;
   static String get noUpdateReady => "noUpdateReady".tr;
   static String get updateComplete => "updateComplete".tr;
   static String get appWillRestart => "appWillRestart".tr;
@@ -443,17 +410,15 @@ class AppTranslationKey {
   static String get searchMyTickets => "searchMyTickets".tr;
   static String get myTicketsOverview => "myTicketsOverview".tr;
   static String get noSupportTicketsYet => "noSupportTicketsYet".tr;
-  static String get createYourFirstSupportTicket =>
-      "createYourFirstSupportTicket".tr;
+  static String get createYourFirstSupportTicket => "createYourFirstSupportTicket".tr;
   static String get createSupportTicket => "createSupportTicket".tr;
   static String get specialization => "specialization".tr;
   static String get selectSpecialization => "selectSpecialization".tr;
   static String get filterOptions => "filterOptions".tr;
-
+  
   // FAQ related translations
   static String get frequentlyAskedQuestions => "frequentlyAskedQuestions".tr;
-  static String get getAnswersToCommonQuestions =>
-      "getAnswersToCommonQuestions".tr;
+  static String get getAnswersToCommonQuestions => "getAnswersToCommonQuestions".tr;
   static String get searchFAQs => "searchFAQs".tr;
   static String get enterKeywords => "enterKeywords".tr;
   static String get noFAQsFound => "noFAQsFound".tr;
@@ -466,7 +431,7 @@ class AppTranslationKey {
   static String get errorLoadingMore => "errorLoadingMore".tr;
   static String get featured => "featured".tr;
   static String get retry => "retry".tr;
-
+  
   // Chat list translations
   static String get chatList => "chatList".tr;
   static String get conversations => "conversations".tr;
@@ -487,18 +452,14 @@ class AppTranslation {
   static final Map<String, Map<String, String>> translations = {'en': enUS};
 
   /// Update translations dynamically
-  static void updateTranslations(
-    String languageCode,
-    Map<String, String> newTranslations,
-  ) {
+  static void updateTranslations(String languageCode, Map<String, String> newTranslations) {
     if (newTranslations.isNotEmpty) {
       translations[languageCode] = newTranslations;
     }
   }
 
   /// Get available translations
-  static Map<String, Map<String, String>> get availableTranslations =>
-      translations;
+  static Map<String, Map<String, String>> get availableTranslations => translations;
 
   /// Check if language is available
   static bool hasLanguage(String languageCode) {
@@ -511,12 +472,12 @@ class AppTranslation {
     if (translations[languageCode]?.containsKey(key) == true) {
       return translations[languageCode]![key]!;
     }
-
+    
     // Fallback to English
     if (translations['en']?.containsKey(key) == true) {
       return translations['en']![key]!;
     }
-
+    
     // Return the key if no translation found
     return key;
   }

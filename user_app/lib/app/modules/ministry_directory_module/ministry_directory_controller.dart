@@ -1,47 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
-import '../../data/models/filter_models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
 class MinistryDirectoryController extends GetxController {
-  // Pagination controller
+  // ================= PAGINATION =================
   late final PagingController<int, MinistryDirectory> pagingController;
 
-  // Permanent tree filters from selector modal
+  // ================= FILTER STATE =================
   final RxMap<String, dynamic> treeFilters = <String, dynamic>{}.obs;
 
-  // Search and filter state
   final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
   final RxString selectedMinistry = ''.obs;
   final RxString selectedDistrict = ''.obs;
   final RxString selectedRegion = ''.obs;
   final RxString selectedDepartment = ''.obs;
   final RxString selectedStatus = ''.obs;
+
   final RxBool showEmergencyOnly = false.obs;
   final RxBool showActiveOnly = true.obs;
 
-  // Available filter options
+  final RxBool hasActiveFilters = false.obs;
+
+  // ================= OPTIONS =================
   final RxList<String> availableMinistries = <String>[].obs;
   final RxList<String> availableDistricts = <String>[].obs;
   final RxList<String> availableRegions = <String>[].obs;
+
   final RxBool isLoadingFilters = false.obs;
 
+  // ================= LIFECYCLE =================
   @override
   void onInit() {
     super.onInit();
+
     _applyTreeFiltersFromArguments();
+
     pagingController = PagingController<int, MinistryDirectory>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
+
     _loadFilterOptions();
   }
 
@@ -51,73 +57,22 @@ class MinistryDirectoryController extends GetxController {
     super.onClose();
   }
 
-  /// Load a page of ministry directory entries
+  // ================= DATA LOADING =================
+
   Future<List<MinistryDirectory>> _loadPage(int pageKey) async {
     try {
-      final List<MinistryDirectory> newItems;
+      final filter = _buildFilter();
 
-      // Build filter string for backend
-      String filter = '';
-      final filters = <String>[];
-
-      // Status filter - show active by default
-      if (selectedStatus.value.isNotEmpty) {
-        filters.add('status="${selectedStatus.value}"');
-      } else if (showActiveOnly.value) {
-        filters.add('status="active"');
-      }
-
-      // Search query filter - includes name, title, department, ministry, and email
-      if (searchQuery.value.isNotEmpty) {
-        filters.add(
-          '(name~"${searchQuery.value}" || title~"${searchQuery.value}" || department~"${searchQuery.value}" || ministry~"${searchQuery.value}" || email~"${searchQuery.value}")',
-        );
-      }
-
-      // Ministry filter
-      if (selectedMinistry.value.isNotEmpty) {
-        filters.add('ministry="${selectedMinistry.value}"');
-      }
-
-      // District filter (using relation)
-      if (selectedDistrict.value.isNotEmpty) {
-        filters.add('district.name~"${selectedDistrict.value}"');
-      }
-
-      // Region filter (using relation)
-      if (selectedRegion.value.isNotEmpty) {
-        filters.add('region.name~"${selectedRegion.value}"');
-      }
-
-      // Department filter
-      if (selectedDepartment.value.isNotEmpty) {
-        filters.add('department~"${selectedDepartment.value}"');
-      }
-
-      // Emergency contacts only filter
-      if (showEmergencyOnly.value) {
-        filters.add('priority_level=1');
-      }
-
-      if (filters.isNotEmpty) {
-        filter = filters.join(' && ');
-      }
-
-      // Load ministry directory with filters and expand district/region relations
-      final result = await BackendService.to.getRecordList(
+      final result = await PocketBaseService.to.getRecordList(
         collectionName: 'ministry_directory',
         page: pageKey,
         perPage: pageSize,
-        filter: filter.isNotEmpty ? filter : null,
+        filter: filter.isEmpty ? null : filter,
         sort: 'priority_level,name',
         expand: 'district,region',
       );
 
-      newItems = result.items
-          .map((item) => MinistryDirectory.fromRecord(item))
-          .toList();
-
-      return newItems;
+      return result.items.map((e) => MinistryDirectory.fromRecord(e)).toList();
     } catch (e) {
       Common.quickToast(
         title: 'Error loading directory',
@@ -127,32 +82,77 @@ class MinistryDirectoryController extends GetxController {
     }
   }
 
-  /// Load available filter options
+  // ================= FILTER BUILDING =================
+
+  String _buildFilter() {
+    final filters = <String>[];
+
+    // Status logic
+    if (selectedStatus.value.isNotEmpty) {
+      filters.add('status="${selectedStatus.value}"');
+    } else if (showActiveOnly.value) {
+      filters.add('status="active"');
+    }
+
+    // Search
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value;
+      filters.add(
+        '(name~"$q" || title~"$q" || department~"$q" || ministry~"$q" || email~"$q")',
+      );
+    }
+
+    // Simple filters
+    if (selectedMinistry.value.isNotEmpty) {
+      filters.add('ministry="${selectedMinistry.value}"');
+    }
+
+    if (selectedDepartment.value.isNotEmpty) {
+      filters.add('department~"${selectedDepartment.value}"');
+    }
+
+    if (selectedDistrict.value.isNotEmpty) {
+      filters.add('district.name~"${selectedDistrict.value}"');
+    }
+
+    if (selectedRegion.value.isNotEmpty) {
+      filters.add('region.name~"${selectedRegion.value}"');
+    }
+
+    // Flags
+    if (showEmergencyOnly.value) {
+      filters.add('priority_level=1');
+    }
+
+    return filters.join(' && ');
+  }
+
+  // ================= FILTER OPTIONS =================
+
   Future<void> _loadFilterOptions() async {
     try {
       isLoadingFilters.value = true;
 
-      // Load available ministries from enum
-      availableMinistries.value = Ministry.values.map((m) => m.label).toList();
+      availableMinistries.value = Ministry.values.map((e) => e.label).toList();
 
-      // Load available districts
-      final districtsResult = await BackendService.to.getRecordList(
+      final districts = await PocketBaseService.to.getRecordList(
         collectionName: 'districts',
-        perPage: 500, // Load all districts
+        perPage: 500,
         sort: 'name',
       );
-      availableDistricts.value = districtsResult.items
-          .map((d) => d.data['name'] as String)
+
+      availableDistricts.value = districts.items
+          .map((e) => e.data['name'] as String)
           .toList();
 
-      // Load available regions
-      final regionsResult = await BackendService.to.getRecordList(
+      final regions = await PocketBaseService.to.getRecordList(
         collectionName: 'regions',
-        perPage: 500, // Load all regions
+        perPage: 500,
         sort: 'name',
       );
-      availableRegions.value = regionsResult.items
-          .map((r) => r.data['name'] as String)
+
+      availableRegions.value = regions.items
+          .map((e) => e.data['name'] as String)
           .toList();
     } catch (e) {
       Common.quickToast(
@@ -164,104 +164,15 @@ class MinistryDirectoryController extends GetxController {
     }
   }
 
-  /// Handle search query change
+  // ================= ACTIONS =================
+
   void onSearchQueryChanged(String query) {
-    if (searchQuery.value != query) {
-      searchQuery.value = query;
-      _refreshList();
-    }
+    searchQuery.value = query.trim();
+    _refresh();
   }
 
-  /// Show advanced filter bottom sheet
-  Future<void> showAdvancedFilter(BuildContext context) async {
-    final result = await GenericFilterBottomSheet.show(
-      context: context,
-      title: 'Filter Directory',
-      fields: [
-        FilterField.text(
-          'search',
-          'Search by name, title, email...',
-          initialValue: searchQuery.value.isEmpty ? null : searchQuery.value,
-          hint: 'Enter name, title, department, ministry, or email',
-        ),
-        FilterField.dropdown(
-          'ministry',
-          'Ministry',
-          availableMinistries,
-          initialValue: selectedMinistry.value.isEmpty
-              ? null
-              : selectedMinistry.value,
-        ),
-        FilterField.dropdown(
-          'district',
-          'District',
-          availableDistricts,
-          initialValue: selectedDistrict.value.isEmpty
-              ? null
-              : selectedDistrict.value,
-        ),
-        FilterField.dropdown(
-          'region',
-          'Region',
-          availableRegions,
-          initialValue: selectedRegion.value.isEmpty
-              ? null
-              : selectedRegion.value,
-        ),
-        FilterField.boolean(
-          'emergency_only',
-          'Emergency contacts only',
-          initialValue: showEmergencyOnly.value,
-        ),
-        FilterField.boolean(
-          'active_only',
-          'Active contacts only',
-          initialValue: showActiveOnly.value,
-        ),
-      ],
-      initialValues: {
-        'search': searchQuery.value.isEmpty ? null : searchQuery.value,
-        'ministry': selectedMinistry.value.isEmpty
-            ? null
-            : selectedMinistry.value,
-        'district': selectedDistrict.value.isEmpty
-            ? null
-            : selectedDistrict.value,
-        'region': selectedRegion.value.isEmpty ? null : selectedRegion.value,
-        'emergency_only': showEmergencyOnly.value,
-        'active_only': showActiveOnly.value,
-      },
-    );
-
-    if (result != null && result.hasValues) {
-      _applyAdvancedFilters(result.values);
-    }
-  }
-
-  /// Apply advanced filters from bottom sheet
-  void _applyAdvancedFilters(Map<String, dynamic> filters) {
-    // Search query
-    searchQuery.value = filters['search'] as String? ?? '';
-
-    // Ministry filter
-    selectedMinistry.value = filters['ministry'] as String? ?? '';
-
-    // District filter
-    selectedDistrict.value = filters['district'] as String? ?? '';
-
-    // Region filter
-    selectedRegion.value = filters['region'] as String? ?? '';
-
-    // Boolean filters
-    showEmergencyOnly.value = filters['emergency_only'] as bool? ?? false;
-    showActiveOnly.value = filters['active_only'] as bool? ?? true;
-
-    _updateActiveFiltersState();
-    _refreshList();
-  }
-
-  /// Reset all filters
   void resetFilters() {
+    searchQuery.value = '';
     selectedMinistry.value = '';
     selectedDistrict.value = '';
     selectedRegion.value = '';
@@ -269,121 +180,85 @@ class MinistryDirectoryController extends GetxController {
     selectedStatus.value = '';
     showEmergencyOnly.value = false;
     showActiveOnly.value = true;
-    searchQuery.value = '';
     treeFilters.clear();
 
-    _updateActiveFiltersState();
-    _refreshList();
+    _updateActiveFilters();
+    _refresh();
   }
 
-  /// Update active filters state
-  void _updateActiveFiltersState() {
+  Future<void> showAdvancedFilter(BuildContext context) async {
+    final result = await GenericFilterBottomSheet.show(
+      context: context,
+      title: 'Filter Directory',
+      fields: [
+        FilterField.text('search', 'Search'),
+        FilterField.dropdown('ministry', 'Ministry', availableMinistries),
+        FilterField.dropdown('district', 'District', availableDistricts),
+        FilterField.dropdown('region', 'Region', availableRegions),
+        FilterField.boolean('emergency_only', 'Emergency Only'),
+        FilterField.boolean('active_only', 'Active Only'),
+      ],
+      initialValues: {
+        'search': searchQuery.value,
+        'ministry': selectedMinistry.value,
+        'district': selectedDistrict.value,
+        'region': selectedRegion.value,
+        'emergency_only': showEmergencyOnly.value,
+        'active_only': showActiveOnly.value,
+      },
+    );
+
+    if (result == null || !result.hasValues) return;
+
+    final v = result.values;
+
+    searchQuery.value = v['search'] ?? '';
+    selectedMinistry.value = v['ministry'] ?? '';
+    selectedDistrict.value = v['district'] ?? '';
+    selectedRegion.value = v['region'] ?? '';
+    showEmergencyOnly.value = v['emergency_only'] ?? false;
+    showActiveOnly.value = v['active_only'] ?? true;
+
+    _updateActiveFilters();
+    _refresh();
+  }
+
+  // ================= HELPERS =================
+
+  void _refresh() => pagingController.refresh();
+
+  void _updateActiveFilters() {
     hasActiveFilters.value =
+        searchQuery.value.isNotEmpty ||
         selectedMinistry.value.isNotEmpty ||
         selectedDistrict.value.isNotEmpty ||
         selectedRegion.value.isNotEmpty ||
         selectedDepartment.value.isNotEmpty ||
         selectedStatus.value.isNotEmpty ||
         showEmergencyOnly.value ||
-        !showActiveOnly.value ||
-        searchQuery.value.isNotEmpty;
-  }
-
-  /// Refresh the list
-  void _refreshList() {
-    pagingController.refresh();
-  }
-
-  /// Public method to refresh data
-  void refreshData() {
-    _refreshList();
-  }
-
-  /// Get active filters count
-  int get activeFiltersCount {
-    int count = 0;
-    if (selectedMinistry.value.isNotEmpty) count++;
-    if (selectedDistrict.value.isNotEmpty) count++;
-    if (selectedRegion.value.isNotEmpty) count++;
-    if (selectedDepartment.value.isNotEmpty) count++;
-    if (selectedStatus.value.isNotEmpty) count++;
-    if (showEmergencyOnly.value) count++;
-    if (!showActiveOnly.value) count++;
-    return count;
-  }
-
-  /// Get active filters summary
-  String get activeFiltersSummary {
-    final filters = <String>[];
-
-    if (selectedMinistry.value.isNotEmpty) {
-      filters.add(selectedMinistry.value);
-    }
-    if (selectedDistrict.value.isNotEmpty) {
-      filters.add(selectedDistrict.value);
-    }
-    if (selectedRegion.value.isNotEmpty) {
-      filters.add(selectedRegion.value);
-    }
-    if (selectedDepartment.value.isNotEmpty) {
-      filters.add(selectedDepartment.value);
-    }
-    if (selectedStatus.value.isNotEmpty) {
-      filters.add(selectedStatus.value.capitalizeFirst ?? selectedStatus.value);
-    }
-    if (showEmergencyOnly.value) {
-      filters.add('Emergency Only');
-    }
-    if (!showActiveOnly.value) {
-      filters.add('All Statuses');
-    }
-
-    return filters.join(', ');
+        !showActiveOnly.value;
   }
 
   void _applyTreeFiltersFromArguments() {
     final args = Get.arguments;
     if (args is! Map) return;
 
-    final rawFilters = args['treeFilters'];
-    if (rawFilters is! Map) return;
-
-    final filters = Map<String, dynamic>.from(rawFilters);
+    final filters = Map<String, dynamic>.from(args['treeFilters'] ?? {});
     treeFilters.assignAll(filters);
 
-    final ministry = _readString(filters, 'ministry');
-    final district = _readString(filters, 'district');
-    final region = _readString(filters, 'region');
-    final department = _readString(filters, 'department');
-    final status = _readString(filters, 'status');
+    selectedMinistry.value = _s(filters, 'ministry');
+    selectedDistrict.value = _s(filters, 'district');
+    selectedRegion.value = _s(filters, 'region');
+    selectedDepartment.value = _s(filters, 'department');
+    selectedStatus.value = _s(filters, 'status');
 
-    if (ministry.isNotEmpty) selectedMinistry.value = ministry;
-    if (district.isNotEmpty) selectedDistrict.value = district;
-    if (region.isNotEmpty) selectedRegion.value = region;
-    if (department.isNotEmpty) selectedDepartment.value = department;
-    if (status.isNotEmpty) selectedStatus.value = status;
+    showEmergencyOnly.value =
+        filters['emergency_only'] == true ||
+        filters['priority_level']?.toString() == '1';
 
-    final emergency = filters['emergency_only'];
-    if (emergency is bool && emergency) {
-      showEmergencyOnly.value = true;
-    }
-
-    final priorityLevel = filters['priority_level'];
-    if ((priorityLevel is num && priorityLevel == 1) ||
-        priorityLevel?.toString() == '1') {
-      showEmergencyOnly.value = true;
-    }
-
-    if (selectedStatus.value == 'active') {
-      showActiveOnly.value = true;
-    }
-
-    _updateActiveFiltersState();
+    _updateActiveFilters();
   }
 
-  String _readString(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    if (value == null) return '';
-    return value.toString().trim();
-  }
+  String _s(Map<String, dynamic> map, String key) =>
+      (map[key] ?? '').toString().trim();
 }

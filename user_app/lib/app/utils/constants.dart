@@ -1,6 +1,6 @@
-const String backendBaseUrl = String.fromEnvironment(
-  'MEDIGUIDE_BACKEND_URL',
-  defaultValue: 'http://127.0.0.1:8080',
+const String pocketbaseUrl = String.fromEnvironment(
+  'MEDIGUIDE_POCKETBASE_URL',
+  defaultValue: 'http://127.0.0.1:8090',
 );
 
 const String openRouterApiKey = String.fromEnvironment(
@@ -26,7 +26,6 @@ class SharedPreferencesKeys {
   static const String notFirstTime = 'not_first_time';
   static const String isLoggedIn = 'is_logged_in';
   static const String userToken = 'user_token';
-  static const String refreshToken = 'refresh_token';
   static const String userId = 'user_id';
   static const String currentUser = 'current_user';
   static const String biometricEnabled = 'biometric_enabled';

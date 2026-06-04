@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/conversation.dart';
 import '../../data/models/message.dart';
@@ -24,17 +24,6 @@ class ChatInterfaceController extends GetxController {
   void onInit() {
     super.onInit();
 
-    if (!BackendService.to.supportsMessaging) {
-      Common.quickToast(
-        type: ToastificationType.info,
-        title: 'Messaging',
-        description: BackendService.to.unsupportedCollectionWriteMessage(
-          'messages',
-        ),
-      );
-      return;
-    }
-
     // Get User object from arguments
     final args = Get.arguments;
     if (args is User) {
@@ -51,7 +40,9 @@ class ChatInterfaceController extends GetxController {
   void onClose() {
     // Clean up real-time subscriptions
     if (conversationId.value.isNotEmpty) {
-      BackendService.to.unsubscribeFromCollection(collectionName: 'messages');
+      PocketBaseService.to.unsubscribeFromCollection(
+        collectionName: 'messages',
+      );
     }
     scrollController.dispose();
     super.onClose();
@@ -71,7 +62,7 @@ class ChatInterfaceController extends GetxController {
       final filter =
           '(participant1 = "$currentUserId" && participant2 = "${user.id}") || (participant1 = "${user.id}" && participant2 = "$currentUserId")';
 
-      final existingConversations = await BackendService.to.getRecordList(
+      final existingConversations = await PocketBaseService.to.getRecordList(
         collectionName: 'conversations',
         filter: filter,
       );
@@ -83,7 +74,7 @@ class ChatInterfaceController extends GetxController {
         subscribeToMessages();
       } else {
         // Create new conversation
-        final newConversation = await BackendService.to.createRecord(
+        final newConversation = await PocketBaseService.to.createRecord(
           collectionName: 'conversations',
           data: Conversation.forCreate(
             participant1: currentUserId,
@@ -98,7 +89,7 @@ class ChatInterfaceController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to load conversation',
-        description: Common.parseApiError(e),
+        description: e.toString(),
       );
     } finally {
       isLoading.value = false;
@@ -111,7 +102,7 @@ class ChatInterfaceController extends GetxController {
 
     isLoading.value = true;
     try {
-      final result = await BackendService.to.getRecordList(
+      final result = await PocketBaseService.to.getRecordList(
         collectionName: 'messages',
         filter: 'conversation = "${conversationId.value}"',
         sort: 'created',
@@ -124,8 +115,8 @@ class ChatInterfaceController extends GetxController {
           final message = Message.fromRecord(record);
           messages.add(message);
         } catch (e) {
-          debugPrint('Error creating Message from record: $e');
-          debugPrint('Record data: ${record.data}');
+          print('Error creating Message from record: $e');
+          print('Record data: ${record.data}');
         }
       }
 
@@ -135,7 +126,7 @@ class ChatInterfaceController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to load messages',
-        description: Common.parseApiError(e),
+        description: e.toString(),
       );
     } finally {
       isLoading.value = false;
@@ -150,7 +141,7 @@ class ChatInterfaceController extends GetxController {
     if (currentUserId == null) return;
 
     try {
-      await BackendService.to.createRecord(
+      await PocketBaseService.to.createRecord(
         collectionName: 'messages',
         data: Message.forCreate(
           conversation: conversationId.value,
@@ -161,7 +152,7 @@ class ChatInterfaceController extends GetxController {
       );
 
       // Update conversation last activity
-      await BackendService.to.updateRecord(
+      await PocketBaseService.to.updateRecord(
         collectionName: 'conversations',
         recordId: conversationId.value,
         data: Conversation.forUpdate(lastActivity: DateTime.now()),
@@ -173,7 +164,7 @@ class ChatInterfaceController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to send message',
-        description: Common.parseApiError(e),
+        description: e.toString(),
       );
     }
   }
@@ -189,7 +180,7 @@ class ChatInterfaceController extends GetxController {
 
     isConnected.value = true;
 
-    BackendService.to.subscribeToCollection('messages', (e) {
+    PocketBaseService.to.subscribeToCollection('messages', (e) {
       try {
         final record = e.record;
         if (record == null) return;
@@ -230,7 +221,7 @@ class ChatInterfaceController extends GetxController {
       final updatedReadBy = Map<String, dynamic>.from(message.readBy);
       updatedReadBy[currentUserId] = DateTime.now().toIso8601String();
 
-      await BackendService.to.updateRecord(
+      await PocketBaseService.to.updateRecord(
         collectionName: 'messages',
         recordId: messageId,
         data: Message.forUpdate(readBy: updatedReadBy),
@@ -256,7 +247,7 @@ class ChatInterfaceController extends GetxController {
         userIds.add(currentUserId);
         updatedReactions[emoji] = userIds;
 
-        await BackendService.to.updateRecord(
+        await PocketBaseService.to.updateRecord(
           collectionName: 'messages',
           recordId: messageId,
           data: Message.forUpdate(reactions: updatedReactions),
@@ -266,7 +257,7 @@ class ChatInterfaceController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to add reaction',
-        description: Common.parseApiError(e),
+        description: e.toString(),
       );
     }
   }
@@ -279,7 +270,7 @@ class ChatInterfaceController extends GetxController {
     if (currentUserId == null) return;
 
     try {
-      await BackendService.to.createRecord(
+      await PocketBaseService.to.createRecord(
         collectionName: 'messages',
         data: Message.forCreate(
           conversation: conversationId.value,
@@ -293,7 +284,7 @@ class ChatInterfaceController extends GetxController {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to send reply',
-        description: Common.parseApiError(e),
+        description: e.toString(),
       );
     }
   }

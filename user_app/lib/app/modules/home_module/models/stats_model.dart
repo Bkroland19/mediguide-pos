@@ -91,27 +91,23 @@ class StatsModel {
   String get formattedGuidelinesCount => getFormattedCount(guidelinesCount);
 
   /// Get formatted healthcare facilities count
-  String get formattedHealthcareFacilitiesCount =>
+  String get formattedHealthcareFacilitiesCount => 
       getFormattedCount(healthcareFacilitiesCount);
 
   /// Get formatted consultants count
   String get formattedConsultantsCount => getFormattedCount(consultantsCount);
 
   /// Get formatted patients served count
-  String get formattedPatientsServedCount =>
-      getFormattedCount(patientsServedCount);
+  String get formattedPatientsServedCount => getFormattedCount(patientsServedCount);
 
   /// Get formatted emergency contacts count
-  String get formattedEmergencyContactsCount =>
-      getFormattedCount(emergencyContactsCount);
+  String get formattedEmergencyContactsCount => getFormattedCount(emergencyContactsCount);
 
   /// Get formatted unread messages count
-  String get formattedUnreadMessagesCount =>
-      getFormattedCount(unreadMessagesCount);
+  String get formattedUnreadMessagesCount => getFormattedCount(unreadMessagesCount);
 
   /// Get formatted user conversations count
-  String get formattedUserConversationsCount =>
-      getFormattedCount(userConversationsCount);
+  String get formattedUserConversationsCount => getFormattedCount(userConversationsCount);
 
   /// Get formatted FAQs count
   String get formattedFaqsCount => getFormattedCount(faqsCount);

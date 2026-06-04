@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../data/models/consultant.dart';
 import '../../../data/extensions/enum_extensions.dart';
+import '../../../data/models/consultant.dart';
+import '../../../routes/app_pages.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/common.dart';
 import '../../../widgets/app_button.dart';
-import '../../../widgets/user_avatar.dart';
 import '../../../widgets/section_group.dart';
-import '../../../routes/app_pages.dart';
-import '../../../data/services/backend_service.dart';
+import '../../../widgets/user_avatar.dart';
 
-/// Clean full-screen consultant profile — Messenger-style header + grouped info sections.
 class ConsultantDetailModal extends StatelessWidget {
   final Consultant consultant;
 
@@ -21,217 +19,292 @@ class ConsultantDetailModal extends StatelessWidget {
   static Future<void> show(BuildContext context, Consultant consultant) {
     return showDialog<void>(
       context: context,
-      builder: (context) => Dialog.fullscreen(
+      useSafeArea: false,
+      builder: (_) => Dialog.fullscreen(
         child: ConsultantDetailModal(consultant: consultant),
       ),
     );
   }
 
+  bool get _isActive => consultant.status.name.toLowerCase() == 'active';
+
+  bool get _canStartChat => consultant.userAccount != null;
+
+  String get _specialtyName =>
+      consultant.specialty?.displayName ?? 'generalPractice'.tr;
+
+  String get _location {
+    final parts = [
+      consultant.city,
+      consultant.region,
+      consultant.country,
+    ].where((e) => e.trim().isNotEmpty).toList();
+
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
-    final isActive = consultant.status.name == 'active';
 
     return Scaffold(
       appBar: AppBar(
+        title: Text('consultantDetails'.tr),
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(LucideIcons.x),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: Get.back,
         ),
-        title: Text('consultantDetails'.tr),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        children: [
-          // ── Profile header ──
-          AppSpacing.gapMd,
-          Center(
-            child: Stack(
-              children: [
-                UserAvatar(name: consultant.name, radius: 40),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: isActive ? Colors.green : cs.outlineVariant,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: cs.surface, width: 3),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.xl,
           ),
-          AppSpacing.gapMd,
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  consultant.name,
-                  style: context.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (consultant.isVerified) ...[
-                  const SizedBox(width: 6),
-                  Icon(LucideIcons.badgeCheck, size: 20, color: cs.primary),
-                ],
-              ],
+          children: [
+            _ProfileHeader(
+              consultant: consultant,
+              isActive: _isActive,
+              specialtyName: _specialtyName,
             ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(
-              consultant.specialty?.displayName ?? 'General Practice',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: cs.primary,
-                fontWeight: FontWeight.w500,
-              ),
+
+            AppSpacing.gapLg,
+
+            _StatsRow(
+              isActive: _isActive,
+              rating: consultant.rating,
+              yearsOfExperience: consultant.yearsOfExperience,
             ),
-          ),
-          if (consultant.organization.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Center(
-              child: Text(
-                consultant.organization,
+
+            AppSpacing.gapLg,
+
+            AppButton(
+              text: 'startChat'.tr,
+              icon: LucideIcons.messageSquare,
+              width: double.infinity,
+              onPressed: _canStartChat ? _startChatWithConsultant : null,
+            ),
+
+            if (!_canStartChat) ...[
+              AppSpacing.gapSm,
+              Text(
+                'consultantChatUnavailable'.tr,
+                textAlign: TextAlign.center,
                 style: context.textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                 ),
               ),
-            ),
-          ],
+            ],
 
-          // ── Quick stats row ──
-          AppSpacing.gapLg,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _StatPill(
-                label: '${consultant.yearsOfExperience.toStringAsFixed(0)} yrs',
-                icon: LucideIcons.briefcase,
-              ),
-              if (consultant.rating > 0) ...[
-                AppSpacing.hGapSm,
-                _StatPill(
-                  label: '${consultant.rating.toStringAsFixed(1)} ★',
-                  icon: LucideIcons.star,
-                ),
-              ],
-              AppSpacing.hGapSm,
-              _StatPill(
-                label: isActive ? 'Available' : 'Offline',
-                icon: isActive ? LucideIcons.circle : LucideIcons.circleOff,
-                color: isActive ? Colors.green : cs.error,
+            if (_hasContactInfo) ...[
+              AppSpacing.gapLg,
+              SectionGroup(
+                title: 'contactLocation'.tr,
+                items: [
+                  if (consultant.phone.trim().isNotEmpty)
+                    _InfoRow(
+                      icon: LucideIcons.phone,
+                      label: 'phone'.tr,
+                      value: consultant.phone,
+                    ),
+                  if (consultant.email.trim().isNotEmpty)
+                    _InfoRow(
+                      icon: LucideIcons.mail,
+                      label: 'email'.tr,
+                      value: consultant.email,
+                    ),
+                  if (_location.isNotEmpty)
+                    _InfoRow(
+                      icon: LucideIcons.mapPin,
+                      label: 'location'.tr,
+                      value: _location,
+                    ),
+                ],
               ),
             ],
-          ),
 
-          // ── Start chat button ──
-          AppSpacing.gapLg,
-          AppButton(
-            text: 'startChat'.tr,
-            icon: LucideIcons.messageSquare,
-            width: double.infinity,
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startChatWithConsultant();
-            },
-          ),
-
-          // ── Contact & Location ──
-          if (consultant.phone.isNotEmpty ||
-              consultant.email.isNotEmpty ||
-              consultant.city.isNotEmpty) ...[
-            AppSpacing.gapLg,
-            SectionGroup(
-              title: 'contactLocation'.tr,
-              items: [
-                if (consultant.phone.isNotEmpty)
-                  _InfoRow(
-                    icon: LucideIcons.phone,
-                    label: 'phone'.tr,
-                    value: consultant.phone,
-                  ),
-                if (consultant.email.isNotEmpty)
-                  _InfoRow(
-                    icon: LucideIcons.mail,
-                    label: 'email'.tr,
-                    value: consultant.email,
-                  ),
-                if (consultant.city.isNotEmpty)
-                  _InfoRow(
-                    icon: LucideIcons.mapPin,
-                    label: 'location'.tr,
-                    value:
-                        '${consultant.city}${consultant.region.isNotEmpty ? ', ${consultant.region}' : ''}, ${consultant.country}',
-                  ),
-              ],
-            ),
+            if (_hasProfessionalInfo) ...[
+              AppSpacing.gapMd,
+              SectionGroup(
+                title: 'professionalInfo'.tr,
+                items: [
+                  if (consultant.licenseNumber.trim().isNotEmpty)
+                    _InfoRow(
+                      icon: LucideIcons.award,
+                      label: 'licenseNumber'.tr,
+                      value: consultant.licenseNumber,
+                    ),
+                  if (consultant.certifications.trim().isNotEmpty)
+                    _InfoRow(
+                      icon: LucideIcons.graduationCap,
+                      label: 'certifications'.tr,
+                      value: consultant.certifications,
+                    ),
+                  if (consultant.preferredLanguage != null)
+                    _InfoRow(
+                      icon: LucideIcons.globe,
+                      label: 'preferredLanguage'.tr,
+                      value:
+                          consultant.preferredLanguage?.displayName ??
+                          'English',
+                    ),
+                ],
+              ),
+            ],
           ],
-
-          // ── Professional details ──
-          if (consultant.licenseNumber.isNotEmpty ||
-              consultant.certifications.isNotEmpty ||
-              consultant.preferredLanguage != null) ...[
-            AppSpacing.gapMd,
-            SectionGroup(
-              title: 'professionalInfo'.tr,
-              items: [
-                if (consultant.licenseNumber.isNotEmpty)
-                  _InfoRow(
-                    icon: LucideIcons.award,
-                    label: 'licenseNumber'.tr,
-                    value: consultant.licenseNumber,
-                  ),
-                if (consultant.certifications.isNotEmpty)
-                  _InfoRow(
-                    icon: LucideIcons.graduationCap,
-                    label: 'certifications'.tr,
-                    value: consultant.certifications,
-                  ),
-                if (consultant.preferredLanguage != null)
-                  _InfoRow(
-                    icon: LucideIcons.globe,
-                    label: 'preferredLanguage'.tr,
-                    value:
-                        consultant.preferredLanguage?.displayName ?? 'English',
-                  ),
-              ],
-            ),
-          ],
-
-          AppSpacing.gapXl,
-        ],
+        ),
       ),
     );
   }
 
+  bool get _hasContactInfo =>
+      consultant.phone.trim().isNotEmpty ||
+      consultant.email.trim().isNotEmpty ||
+      _location.isNotEmpty;
+
+  bool get _hasProfessionalInfo =>
+      consultant.licenseNumber.trim().isNotEmpty ||
+      consultant.certifications.trim().isNotEmpty ||
+      consultant.preferredLanguage != null;
+
   void _startChatWithConsultant() {
-    if (!BackendService.to.supportsMessaging) {
+    final userAccount = consultant.userAccount;
+
+    if (userAccount == null) {
       Common.quickToast(
-        title: 'Chat Unavailable',
-        description: BackendService.to.unsupportedCollectionWriteMessage(
-          'messages',
-        ),
+        title: 'chatUnavailable'.tr,
+        description: 'consultantChatUnavailable'.tr,
       );
       return;
     }
-    if (consultant.userAccount == null) {
-      Common.quickToast(
-        title: 'Chat Unavailable',
-        description: 'This consultant is not available for chat at the moment.',
-      );
-      return;
-    }
-    Get.toNamed(AppRoutes.chatInterface, arguments: consultant.userAccount);
+
+    Get.back();
+    Get.toNamed(AppRoutes.chatInterface, arguments: userAccount);
   }
 }
 
-/// Small stat pill for the quick stats row.
+class _ProfileHeader extends StatelessWidget {
+  final Consultant consultant;
+  final bool isActive;
+  final String specialtyName;
+
+  const _ProfileHeader({
+    required this.consultant,
+    required this.isActive,
+    required this.specialtyName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Column(
+      children: [
+        Stack(
+          children: [
+            UserAvatar(name: consultant.name, radius: 44),
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.green : cs.outlineVariant,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: cs.surface, width: 3),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        AppSpacing.gapMd,
+
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                consultant.name,
+                textAlign: TextAlign.center,
+                style: context.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (consultant.isVerified) ...[
+              const SizedBox(width: 6),
+              Icon(LucideIcons.badgeCheck, size: 20, color: cs.primary),
+            ],
+          ],
+        ),
+
+        const SizedBox(height: 4),
+
+        Text(
+          specialtyName,
+          textAlign: TextAlign.center,
+          style: context.textTheme.bodyMedium?.copyWith(
+            color: cs.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        if (consultant.organization.trim().isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(
+            consultant.organization,
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  final bool isActive;
+  final double rating;
+  final num yearsOfExperience;
+
+  const _StatsRow({
+    required this.isActive,
+    required this.rating,
+    required this.yearsOfExperience,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        _StatPill(
+          label: '${yearsOfExperience.toStringAsFixed(0)} yrs',
+          icon: LucideIcons.briefcase,
+        ),
+        if (rating > 0)
+          _StatPill(label: rating.toStringAsFixed(1), icon: LucideIcons.star),
+        _StatPill(
+          label: isActive ? 'available'.tr : 'offline'.tr,
+          icon: isActive ? LucideIcons.circle : LucideIcons.circleOff,
+          color: isActive ? Colors.green : cs.error,
+        ),
+      ],
+    );
+  }
+}
+
 class _StatPill extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -241,23 +314,25 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? context.theme.colorScheme.onSurfaceVariant;
+    final cs = context.theme.colorScheme;
+    final effectiveColor = color ?? cs.onSurfaceVariant;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        color: effectiveColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: c),
-          const SizedBox(width: 5),
+          Icon(icon, size: 14, color: effectiveColor),
+          const SizedBox(width: 6),
           Text(
             label,
             style: context.textTheme.labelSmall?.copyWith(
-              color: c,
-              fontWeight: FontWeight.w600,
+              color: effectiveColor,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -266,7 +341,6 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-/// Label-value row inside SectionGroup.
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -281,17 +355,19 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: cs.onSurfaceVariant),
+          Icon(icon, size: 17, color: cs.onSurfaceVariant),
           AppSpacing.hGapSm,
           SizedBox(
-            width: 90,
+            width: 96,
             child: Text(
               label,
               style: context.textTheme.bodySmall?.copyWith(
@@ -303,7 +379,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value,
               style: context.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

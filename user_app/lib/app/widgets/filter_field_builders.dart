@@ -14,7 +14,10 @@ class FilterFieldBuilders {
       name: field.name,
       enabled: field.enabled,
       initialValue: field.initialValue,
-      decoration: InputDecoration(labelText: field.label, hintText: field.hint),
+      decoration: InputDecoration(
+        labelText: field.label,
+        hintText: field.hint,
+      ),
     );
   }
 
@@ -24,10 +27,13 @@ class FilterFieldBuilders {
       name: field.name,
       enabled: field.enabled,
       initialValue: field.initialValue,
-      decoration: InputDecoration(labelText: field.label),
-      items: field.options!
-          .map((option) => DropdownMenuItem(value: option, child: Text(option)))
-          .toList(),
+      decoration: InputDecoration(
+        labelText: field.label,
+      ),
+      items: field.options!.map((option) => DropdownMenuItem(
+        value: option,
+        child: Text(option),
+      )).toList(),
     );
   }
 
@@ -54,7 +60,7 @@ class FilterFieldBuilders {
       enabled: field.enabled,
       builder: (FormFieldState<bool?> formField) {
         final context = formField.context;
-
+        
         return CheckboxListTile(
           title: Text(
             field.label,
@@ -64,9 +70,9 @@ class FilterFieldBuilders {
             ),
           ),
           value: formField.value ?? false,
-          onChanged: field.enabled
-              ? (bool? value) => formField.didChange(value ?? false)
-              : null,
+          onChanged: field.enabled 
+            ? (bool? value) => formField.didChange(value ?? false)
+            : null,
           contentPadding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
           activeColor: context.theme.colorScheme.primary,
@@ -102,12 +108,8 @@ class FilterFieldBuilders {
         final context = formField.context;
         final selectedValues = formField.value ?? <String>[];
         final fontSize = Responsive.fontSize(context, mobile: 14, tablet: 16);
-        final chipSpacing = Responsive.doubleValue(
-          context,
-          mobile: 8.0,
-          tablet: 10.0,
-        );
-
+        final chipSpacing = Responsive.doubleValue(context, mobile: 8.0, tablet: 10.0);
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -124,25 +126,24 @@ class FilterFieldBuilders {
               runSpacing: 6.0,
               children: field.options!.map((option) {
                 final isSelected = selectedValues.contains(option);
-
+                
                 return FilterChip(
                   label: Text(
                     option,
-                    semanticsLabel:
-                        '${field.label}: $option ${isSelected ? "selected" : "not selected"}',
+                    semanticsLabel: '${field.label}: $option ${isSelected ? "selected" : "not selected"}',
                   ),
                   selected: isSelected,
-                  onSelected: field.enabled
-                      ? (bool selected) {
-                          final newValues = List<String>.from(selectedValues);
-                          if (selected) {
-                            newValues.add(option);
-                          } else {
-                            newValues.remove(option);
-                          }
-                          formField.didChange(newValues);
+                  onSelected: field.enabled 
+                    ? (bool selected) {
+                        final newValues = List<String>.from(selectedValues);
+                        if (selected) {
+                          newValues.add(option);
+                        } else {
+                          newValues.remove(option);
                         }
-                      : null,
+                        formField.didChange(newValues);
+                      }
+                    : null,
                   showCheckmark: true,
                   selectedColor: context.theme.colorScheme.primaryContainer,
                   checkmarkColor: context.theme.colorScheme.onPrimaryContainer,

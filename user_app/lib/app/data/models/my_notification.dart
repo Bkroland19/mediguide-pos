@@ -1,7 +1,7 @@
-import 'backend_record.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'base_model.dart';
 
-/// MyNotification model representing a notification from backend
+/// MyNotification model representing a notification from PocketBase
 class MyNotification extends BaseModel {
   MyNotification(super.data);
 
@@ -16,7 +16,7 @@ class MyNotification extends BaseModel {
   // Timestamps inherited from BaseModel (created, updated as String)
   // Use createdDate and updatedDate for DateTime values
 
-  /// Factory constructor to create MyNotification from backend record
+  /// Factory constructor to create MyNotification from PocketBase record
   static MyNotification fromRecord(RecordModel record) {
     return MyNotification(record.data);
   }
@@ -58,7 +58,7 @@ class MyNotification extends BaseModel {
   String get formattedDate {
     final createdDateTime = createdDate;
     if (createdDateTime == null) return "Unknown";
-
+    
     final now = DateTime.now();
     final difference = now.difference(createdDateTime);
 

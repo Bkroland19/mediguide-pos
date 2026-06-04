@@ -1,25 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
-import '../../data/models/filter_models.dart';
-import '../../data/services/backend_service.dart';
-import '../../utils/constants.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../utils/common.dart';
+import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
+enum GuidelineRouteFilterType { all, category, categoryTree, indexItem, tag }
+
 class GuidelinesController extends GetxController {
-  // Pagination controller
+  // ==================== CONSTANTS ====================
+  static const String emergencyCategoryId = 'p4vdq6cqnb2mnin';
+
+  // ==================== PAGINATION ====================
   late final PagingController<int, Guideline> pagingController;
 
-  // Permanent filter state (GuidelineIndex)
+  // ==================== PAGE STATE ====================
+  final RxString pageTitle = 'All Guidelines'.obs;
+  final Rx<GuidelineRouteFilterType> routeFilterType =
+      GuidelineRouteFilterType.all.obs;
+
+  // ==================== INDEX MODE / ROUTE FILTERS ====================
   final Rx<GuidelineIndex?> selectedIndex = Rx<GuidelineIndex?>(null);
   final RxBool isInIndexMode = false.obs;
 
-  // Search and filter state (temporary filters)
+  final RxString routeCategoryId = ''.obs;
+  final RxList<String> routeCategoryIds = <String>[].obs;
+  final RxBool isInCategoryMode = false.obs;
+
+  final RxString selectedTagId = ''.obs;
+  final RxBool isInTagMode = false.obs;
+
+  // ==================== USER FILTER STATE ====================
   final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
   final RxString selectedCategoryId = ''.obs;
   final RxList<String> selectedTagIds = <String>[].obs;
   final RxString selectedPriority = ''.obs;
@@ -27,31 +43,28 @@ class GuidelinesController extends GetxController {
   final RxString selectedTargetPopulation = ''.obs;
   final RxBool showHighPriorityOnly = false.obs;
 
-  // Data state
+  final RxBool hasActiveFilters = false.obs;
+
+  // ==================== DATA ====================
   final RxList<GuidelineCategory> availableCategories =
       <GuidelineCategory>[].obs;
   final RxList<GuidelineTag> availableTags = <GuidelineTag>[].obs;
   final RxBool isLoadingFilters = false.obs;
 
+  // ==================== INIT ====================
   @override
   void onInit() {
     super.onInit();
-    _handleArguments(); // Handle GuidelineIndex from navigation
+
     pagingController = PagingController<int, Guideline>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
-    _loadFilterOptions();
-  }
 
-  /// Handle arguments from navigation (GuidelineIndex)
-  void _handleArguments() {
-    final args = Get.arguments;
-    if (args is GuidelineIndex) {
-      selectedIndex.value = args;
-      isInIndexMode.value = true;
-    }
+    _readRouteArguments();
+    _loadFilterOptions();
+    _updateFilterState();
   }
 
   @override
@@ -60,100 +73,25 @@ class GuidelinesController extends GetxController {
     super.onClose();
   }
 
-  /// Load a page of guidelines
-  Future<List<Guideline>> _loadPage(int pageKey) async {
-    try {
-      final List<Guideline> newItems;
-
-      if (searchQuery.value.isNotEmpty ||
-          hasActiveFilters.value ||
-          isInIndexMode.value) {
-        // Search with filters (including permanent index filter)
-        newItems = await searchGuidelines(
-          query: searchQuery.value,
-          page: pageKey,
-          perPage: pageSize,
-          categoryFilter: selectedCategoryId.value.isNotEmpty
-              ? selectedCategoryId.value
-              : null,
-          tagFilters: selectedTagIds.isNotEmpty
-              ? selectedTagIds.toList()
-              : null,
-          priorityFilter: selectedPriority.value.isNotEmpty
-              ? selectedPriority.value
-              : null,
-          healthcareLevelFilter: selectedHealthcareLevel.value.isNotEmpty
-              ? selectedHealthcareLevel.value
-              : null,
-          targetPopulationFilter: selectedTargetPopulation.value.isNotEmpty
-              ? selectedTargetPopulation.value
-              : null,
-          indexItemFilter: selectedIndex.value?.id, // Permanent index filter
-        );
-      } else if (showHighPriorityOnly.value) {
-        // Show only high priority guidelines
-        if (pageKey == 1) {
-          newItems = await getHighPriorityGuidelines();
-        } else {
-          newItems = [];
-        }
-      } else {
-        // Regular pagination (may still have permanent index filter)
-        newItems = await getGuidelines(
-          page: pageKey,
-          perPage: pageSize,
-          indexItemFilter: selectedIndex
-              .value
-              ?.id, // Apply index filter even without other filters
-        );
-      }
-
-      return newItems;
-    } catch (error) {
-      Common.quickToast(title: 'errorLoadingGuidelines'.tr);
-      rethrow;
+  // ==================== COMPUTED STATE ====================
+  String get effectivePageTitle {
+    if (isInIndexMode.value) {
+      return selectedIndex.value?.title ?? pageTitle.value;
     }
+
+    return pageTitle.value;
   }
 
-  /// Load available categories and tags for filtering
-  Future<void> _loadFilterOptions() async {
-    try {
-      isLoadingFilters.value = true;
-
-      final categories = await getGuidelineCategories();
-      final tags = await getGuidelineTags();
-
-      availableCategories.value = categories;
-      availableTags.value = tags;
-    } catch (error) {
-      Common.quickToast(title: 'errorLoadingFilters'.tr);
-    } finally {
-      isLoadingFilters.value = false;
-    }
+  bool get hasPermanentFilter {
+    return isInIndexMode.value || isInCategoryMode.value || isInTagMode.value;
   }
 
-  /// Clear all temporary filters (preserves permanent index filter)
-  void clearAllFilters() {
-    selectedCategoryId.value = '';
-    selectedTagIds.clear();
-    selectedPriority.value = '';
-    selectedHealthcareLevel.value = '';
-    selectedTargetPopulation.value = '';
-    showHighPriorityOnly.value = false;
-    searchQuery.value = '';
-    hasActiveFilters.value = false;
-    pagingController.refresh();
+  bool get isEmergencyRoute {
+    return isInCategoryMode.value &&
+        routeCategoryId.value == emergencyCategoryId;
   }
 
-  /// Clear the permanent index filter (used for navigation)
-  void clearIndexFilter() {
-    selectedIndex.value = null;
-    isInIndexMode.value = false;
-    pagingController.refresh();
-  }
-
-  /// Check if there are any temporary filters active (excluding permanent index)
-  bool get hasTemporaryFilters {
+  bool get _hasFilters {
     return searchQuery.value.isNotEmpty ||
         selectedCategoryId.value.isNotEmpty ||
         selectedTagIds.isNotEmpty ||
@@ -163,358 +101,577 @@ class GuidelinesController extends GetxController {
         showHighPriorityOnly.value;
   }
 
-  /// Update hasActiveFilters state (only for temporary filters)
-  void _updateHasActiveFilters() {
-    hasActiveFilters.value = hasTemporaryFilters;
-  }
+  // ==================== ROUTE ARGUMENTS ====================
+  void _readRouteArguments() {
+    final args = Get.arguments;
 
-  /// Show filter modal using generic filter bottom sheet
-  Future<void> showFilterModal(BuildContext context) async {
-    // Ensure filter options are loaded
-    if (availableCategories.isEmpty || availableTags.isEmpty) {
-      await _loadFilterOptions();
+    if (args == null) {
+      _applyAllRoute(title: 'All Guidelines');
+      return;
     }
 
-    final fields = <FilterField>[
-      FilterField.text('search', 'search'.tr, hint: 'searchGuidelines'.tr),
-      FilterField.boolean('showHighPriorityOnly', 'showHighPriorityOnly'.tr),
-    ];
+    if (args is GuidelineIndex) {
+      _applyIndexRoute(index: args, title: args.title);
+      return;
+    }
 
-    // Priority dropdown
-    final priorityOptions = ['', 'critical', 'high', 'medium', 'low'];
-    fields.add(
-      FilterField.dropdown(
-        'priority',
-        'priority'.tr,
-        priorityOptions
-            .map((p) => p.isEmpty ? 'allPriorities'.tr : p.capitalizeFirst!)
-            .toList(),
-      ),
+    if (args is! Map) {
+      _applyAllRoute(title: 'All Guidelines');
+      return;
+    }
+
+    final filterType = _parseFilterType(args['filterType']?.toString());
+    final title = args['title']?.toString().trim();
+
+    switch (filterType) {
+      case GuidelineRouteFilterType.all:
+        _applyAllRoute(title: title);
+        break;
+
+      case GuidelineRouteFilterType.category:
+        final categoryId = _firstNonEmpty([
+          args['categoryId'],
+          args['category'],
+        ]);
+
+        _applyCategoryRoute(
+          categoryId: categoryId,
+          title: title,
+          includeChildren: false,
+        );
+        break;
+
+      case GuidelineRouteFilterType.categoryTree:
+        final categoryId = _firstNonEmpty([
+          args['categoryId'],
+          args['category'],
+        ]);
+
+        _applyCategoryRoute(
+          categoryId: categoryId,
+          title: title,
+          includeChildren: true,
+        );
+        break;
+
+      case GuidelineRouteFilterType.indexItem:
+        final indexItemId = _firstNonEmpty([
+          args['indexItemId'],
+          args['index_item'],
+          args['indexItem'],
+        ]);
+
+        _applyIndexIdRoute(indexItemId: indexItemId, title: title);
+        break;
+
+      case GuidelineRouteFilterType.tag:
+        final tagId = _firstNonEmpty([args['tagId'], args['tag']]);
+
+        _applyTagRoute(tagId: tagId, title: title);
+        break;
+    }
+  }
+
+  GuidelineRouteFilterType _parseFilterType(String? value) {
+    switch (value?.trim()) {
+      case 'category':
+        return GuidelineRouteFilterType.category;
+      case 'categoryTree':
+        return GuidelineRouteFilterType.categoryTree;
+      case 'index':
+      case 'indexItem':
+        return GuidelineRouteFilterType.indexItem;
+      case 'tag':
+        return GuidelineRouteFilterType.tag;
+      case 'all':
+      default:
+        return GuidelineRouteFilterType.all;
+    }
+  }
+
+  String _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+
+    return '';
+  }
+
+  void _applyAllRoute({String? title}) {
+    routeFilterType.value = GuidelineRouteFilterType.all;
+    pageTitle.value = _safeTitle(title, fallback: 'All Guidelines');
+
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
+
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    isInCategoryMode.value = false;
+
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+  }
+
+  void _applyCategoryRoute({
+    required String categoryId,
+    required String? title,
+    required bool includeChildren,
+  }) {
+    if (categoryId.isEmpty) {
+      _applyAllRoute(title: title);
+      return;
+    }
+
+    routeFilterType.value = includeChildren
+        ? GuidelineRouteFilterType.categoryTree
+        : GuidelineRouteFilterType.category;
+
+    routeCategoryId.value = categoryId;
+    routeCategoryIds.assignAll([categoryId]);
+    isInCategoryMode.value = true;
+
+    selectedCategoryId.value = '';
+
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
+
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+
+    pageTitle.value = _safeTitle(
+      title,
+      fallback: includeChildren ? 'Guideline Category' : 'Guidelines',
     );
 
-    // Healthcare level dropdown
-    final healthcareLevelOptions = ['', 'HC1', 'HC2', 'HC3', 'HC4'];
-    fields.add(
-      FilterField.dropdown(
-        'healthcareLevel',
-        'healthcareLevel'.tr,
-        healthcareLevelOptions
-            .map((l) => l.isEmpty ? 'allLevels'.tr : l)
-            .toList(),
-      ),
-    );
+    if (includeChildren) {
+      _loadChildCategoryIds(categoryId);
+    }
+  }
 
-    // Target population
-    fields.add(
-      FilterField.text(
-        'targetPopulation',
-        'targetPopulation'.tr,
-        hint: 'filterByTargetPopulation'.tr,
-      ),
-    );
+  void _applyIndexRoute({
+    required GuidelineIndex index,
+    required String? title,
+  }) {
+    routeFilterType.value = GuidelineRouteFilterType.indexItem;
 
-    // Category dropdown
-    if (availableCategories.isNotEmpty) {
-      final categoryOptions = availableCategories
-          .map((category) => category.displayName)
+    selectedIndex.value = index;
+    isInIndexMode.value = true;
+
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    isInCategoryMode.value = false;
+    selectedCategoryId.value = '';
+
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+
+    pageTitle.value = _safeTitle(title, fallback: index.title);
+  }
+
+  void _applyIndexIdRoute({
+    required String indexItemId,
+    required String? title,
+  }) {
+    if (indexItemId.isEmpty) {
+      _applyAllRoute(title: title);
+      return;
+    }
+
+    final resolvedTitle = _safeTitle(title, fallback: 'Guidelines');
+
+    routeFilterType.value = GuidelineRouteFilterType.indexItem;
+
+    selectedIndex.value = GuidelineIndex({
+      'id': indexItemId,
+      'title': resolvedTitle,
+      'description': '',
+      'parent': '',
+      'level': 0,
+      'order': 0,
+      'hasChildren': false,
+    });
+
+    isInIndexMode.value = true;
+
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    isInCategoryMode.value = false;
+    selectedCategoryId.value = '';
+
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+
+    pageTitle.value = resolvedTitle;
+  }
+
+  void _applyTagRoute({required String tagId, required String? title}) {
+    if (tagId.isEmpty) {
+      _applyAllRoute(title: title);
+      return;
+    }
+
+    routeFilterType.value = GuidelineRouteFilterType.tag;
+
+    selectedTagId.value = tagId;
+    isInTagMode.value = true;
+
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
+
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    isInCategoryMode.value = false;
+    selectedCategoryId.value = '';
+
+    pageTitle.value = _safeTitle(title, fallback: 'Tagged Guidelines');
+  }
+
+  String _safeTitle(String? value, {required String fallback}) {
+    final title = value?.trim() ?? '';
+    return title.isEmpty ? fallback : title;
+  }
+
+  Future<void> _loadChildCategoryIds(String parentCategoryId) async {
+    try {
+      final result = await PocketBaseService.to.getRecordList(
+        collectionName: GuidelineCategory.collection,
+        perPage: 100,
+        filter:
+            'status="active" && parent_category="${_escapeFilterValue(parentCategoryId)}"',
+        sort: 'sort_order,name',
+      );
+
+      final childIds = result.items
+          .map((record) => GuidelineCategory.fromRecord(record).id)
+          .where((id) => id.isNotEmpty)
           .toList();
-      fields.add(
-        FilterField.dropdown(
-          'category',
-          'category'.tr,
-          ['allCategories'.tr] + categoryOptions,
-        ),
+
+      routeCategoryIds.assignAll(<String>{parentCategoryId, ...childIds});
+
+      pagingController.refresh();
+    } catch (_) {
+      routeCategoryIds.assignAll([parentCategoryId]);
+    }
+  }
+
+  // ==================== QUICK FILTER ACTIONS ====================
+  void setSearchQuery(String value) {
+    searchQuery.value = value.trim();
+    _updateFilterState();
+    pagingController.refresh();
+  }
+
+  void toggleHighPriorityOnly() {
+    showHighPriorityOnly.value = !showHighPriorityOnly.value;
+    _updateFilterState();
+    pagingController.refresh();
+  }
+
+  void setTargetPopulation(String value) {
+    final current = selectedTargetPopulation.value.toLowerCase();
+    final next = value.trim();
+
+    if (current == next.toLowerCase()) {
+      selectedTargetPopulation.value = '';
+    } else {
+      selectedTargetPopulation.value = next;
+    }
+
+    _updateFilterState();
+    pagingController.refresh();
+  }
+
+  void openEmergencyGuidelines() {
+    routeFilterType.value = GuidelineRouteFilterType.categoryTree;
+
+    routeCategoryId.value = emergencyCategoryId;
+    routeCategoryIds.assignAll([emergencyCategoryId]);
+    isInCategoryMode.value = true;
+
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
+
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+
+    selectedCategoryId.value = '';
+    pageTitle.value = 'Emergency Guidelines';
+
+    _loadChildCategoryIds(emergencyCategoryId);
+
+    _updateFilterState();
+    pagingController.refresh();
+  }
+
+  // ==================== PAGE LOADING ====================
+  Future<List<Guideline>> _loadPage(int pageKey) async {
+    try {
+      final filter = _buildFilter();
+
+      final result = await PocketBaseService.to.getRecordList(
+        collectionName: Guideline.collection,
+        page: pageKey,
+        perPage: pageSize,
+        filter: filter,
+        sort: '-updated',
+        expand: 'categories,tags,index_item',
+      );
+
+      return result.items
+          .map((record) => Guideline.fromRecord(record))
+          .toList();
+    } catch (e) {
+      Common.quickToast(title: 'errorLoadingGuidelines'.tr);
+      rethrow;
+    }
+  }
+
+  String _buildFilter() {
+    final filters = <String>[];
+
+    filters.add('is_published=true');
+    filters.add('status="published"');
+
+    if (isInIndexMode.value && selectedIndex.value != null) {
+      filters.add(
+        'index_item="${_escapeFilterValue(selectedIndex.value!.id)}"',
       );
     }
 
-    // Tags multi-select
-    if (availableTags.isNotEmpty) {
-      final tagOptions = availableTags.map((tag) => tag.displayName).toList();
-      fields.add(FilterField.multiSelect('tags', 'tags'.tr, tagOptions));
+    if (isInCategoryMode.value) {
+      final categoryIds = routeCategoryIds.isNotEmpty
+          ? routeCategoryIds
+          : routeCategoryId.value.isNotEmpty
+          ? <String>[routeCategoryId.value]
+          : <String>[];
+
+      if (categoryIds.isNotEmpty) {
+        final categoryFilter = categoryIds
+            .map((id) => 'categories~"${_escapeFilterValue(id)}"')
+            .join(' || ');
+
+        filters.add('($categoryFilter)');
+      }
     }
 
-    // Get initial values
-    final values = <String, dynamic>{};
-    if (searchQuery.value.isNotEmpty) values['search'] = searchQuery.value;
-    if (showHighPriorityOnly.value) values['showHighPriorityOnly'] = true;
-
-    if (selectedPriority.value.isNotEmpty) {
-      values['priority'] = selectedPriority.value.capitalizeFirst!;
+    if (!isInCategoryMode.value && selectedCategoryId.value.isNotEmpty) {
+      filters.add(
+        'categories~"${_escapeFilterValue(selectedCategoryId.value)}"',
+      );
     }
 
-    if (selectedHealthcareLevel.value.isNotEmpty) {
-      values['healthcareLevel'] = selectedHealthcareLevel.value;
+    if (isInTagMode.value && selectedTagId.value.isNotEmpty) {
+      filters.add('tags~"${_escapeFilterValue(selectedTagId.value)}"');
     }
 
-    if (selectedTargetPopulation.value.isNotEmpty) {
-      values['targetPopulation'] = selectedTargetPopulation.value;
-    }
+    if (searchQuery.value.trim().isNotEmpty) {
+      final q = _escapeFilterValue(searchQuery.value.trim());
 
-    if (selectedCategoryId.value.isNotEmpty) {
-      final category = availableCategories
-          .where((cat) => cat.id == selectedCategoryId.value)
-          .firstOrNull;
-      if (category != null) values['category'] = category.displayName;
+      filters.add(
+        '(condition_name~"$q" || definition~"$q" || clinical_features~"$q" || causes~"$q" || icd10_code~"$q")',
+      );
     }
 
     if (selectedTagIds.isNotEmpty) {
-      final tagNames = availableTags
-          .where((tag) => selectedTagIds.contains(tag.id))
-          .map((tag) => tag.displayName)
-          .toList();
-      if (tagNames.isNotEmpty) values['tags'] = tagNames;
+      final tagFilter = selectedTagIds
+          .map((id) => 'tags~"${_escapeFilterValue(id)}"')
+          .join(' || ');
+
+      filters.add('($tagFilter)');
     }
 
-    if (!context.mounted) return;
-
-    final result = await GenericFilterBottomSheet.show(
-      context: context,
-      title: 'filterGuidelines'.tr,
-      fields: fields,
-      initialValues: values,
-    );
-
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
+    if (selectedPriority.value.isNotEmpty) {
+      filters.add('priority="${_escapeFilterValue(selectedPriority.value)}"');
     }
+
+    if (selectedHealthcareLevel.value.isNotEmpty) {
+      filters.add(
+        'healthcare_level_required~"${_escapeFilterValue(selectedHealthcareLevel.value)}"',
+      );
+    }
+
+    if (selectedTargetPopulation.value.isNotEmpty) {
+      filters.add(
+        'target_population~"${_escapeFilterValue(selectedTargetPopulation.value)}"',
+      );
+    }
+
+    if (showHighPriorityOnly.value) {
+      filters.add('(priority="critical" || priority="high")');
+    }
+
+    return filters.join(' && ');
   }
 
-  /// Apply filters from the generic filter result (preserves permanent index filter)
-  void _applyFilters(FilterResult result) {
-    // Clear existing temporary filters first (preserve index filter)
+  String _escapeFilterValue(String value) {
+    return value.replaceAll('"', r'\"');
+  }
+
+  void _updateFilterState() {
+    hasActiveFilters.value = _hasFilters;
+  }
+
+  // ==================== CLEAR ====================
+  void clearAllFilters() {
+    searchQuery.value = '';
     selectedCategoryId.value = '';
     selectedTagIds.clear();
     selectedPriority.value = '';
     selectedHealthcareLevel.value = '';
     selectedTargetPopulation.value = '';
     showHighPriorityOnly.value = false;
-    searchQuery.value = '';
 
-    // Apply new filters
-    final search = result.getValue<String>('search');
-    if (search != null && search.isNotEmpty) {
-      searchQuery.value = search;
-    }
-
-    final highPriorityOnly = result.getValue<bool>('showHighPriorityOnly');
-    if (highPriorityOnly == true) {
-      showHighPriorityOnly.value = true;
-    }
-
-    final priority = result.getValue<String>('priority');
-    if (priority != null &&
-        priority.isNotEmpty &&
-        priority != 'allPriorities'.tr) {
-      selectedPriority.value = priority.toLowerCase();
-    }
-
-    final healthcareLevel = result.getValue<String>('healthcareLevel');
-    if (healthcareLevel != null &&
-        healthcareLevel.isNotEmpty &&
-        healthcareLevel != 'allLevels'.tr) {
-      selectedHealthcareLevel.value = healthcareLevel;
-    }
-
-    final targetPopulation = result.getValue<String>('targetPopulation');
-    if (targetPopulation != null && targetPopulation.isNotEmpty) {
-      selectedTargetPopulation.value = targetPopulation;
-    }
-
-    final categoryName = result.getValue<String>('category');
-    if (categoryName != null &&
-        categoryName.isNotEmpty &&
-        categoryName != 'allCategories'.tr) {
-      final category = availableCategories
-          .where((cat) => cat.displayName == categoryName)
-          .firstOrNull;
-      if (category != null) {
-        selectedCategoryId.value = category.id;
-      }
-    }
-
-    final tagNames = result.getValue<List>('tags');
-    if (tagNames != null && tagNames.isNotEmpty) {
-      final tagIds = <String>[];
-      for (final tagName in tagNames) {
-        final tag = availableTags
-            .where((t) => t.displayName == tagName)
-            .firstOrNull;
-        if (tag != null) {
-          tagIds.add(tag.id);
-        }
-      }
-      selectedTagIds.addAll(tagIds);
-    }
-
-    _updateHasActiveFilters();
+    _updateFilterState();
     pagingController.refresh();
   }
 
-  // ==================== GUIDELINE METHODS ====================
+  void clearIndexFilter() {
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
 
-  /// Get all guidelines with pagination
-  Future<List<Guideline>> getGuidelines({
-    int page = 1,
-    int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
-    String? indexItemFilter,
-  }) async {
-    // Build filter with index item filter if provided
-    final List<String> filters = [];
-
-    // Index item filter (permanent filter when present)
-    if (indexItemFilter != null && indexItemFilter.isNotEmpty) {
-      filters.add('index_item = "$indexItemFilter"');
+    if (!hasPermanentFilter) {
+      pageTitle.value = 'All Guidelines';
+      routeFilterType.value = GuidelineRouteFilterType.all;
     }
 
-    // Published filter
-    filters.add('is_published = true');
-
-    // Add any additional filter
-    if (filter != null && filter.isNotEmpty) {
-      filters.add(filter);
-    }
-
-    final combinedFilter = filters.isNotEmpty ? filters.join(' && ') : null;
-
-    final result = await BackendService.to.getRecordList(
-      collectionName: Guideline.collection,
-      page: page,
-      perPage: perPage,
-      filter: combinedFilter,
-      sort: sort ?? '-created',
-      expand: expand ?? 'categories,tags,index_item',
-    );
-    return result.items.map((record) => Guideline.fromRecord(record)).toList();
+    pagingController.refresh();
   }
 
-  /// Get guideline by ID with expanded relationships
-  Future<Guideline?> getGuidelineById(String guidelineId) async {
-    final record = await BackendService.to.getRecord(
-      collectionName: Guideline.collection,
-      recordId: guidelineId,
-      expand: 'categories,tags',
-    );
-    return record != null ? Guideline.fromRecord(record) : null;
+  void clearRouteCategoryFilter() {
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    selectedCategoryId.value = '';
+    isInCategoryMode.value = false;
+
+    if (!hasPermanentFilter) {
+      pageTitle.value = 'All Guidelines';
+      routeFilterType.value = GuidelineRouteFilterType.all;
+    }
+
+    _updateFilterState();
+    pagingController.refresh();
   }
 
-  /// Get high priority guidelines (critical and high priority)
-  Future<List<Guideline>> getHighPriorityGuidelines({
-    int perPage = 50,
-    String? expand,
-  }) async {
-    final result = await BackendService.to.getRecordList(
-      collectionName: Guideline.collection,
-      perPage: perPage,
-      filter:
-          'is_published = true && (priority = "critical" || priority = "high")',
-      sort: 'priority,condition_name',
-      expand: expand ?? 'categories,tags',
-    );
-    return result.items.map((record) => Guideline.fromRecord(record)).toList();
+  void clearTagFilter() {
+    selectedTagId.value = '';
+    isInTagMode.value = false;
+
+    if (!hasPermanentFilter) {
+      pageTitle.value = 'All Guidelines';
+      routeFilterType.value = GuidelineRouteFilterType.all;
+    }
+
+    pagingController.refresh();
   }
 
-  /// Search guidelines by query string
-  Future<List<Guideline>> searchGuidelines({
-    required String query,
-    int page = 1,
-    int perPage = 30,
-    String? categoryFilter,
-    List<String>? tagFilters,
-    String? priorityFilter,
-    String? healthcareLevelFilter,
-    String? targetPopulationFilter,
-    String? indexItemFilter,
-  }) async {
-    final List<String> filters = [];
+  void showAllGuidelines() {
+    routeFilterType.value = GuidelineRouteFilterType.all;
 
-    // Index item filter (permanent filter when present)
-    if (indexItemFilter != null && indexItemFilter.isNotEmpty) {
-      filters.add('index_item = "$indexItemFilter"');
-    }
+    selectedIndex.value = null;
+    isInIndexMode.value = false;
 
-    // Base filter - only published guidelines
-    filters.add('is_published = true');
+    routeCategoryId.value = '';
+    routeCategoryIds.clear();
+    selectedCategoryId.value = '';
+    isInCategoryMode.value = false;
 
-    // Search in condition name, definition, and clinical features
-    if (query.isNotEmpty) {
-      filters.add(
-        '(condition_name ~ "$query" || definition ~ "$query" || clinical_features ~ "$query" || causes ~ "$query")',
-      );
-    }
+    selectedTagId.value = '';
+    isInTagMode.value = false;
 
-    // Category filter
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      filters.add('categories ~ "$categoryFilter"');
-    }
+    searchQuery.value = '';
+    selectedTagIds.clear();
+    selectedPriority.value = '';
+    selectedHealthcareLevel.value = '';
+    selectedTargetPopulation.value = '';
+    showHighPriorityOnly.value = false;
 
-    // Tag filters
-    if (tagFilters != null && tagFilters.isNotEmpty) {
-      final tagFilterString = tagFilters
-          .map((tag) => 'tags ~ "$tag"')
-          .join(' || ');
-      filters.add('($tagFilterString)');
-    }
+    pageTitle.value = 'All Guidelines';
 
-    // Priority filter
-    if (priorityFilter != null && priorityFilter.isNotEmpty) {
-      filters.add('priority = "$priorityFilter"');
-    }
-
-    // Healthcare level filter
-    if (healthcareLevelFilter != null && healthcareLevelFilter.isNotEmpty) {
-      filters.add('healthcare_level_required = "$healthcareLevelFilter"');
-    }
-
-    // Target population filter
-    if (targetPopulationFilter != null && targetPopulationFilter.isNotEmpty) {
-      filters.add('target_population ~ "$targetPopulationFilter"');
-    }
-
-    final filterString = filters.join(' && ');
-
-    final result = await BackendService.to.getRecordList(
-      collectionName: Guideline.collection,
-      page: page,
-      perPage: perPage,
-      filter: filterString,
-      sort: 'priority,condition_name',
-      expand: 'categories,tags,index_item',
-    );
-
-    return result.items.map((record) => Guideline.fromRecord(record)).toList();
+    _updateFilterState();
+    pagingController.refresh();
   }
 
-  /// Get all guideline categories
-  Future<List<GuidelineCategory>> getGuidelineCategories({
-    String? filter,
-    String? sort,
-  }) async {
-    final result = await BackendService.to.getRecordList(
+  // ==================== FILTER MODAL ====================
+  Future<void> showFilterModal(BuildContext context) async {
+    final fields = <FilterField>[
+      FilterField.text('search', 'search'.tr),
+      FilterField.boolean('showHighPriorityOnly', 'High Priority Only'),
+    ];
+
+    final values = <String, dynamic>{
+      if (searchQuery.value.isNotEmpty) 'search': searchQuery.value,
+      if (showHighPriorityOnly.value) 'showHighPriorityOnly': true,
+    };
+
+    if (!context.mounted) return;
+
+    final result = await GenericFilterBottomSheet.show(
+      context: context,
+      title: 'Filter Guidelines',
+      fields: fields,
+      initialValues: values,
+    );
+
+    if (result != null) {
+      _applyFilters(result);
+    }
+  }
+
+  void _applyFilters(FilterResult result) {
+    searchQuery.value = '';
+    showHighPriorityOnly.value = false;
+
+    final search = result.getValue<String>('search');
+    if (search != null && search.trim().isNotEmpty) {
+      searchQuery.value = search.trim();
+    }
+
+    final high = result.getValue<bool>('showHighPriorityOnly');
+    if (high == true) {
+      showHighPriorityOnly.value = true;
+    }
+
+    _updateFilterState();
+    pagingController.refresh();
+  }
+
+  // ==================== FILTER OPTIONS ====================
+  Future<void> _loadFilterOptions() async {
+    try {
+      isLoadingFilters.value = true;
+
+      final categories = await getGuidelineCategories();
+      final tags = await getGuidelineTags();
+
+      availableCategories.assignAll(categories);
+      availableTags.assignAll(tags);
+    } finally {
+      isLoadingFilters.value = false;
+    }
+  }
+
+  Future<List<GuidelineCategory>> getGuidelineCategories() async {
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: GuidelineCategory.collection,
-      filter: filter ?? 'status = "active"',
-      sort: sort ?? 'sort_order,name',
-      expand: 'parent_category',
+      perPage: 100,
+      filter: 'status="active"',
+      sort: 'sort_order,name',
     );
-    return result.items
-        .map((record) => GuidelineCategory.fromRecord(record))
-        .toList();
+
+    return result.items.map((e) => GuidelineCategory.fromRecord(e)).toList();
   }
 
-  /// Get all guideline tags
-  Future<List<GuidelineTag>> getGuidelineTags({
-    String? filter,
-    String? sort,
-  }) async {
-    final result = await BackendService.to.getRecordList(
+  Future<List<GuidelineTag>> getGuidelineTags() async {
+    final result = await PocketBaseService.to.getRecordList(
       collectionName: GuidelineTag.collection,
-      filter: filter,
-      sort: sort ?? 'name',
+      perPage: 100,
+      sort: 'name',
     );
-    return result.items
-        .map((record) => GuidelineTag.fromRecord(record))
-        .toList();
+
+    return result.items.map((e) => GuidelineTag.fromRecord(e)).toList();
   }
 }

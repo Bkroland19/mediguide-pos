@@ -1,96 +1,115 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+
 import '../../data/models/models.dart';
-import '../../data/services/backend_service.dart';
+import '../../data/services/pocketbase_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 
 class NotificationsController extends GetxController {
-  // Pagination controller
   late final PagingController<int, MyNotification> pagingController;
 
-  // Search and filter state
   final RxString searchQuery = ''.obs;
   final RxBool hasActiveFilters = false.obs;
   final RxString selectedType = ''.obs;
   final RxString selectedPriority = ''.obs;
 
+  Timer? _debounce;
+
   @override
   void onInit() {
     super.onInit();
+
     pagingController = PagingController<int, MyNotification>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
 
-    // Listen to search changes
-    searchQuery.listen((_) => _refreshData());
-    selectedType.listen((_) => _refreshData());
-    selectedPriority.listen((_) => _refreshData());
+    ever(searchQuery, (_) => _onFilterChanged());
+    ever(selectedType, (_) => _onFilterChanged());
+    ever(selectedPriority, (_) => _onFilterChanged());
   }
 
   @override
   void onClose() {
+    _debounce?.cancel();
     pagingController.dispose();
     super.onClose();
   }
 
-  /// Load page of notifications
+  // =========================
+  // DATA LOADING
+  // =========================
+
   Future<List<MyNotification>> _loadPage(int pageKey) async {
     try {
-      final currentUserId = AuthService.to.currentUser.value?.id;
-      String filter = '';
+      final filter = _buildFilter();
 
-      // Build filter for user-specific + general notifications
-      if (currentUserId != null) {
-        filter = 'user_id = "" || user_id = "$currentUserId"';
-      } else {
-        filter = 'user_id = ""';
-      }
-
-      // Add search filter
-      if (searchQuery.value.isNotEmpty) {
-        filter +=
-            ' && (title ~ "${searchQuery.value}" || message ~ "${searchQuery.value}")';
-      }
-
-      // Add type filter
-      if (selectedType.value.isNotEmpty) {
-        filter += ' && type = "${selectedType.value}"';
-      }
-
-      // Add priority filter
-      if (selectedPriority.value.isNotEmpty) {
-        filter += ' && priority = "${selectedPriority.value}"';
-      }
-
-      final result = await BackendService.to.getRecordList(
+      final result = await PocketBaseService.to.getRecordList(
         collectionName: 'notifications',
         page: pageKey,
         perPage: pageSize,
-        filter: filter,
+        filter: filter.isEmpty ? null : filter,
         sort: '-created',
       );
 
-      final notifications = result.items
-          .map((record) => MyNotification.fromRecord(record))
-          .toList();
-      return notifications;
-    } catch (error) {
-      Common.quickToast(title: 'Error loading notifications');
+      return result.items.map((r) => MyNotification.fromRecord(r)).toList();
+    } catch (e) {
+      Common.quickToast(
+        title: 'Error loading notifications',
+        description: e.toString(),
+      );
       rethrow;
     }
   }
 
-  /// Refresh data
-  void _refreshData() {
-    _updateFilterState();
-    pagingController.refresh();
+  // =========================
+  // FILTER BUILDER
+  // =========================
+
+  String _buildFilter() {
+    final filters = <String>[];
+
+    final userId = AuthService.to.currentUser.value?.id;
+
+    if (userId != null) {
+      filters.add('(user_id = "" || user_id = "$userId")');
+    } else {
+      filters.add('user_id = ""');
+    }
+
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value;
+      filters.add('(title ~ "$q" || message ~ "$q")');
+    }
+
+    if (selectedType.value.isNotEmpty) {
+      filters.add('type = "${selectedType.value}"');
+    }
+
+    if (selectedPriority.value.isNotEmpty) {
+      filters.add('priority = "${selectedPriority.value}"');
+    }
+
+    return filters.join(' && ');
   }
 
-  /// Update filter state
+  // =========================
+  // FILTER HANDLING
+  // =========================
+
+  void _onFilterChanged() {
+    _updateFilterState();
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      pagingController.refresh();
+    });
+  }
+
   void _updateFilterState() {
     hasActiveFilters.value =
         searchQuery.value.isNotEmpty ||
@@ -98,19 +117,16 @@ class NotificationsController extends GetxController {
         selectedPriority.value.isNotEmpty;
   }
 
-  /// Clear all filters
   void clearAllFilters() {
     searchQuery.value = '';
     selectedType.value = '';
     selectedPriority.value = '';
   }
 
-  /// Set type filter
   void setTypeFilter(String type) {
     selectedType.value = type;
   }
 
-  /// Set priority filter
   void setPriorityFilter(String priority) {
     selectedPriority.value = priority;
   }

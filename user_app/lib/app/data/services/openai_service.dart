@@ -49,27 +49,19 @@ State clearly when more clinical judgment or urgent in-person care is needed.
 
       // Build conversation messages
       final messages = <ChatCompletionMessage>[
-        ChatCompletionMessage.system(
-          content: customInstructions ?? _defaultInstructions,
-        ),
-
+        ChatCompletionMessage.system(content: customInstructions ?? _defaultInstructions),
+        
         // Add conversation history if provided
         if (conversationHistory != null)
           ...conversationHistory.asMap().entries.map((entry) {
             final isUser = entry.key % 2 == 0;
-            return isUser
-                ? ChatCompletionMessage.user(
-                    content: ChatCompletionUserMessageContent.string(
-                      entry.value,
-                    ),
-                  )
-                : ChatCompletionMessage.assistant(content: entry.value);
+            return isUser 
+              ? ChatCompletionMessage.user(content: ChatCompletionUserMessageContent.string(entry.value))
+              : ChatCompletionMessage.assistant(content: entry.value);
           }),
-
+        
         // Add current user message
-        ChatCompletionMessage.user(
-          content: ChatCompletionUserMessageContent.string(userMessage),
-        ),
+        ChatCompletionMessage.user(content: ChatCompletionUserMessageContent.string(userMessage)),
       ];
 
       final response = await _client!.createChatCompletion(
@@ -97,11 +89,12 @@ State clearly when more clinical judgment or urgent in-person care is needed.
     }
   }
 
+
   /// Get fallback response when AI service fails
   String _getFallbackResponse(String userMessage) {
     final lowerMessage = userMessage.toLowerCase();
     final notConfigured = !isConfigured;
-
+    
     if (lowerMessage.contains('emergency') || lowerMessage.contains('urgent')) {
       return '''
 🚨 **MEDICAL EMERGENCY**
@@ -120,7 +113,7 @@ MediGuide AI is currently ${notConfigured ? 'not configured for this build' : 'u
 **Disclaimer**: This is not a substitute for emergency medical care.
 ''';
     }
-
+    
     if (lowerMessage.contains('drug') || lowerMessage.contains('medicine')) {
       return '''
 💊 **Drug Information**
@@ -135,9 +128,8 @@ MediGuide AI is temporarily ${notConfigured ? 'not configured in this environmen
 Navigate to the Drug Index section or consult with our medical experts.
 ''';
     }
-
-    if (lowerMessage.contains('guideline') ||
-        lowerMessage.contains('protocol')) {
+    
+    if (lowerMessage.contains('guideline') || lowerMessage.contains('protocol')) {
       return '''
 📋 **Clinical Guidelines**
 
@@ -151,8 +143,8 @@ MediGuide AI is temporarily ${notConfigured ? 'not configured in this environmen
 Navigate to the Guidelines section for comprehensive protocols.
 ''';
     }
-
-    return '''
+    
+      return '''
 🤖 **MediGuide AI ${notConfigured ? 'Not Configured' : 'Temporarily Unavailable'}**
 
 ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI assistant is disabled.' : 'The AI assistant is currently experiencing difficulties.'}
@@ -172,7 +164,7 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
   /// Get contextual suggestions based on user query
   List<String> getContextualSuggestions(String userMessage) {
     final lowerMessage = userMessage.toLowerCase();
-
+    
     if (lowerMessage.contains('drug') || lowerMessage.contains('medicine')) {
       return [
         'Check drug interactions',
@@ -181,9 +173,8 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Calculate pediatric doses',
       ];
     }
-
-    if (lowerMessage.contains('guideline') ||
-        lowerMessage.contains('protocol')) {
+    
+    if (lowerMessage.contains('guideline') || lowerMessage.contains('protocol')) {
       return [
         'Search treatment guidelines',
         'View emergency protocols',
@@ -191,7 +182,7 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Check latest updates',
       ];
     }
-
+    
     if (lowerMessage.contains('calculator') || lowerMessage.contains('tool')) {
       return [
         'BMI calculator',
@@ -200,7 +191,7 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Clinical checklists',
       ];
     }
-
+    
     return [
       'Search medical guidelines',
       'Check drug information',
@@ -208,4 +199,5 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
       'Consult with experts',
     ];
   }
+
 }

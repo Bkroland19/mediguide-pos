@@ -14,7 +14,7 @@ class CopyrightTermsWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '© ${DateTime.now().year} By Gother Technologies(U) Ltd',
+          '© ${DateTime.now().year} By MoH - Ministry of Health, Uganda. All rights reserved.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

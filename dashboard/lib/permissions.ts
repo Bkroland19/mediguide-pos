@@ -402,6 +402,22 @@ export class PermissionService {
 // Global permission service instance
 export const permissionService = new PermissionService()
 
+function permissionGrantsToRolePermissions(grants: PermissionGrant[]): RolePermissions {
+  const permissions: RolePermissions = {}
+
+  for (const grant of grants) {
+    if (!permissions[grant.resource]) {
+      permissions[grant.resource] = {}
+    }
+
+    permissions[grant.resource][grant.action] = Array.isArray(grant.attributes)
+      ? grant.attributes
+      : [grant.attributes]
+  }
+
+  return permissions
+}
+
 /**
  * Utility Functions
  */
@@ -410,16 +426,38 @@ export const permissionService = new PermissionService()
  * Convert database permissions JSON to RolePermissions format
  */
 export function parsePermissionsFromDatabase(permissionsJson: unknown): RolePermissions {
-  if (!permissionsJson || typeof permissionsJson !== 'object') {
+  if (!permissionsJson) {
     return {}
   }
 
   try {
+    if (typeof permissionsJson === 'string') {
+      const parsed = JSON.parse(permissionsJson)
+      return parsed && typeof parsed === 'object' ? parsed as RolePermissions : {}
+    }
+
+    if (Array.isArray(permissionsJson)) {
+      return permissionGrantsToRolePermissions(permissionsJson as PermissionGrant[])
+    }
+
+    if (typeof permissionsJson !== 'object') {
+      return {}
+    }
+
     return permissionsJson as RolePermissions
   } catch (error) {
     console.error('Failed to parse permissions from database:', error)
     return {}
   }
+}
+
+export function getTemplatePermissions(roleKey: string): RolePermissions {
+  const template = PERMISSION_TEMPLATES[roleKey]
+  if (!template) {
+    return {}
+  }
+
+  return permissionGrantsToRolePermissions(template)
 }
 
 /**

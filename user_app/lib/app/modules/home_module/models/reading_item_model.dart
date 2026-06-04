@@ -96,7 +96,7 @@ class ReadingItemModel {
   String get timeSinceLastRead {
     final now = DateTime.now();
     final difference = now.difference(lastReadAt);
-
+    
     if (difference.inDays > 0) {
       return '${difference.inDays} days ago';
     } else if (difference.inHours > 0) {
@@ -143,7 +143,7 @@ enum ReadingItemType {
   protocol(label: 'Protocol', icon: '⚕️');
 
   const ReadingItemType({required this.label, required this.icon});
-
+  
   final String label;
   final String icon;
 }
