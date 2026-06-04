@@ -5,19 +5,20 @@ import 'base_model.dart';
 /// Therapeutic category model based on PocketBase therapeutic_categories collection
 class TherapeuticCategory extends BaseModel {
   TherapeuticCategory(super.data);
-  
+
   /// PocketBase collection name
   static const String collection = 'therapeutic_categories';
-  
+
   // Self-registration for dynamic model creation
   static final _registered = (() {
     BaseModel.registerModel(collection, (data) => TherapeuticCategory(data));
     return true;
   })();
-  
+
   /// Create TherapeuticCategory from PocketBase record
-  static TherapeuticCategory fromRecord(RecordModel record) => TherapeuticCategory(record.data);
-  
+  static TherapeuticCategory fromRecord(RecordModel record) =>
+      TherapeuticCategory(record.data);
+
   /// Create JSON for new therapeutic category record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -29,21 +30,22 @@ class TherapeuticCategory extends BaseModel {
   }) {
     return {
       'name': name,
-      if (description != null) 'description': description,
-      if (color != null) 'color': color,
-      if (icon != null) 'icon': icon,
-      if (sortOrder != null) 'sort_order': sortOrder,
+      'description': ?description,
+      'color': ?color,
+      'icon': ?icon,
+      'sort_order': ?sortOrder,
       'status': (status ?? Status.active).name,
     };
   }
-  
+
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String description = get<String>("description", "");
   late final String color = get<String>("color", "");
   late final String icon = get<String>("icon", "");
   late final double sortOrder = get<double>("sort_order", 0);
-  
+
   // Enum properties
-  late final Status status = getEnum<Status>("status", Status.values) ?? Status.active;
+  late final Status status =
+      getEnum<Status>("status", Status.values) ?? Status.active;
 }

@@ -5,36 +5,34 @@ import 'ownership_type.dart';
 /// Authority model based on PocketBase authorities collection
 class Authority extends BaseModel {
   Authority(super.data);
-  
+
   /// PocketBase collection name
   static const String collection = 'authorities';
-  
+
   // Self-registration for dynamic model creation
   static final _registered = (() {
     BaseModel.registerModel(collection, (data) => Authority(data));
     return true;
   })();
-  
+
   /// Create Authority from PocketBase record
   static Authority fromRecord(RecordModel record) => Authority(record.data);
-  
+
   /// Create JSON for new authority record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
     String? code,
     required String ownershipTypeId,
   }) {
-    return {
-      'name': name,
-      if (code != null) 'code': code,
-      'ownership_type': ownershipTypeId,
-    };
+    return {'name': name, 'code': ?code, 'ownership_type': ownershipTypeId};
   }
-  
+
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String code = get<String>("code", "");
-  
+
   // Relationship properties
-  late final OwnershipType? ownershipType = getRelation<OwnershipType>("ownership_type");
+  late final OwnershipType? ownershipType = getRelation<OwnershipType>(
+    "ownership_type",
+  );
 }

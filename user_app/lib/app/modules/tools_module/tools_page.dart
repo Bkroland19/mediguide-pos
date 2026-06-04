@@ -5,7 +5,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/models/models.dart';
 import '../../routes/app_pages.dart';
-import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../widgets/filter_button.dart';
 import '../../widgets/pagination_indicators.dart';

@@ -4,32 +4,29 @@ import 'base_model.dart';
 /// Facility level model based on PocketBase facility_levels collection
 class FacilityLevel extends BaseModel {
   FacilityLevel(super.data);
-  
+
   /// PocketBase collection name
   static const String collection = 'facility_levels';
-  
+
   // Self-registration for dynamic model creation
   static final _registered = (() {
     BaseModel.registerModel(collection, (data) => FacilityLevel(data));
     return true;
   })();
-  
+
   /// Create FacilityLevel from PocketBase record
-  static FacilityLevel fromRecord(RecordModel record) => FacilityLevel(record.data);
-  
+  static FacilityLevel fromRecord(RecordModel record) =>
+      FacilityLevel(record.data);
+
   /// Create JSON for new facility level record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
     String? description,
     int? level,
   }) {
-    return {
-      'name': name,
-      if (description != null) 'description': description,
-      if (level != null) 'level': level,
-    };
+    return {'name': name, 'description': ?description, 'level': ?level};
   }
-  
+
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String description = get<String>("description", "");

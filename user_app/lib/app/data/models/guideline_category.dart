@@ -5,19 +5,20 @@ import 'base_model.dart';
 /// Guideline category model based on PocketBase guideline_categories collection
 class GuidelineCategory extends BaseModel {
   GuidelineCategory(super.data);
-  
+
   /// PocketBase collection name
   static const String collection = 'guideline_categories';
-  
+
   // Self-registration for dynamic model creation
   static final _registered = (() {
     BaseModel.registerModel(collection, (data) => GuidelineCategory(data));
     return true;
   })();
-  
+
   /// Create GuidelineCategory from PocketBase record
-  static GuidelineCategory fromRecord(RecordModel record) => GuidelineCategory(record.data);
-  
+  static GuidelineCategory fromRecord(RecordModel record) =>
+      GuidelineCategory(record.data);
+
   /// Create JSON for new guideline category record (excludes system fields)
   static Map<String, dynamic> forCreate({
     required String name,
@@ -31,16 +32,16 @@ class GuidelineCategory extends BaseModel {
   }) {
     return {
       'name': name,
-      if (slug != null) 'slug': slug,
-      if (description != null) 'description': description,
-      if (sortOrder != null) 'sort_order': sortOrder,
+      'slug': ?slug,
+      'description': ?description,
+      'sort_order': ?sortOrder,
       'status': (status ?? Status.active).name,
-      if (color != null) 'color': color,
-      if (icon != null) 'icon': icon,
-      if (parentCategoryId != null) 'parent_category': parentCategoryId,
+      'color': ?color,
+      'icon': ?icon,
+      'parent_category': ?parentCategoryId,
     };
   }
-  
+
   // Direct properties - late final for performance
   late final String name = get<String>("name", "");
   late final String slug = get<String>("slug", "");
@@ -49,26 +50,27 @@ class GuidelineCategory extends BaseModel {
   late final String color = get<String>("color", "");
   late final String icon = get<String>("icon", "");
   late final String parentCategoryId = get<String>("parent_category", "");
-  
+
   // Enum properties
-  late final Status status = getEnum<Status>("status", Status.values) ?? Status.active;
-  
+  late final Status status =
+      getEnum<Status>("status", Status.values) ?? Status.active;
+
   // Relationship properties
   late final GuidelineCategory? parentCategory = _getParentCategory();
-  
+
   /// Get parent category from expanded data
   GuidelineCategory? _getParentCategory() {
     final parentData = get<Map<String, dynamic>>("expand.parent_category");
     if (parentData.isEmpty) return null;
     return GuidelineCategory.fromRecord(RecordModel(parentData));
   }
-  
+
   /// Check if this category has a parent
   bool get hasParent => parentCategoryId.isNotEmpty;
-  
+
   /// Check if this category is active
   bool get isActive => status == Status.active;
-  
+
   /// Get display name (falls back to slug if name is empty)
   String get displayName => name.isNotEmpty ? name : slug;
 }

@@ -99,12 +99,12 @@ class ReadGuidelinePage extends GetWidget<ReadGuidelineController> {
     }
 
     final guideline = controller.guideline.value!;
-    
+
     // Build guideline data map from available sections
     final guidelineData = <String, dynamic>{};
     for (final section in controller.availableSections) {
       final content = controller.getSectionContent(section);
-      if (content != null && content.isNotEmpty) {
+      if (content.isNotEmpty) {
         guidelineData[section.label] = content;
       }
     }

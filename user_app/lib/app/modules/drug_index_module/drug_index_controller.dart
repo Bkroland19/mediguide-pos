@@ -144,35 +144,23 @@ class DrugIndexController extends GetxController {
 
     if (selectedCategories.isNotEmpty) {
       parts.add(
-        '(' +
-            selectedCategories.map((e) => 'categories ~ "$e"').join(' || ') +
-            ')',
+        '(${selectedCategories.map((e) => 'categories ~ "$e"').join(' || ')})',
       );
     }
 
     if (selectedTags.isNotEmpty) {
-      parts.add(
-        '(' + selectedTags.map((e) => 'tags ~ "$e"').join(' || ') + ')',
-      );
+      parts.add('(${selectedTags.map((e) => 'tags ~ "$e"').join(' || ')})');
     }
 
     if (selectedRoutes.isNotEmpty) {
       parts.add(
-        '(' +
-            selectedRoutes
-                .map((e) => 'route_of_administration ~ "$e"')
-                .join(' || ') +
-            ')',
+        '(${selectedRoutes.map((e) => 'route_of_administration ~ "$e"').join(' || ')})',
       );
     }
 
     if (selectedPregnancyCategories.isNotEmpty) {
       parts.add(
-        '(' +
-            selectedPregnancyCategories
-                .map((e) => 'pregnancy_category ~ "$e"')
-                .join(' || ') +
-            ')',
+        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "$e"').join(' || ')})',
       );
     }
 

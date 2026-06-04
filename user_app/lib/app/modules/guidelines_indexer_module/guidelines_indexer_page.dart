@@ -6,7 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/data/models/guideline_index.dart';
 import 'package:user_app/app/utils/app_spacing.dart';
 import 'package:user_app/app/widgets/empty_state.dart';
-import 'package:user_app/app/widgets/filter_button.dart';
 
 import 'guidelines_indexer_controller.dart';
 import 'widgets/guideline_tree_tile.dart';
