@@ -1,5 +1,4 @@
 *.md
 backend/.env
 backend/.env.local
-guidelines
 .DS_Store
