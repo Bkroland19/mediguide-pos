@@ -340,7 +340,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 	"health_facilities": {
 		Table:        "health_facilities hf",
 		IDColumn:     "hf.id",
-		Select:       "hf.*, fl.name AS facility_level_name, a.name AS authority_name, ot.name AS ownership_type_name, d.name AS district_name, r.name AS region_name",
+		Select:       "hf.*, fl.name AS facility_level_name, a.name AS authority_name, ot.name AS ownership_type_name, d.name AS district_name, r.name AS region_name, c.name AS county_name, sc.name AS subcounty_name, p.name AS parish_name, hsd.name AS health_sub_district_name",
 		DefaultOrder: "hf.name ASC",
 		SearchColumns: []string{
 			"hf.name", "hf.nhpi_code", "hf.hsdt_code", "coalesce(d.name, '')", "coalesce(r.name, '')",
@@ -349,6 +349,7 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			"region_id":         "hf.region_id::text",
 			"district_id":       "hf.district_id::text",
 			"facility_level_id": "hf.facility_level_id::text",
+			"ownership_type_id": "hf.ownership_type_id::text",
 			"authority_id":      "hf.authority_id::text",
 		},
 		Access: legacyAccessPublic,
@@ -356,6 +357,10 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			"LEFT JOIN facility_levels fl ON fl.id = hf.facility_level_id",
 			"LEFT JOIN authorities a ON a.id = hf.authority_id",
 			"LEFT JOIN ownership_types ot ON ot.id = hf.ownership_type_id",
+			"LEFT JOIN health_sub_districts hsd ON hsd.id = hf.health_sub_district_id",
+			"LEFT JOIN parishes p ON p.id = hf.parish_id",
+			"LEFT JOIN subcounties sc ON sc.id = hf.subcounty_id",
+			"LEFT JOIN counties c ON c.id = hf.county_id",
 			"LEFT JOIN districts d ON d.id = hf.district_id",
 			"LEFT JOIN regions r ON r.id = hf.region_id",
 		},

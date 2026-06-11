@@ -22,12 +22,10 @@ type LegacyAPIHandler struct {
 // @Description Legacy v1 endpoint that groups consultants by region, city, then specialty.
 // @Tags legacy-v1
 // @Produce json
-// @Security BearerAuth
 // @Param level query int false "Tree level" minimum(0) maximum(2)
 // @Param filters query string false "JSON encoded filters"
 // @Param context query string false "Optional JSON context"
 // @Success 200 {object} handlers.LegacyTreeResult
-// @Failure 401 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v1/consultants/tree [get]
 func (h LegacyAPIHandler) ConsultantsTree(c *gin.Context) {
@@ -45,12 +43,10 @@ func (h LegacyAPIHandler) ConsultantsTree(c *gin.Context) {
 // @Description Legacy v1 endpoint that groups facilities by region, district, then facility level.
 // @Tags legacy-v1
 // @Produce json
-// @Security BearerAuth
 // @Param level query int false "Tree level" minimum(0) maximum(2)
 // @Param filters query string false "JSON encoded filters"
 // @Param context query string false "Optional JSON context"
 // @Success 200 {object} handlers.LegacyTreeResult
-// @Failure 401 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v1/health-facilities/tree [get]
 func (h LegacyAPIHandler) HealthFacilitiesTree(c *gin.Context) {
@@ -68,12 +64,10 @@ func (h LegacyAPIHandler) HealthFacilitiesTree(c *gin.Context) {
 // @Description Legacy v1 endpoint that groups ministry directory contacts by region, district, then ministry.
 // @Tags legacy-v1
 // @Produce json
-// @Security BearerAuth
 // @Param level query int false "Tree level" minimum(0) maximum(2)
 // @Param filters query string false "JSON encoded filters"
 // @Param context query string false "Optional JSON context"
 // @Success 200 {object} handlers.LegacyTreeResult
-// @Failure 401 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v1/ministry-directory/tree [get]
 func (h LegacyAPIHandler) MinistryDirectoryTree(c *gin.Context) {

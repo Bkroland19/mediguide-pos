@@ -50,6 +50,7 @@ services:
       APP_NAME: mediguide-backend
       APP_ENV: development
       HTTP_PORT: 8080
+      AUTO_SEED: "false"
       STATIC_SAMPLES_DIR: /app/dashboard/samples
       DATABASE_URL: postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable
       JWT_SECRET: change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u

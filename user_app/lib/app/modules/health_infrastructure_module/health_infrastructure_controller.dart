@@ -42,6 +42,7 @@ class HealthInfrastructureController extends GetxController {
     );
 
     _loadFilterOptions();
+    _updateActiveFilters();
   }
 
   @override
@@ -57,13 +58,10 @@ class HealthInfrastructureController extends GetxController {
 
     if (args is Map && args['treeFilters'] is Map) {
       treeFilters.assignAll(Map<String, dynamic>.from(args['treeFilters']));
-
-      _filters
-        ..regionId = treeFilters['region']?.toString() ?? ''
-        ..districtId = treeFilters['district']?.toString() ?? ''
-        ..facilityLevelId = treeFilters['facility_level']?.toString() ?? ''
-        ..ownershipTypeId = treeFilters['ownership_type']?.toString() ?? '';
+      _updateFromTreeFilters(treeFilters);
     }
+
+    _updateActiveFilters();
   }
 
   // ==================== PAGINATION ====================
@@ -76,7 +74,8 @@ class HealthInfrastructureController extends GetxController {
         perPage: pageSize,
         filter: _buildFilter(),
         sort: 'name',
-        expand: 'region,district,facility_level,ownership_type',
+        expand:
+            'region,district,county,subcounty,parish,facility_level,ownership_type,authority,health_sub_district',
       );
 
       return result.items.map((r) => HealthFacility.fromRecord(r)).toList();
@@ -90,8 +89,6 @@ class HealthInfrastructureController extends GetxController {
 
   String _buildFilter() {
     final f = <String>[];
-
-    f.add('is_active = true');
 
     if (_filters.query.isNotEmpty) {
       final q = _filters.query;
@@ -121,6 +118,7 @@ class HealthInfrastructureController extends GetxController {
 
   void search(String value) {
     _filters.query = value.trim();
+    _updateActiveFilters();
     _refresh();
   }
 
@@ -128,6 +126,7 @@ class HealthInfrastructureController extends GetxController {
     _filters.reset();
     treeFilters.clear();
     availableDistricts.clear();
+    _updateActiveFilters();
     _refresh();
   }
 
@@ -182,8 +181,11 @@ class HealthInfrastructureController extends GetxController {
 
     if (_filters.regionId.isNotEmpty) {
       _loadDistricts(_filters.regionId);
+    } else {
+      availableDistricts.clear();
     }
 
+    _updateActiveFilters();
     _refresh();
   }
 
@@ -212,6 +214,10 @@ class HealthInfrastructureController extends GetxController {
       availableOwnershipTypes.assignAll(
         ownership.items.map((e) => OwnershipType.fromRecord(e)),
       );
+
+      if (_filters.regionId.isNotEmpty) {
+        await _loadDistricts(_filters.regionId);
+      }
     } finally {
       isLoadingFilters.value = false;
     }
@@ -230,7 +236,7 @@ class HealthInfrastructureController extends GetxController {
   Future<void> _loadDistricts(String regionId) async {
     final districts = await PocketBaseService.to.getRecordList(
       collectionName: 'districts',
-      filter: 'region = "$regionId"',
+      filter: 'region_id = "$regionId"',
       sort: 'name',
     );
 
@@ -263,6 +269,12 @@ class HealthInfrastructureController extends GetxController {
       ..districtId = filters['district']?.toString() ?? ''
       ..facilityLevelId = filters['facility_level']?.toString() ?? ''
       ..ownershipTypeId = filters['ownership_type']?.toString() ?? '';
+
+    _updateActiveFilters();
+  }
+
+  void _updateActiveFilters() {
+    hasActiveFilters.value = _filters.isActive;
   }
 }
 

@@ -28,6 +28,7 @@ help:
 		"  migrate-down     Roll back backend migrations" \
 		"  migrate-status   Show backend migration status" \
 		"  seed             Seed backend data" \
+		"  importpb         Import PocketBase SQLite data into backend Postgres" \
 		"  ai-test          Run ai-worker tests" \
 		"  ai-api           Run ai-worker FastAPI locally" \
 		"  ai-worker        Run ai-worker loop locally"
@@ -94,6 +95,10 @@ migrate-status:
 .PHONY: seed
 seed:
 	$(MAKE) -C $(BACKEND_DIR) seed
+
+.PHONY: importpb
+importpb:
+	$(MAKE) -C $(BACKEND_DIR) importpb
 
 .PHONY: ai-test
 ai-test: ai-deps
