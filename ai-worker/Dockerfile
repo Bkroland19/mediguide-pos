@@ -5,21 +5,34 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=0
+    PIP_NO_CACHE_DIR=0 \
+    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=10 \
+    PIP_RESUME_RETRIES=10
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    ca-certificates \
     libgl1 \
     libglib2.0-0 \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+
+RUN python -m pip install --upgrade pip setuptools wheel
+
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --retries 10 --timeout 300 --resume-retries 10 -r requirements.txt
+    pip install \
+    --retries 10 \
+    --timeout 300 \
+    --resume-retries 10 \
+    -r requirements.txt
 
 COPY app ./app
 COPY mediguide ./mediguide
