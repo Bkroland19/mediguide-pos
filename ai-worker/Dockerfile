@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+    pip install --retries 10 --timeout 300 --resume-retries 10 -r requirements.txt
 
 COPY app ./app
 COPY mediguide ./mediguide
