@@ -2,3 +2,4 @@
 backend/.env
 backend/.env.local
 .DS_Store
+guidelines-docs
