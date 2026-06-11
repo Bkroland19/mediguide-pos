@@ -21,139 +21,139 @@ class GenericViewerPage extends GetWidget<GenericViewerController> {
       () => controller.isLoading.value
           ? const Scaffold(body: CenteredLoading(loading: Loading.large()))
           : !controller.hasContent
-              ? Scaffold(
-                  appBar: AppBar(
-                    title: Text(
-                      controller.pageTitle,
-                      style: context.textTheme.titleMedium,
-                    ),
+          ? Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  controller.pageTitle,
+                  style: context.textTheme.titleMedium,
+                ),
+              ),
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(
+                    Responsive.horizontalPadding(context),
                   ),
-                  body: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: 64,
-                            color: context.theme.colorScheme.onSurfaceVariant,
-                          ),
-                          AppSpacing.lg.gap,
-                          Text(
-                            'No Content Available',
-                            style: context.textTheme.headlineSmall?.copyWith(
-                              color: context.theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          AppSpacing.md.gap,
-                          Text(
-                            'This page does not have any content to display.',
-                            style: context.textTheme.bodyMedium?.copyWith(
-                              color: context.theme.colorScheme.onSurfaceVariant,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.description_outlined,
+                        size: 64,
+                        color: context.theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
+                      AppSpacing.lg.gap,
+                      Text(
+                        'No Content Available',
+                        style: context.textTheme.headlineSmall?.copyWith(
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      AppSpacing.md.gap,
+                      Text(
+                        'This page does not have any content to display.',
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                )
-              : controller.isKeyValueContent
-                  ? DefaultTabController(
-                      length: controller.availableSections.length,
-                      child: Scaffold(
-                        appBar: AppBar(
-                          title: Text(
-                            controller.pageTitle,
-                            style: context.textTheme.titleMedium,
-                          ),
-                          actions: [
-                            AiContextButton.iconButton(
-                              context: _buildPageContext(),
-                            ),
-                            IconButton(
-                              onPressed: controller.sharePage,
-                              icon: const Icon(LucideIcons.share),
-                              tooltip: 'Share',
-                            ),
-                          ],
-                          bottom: TabBar(
-                            isScrollable: true,
-                            tabAlignment: TabAlignment.start,
-                            tabs: controller.availableSections
-                                .map((section) => Tab(text: section.title))
-                                .toList(),
-                            onTap: (index) {
-                              controller.navigateToSection(
-                                controller.availableSections[index],
-                              );
-                            },
-                          ),
+                ),
+              ),
+            )
+          : controller.isKeyValueContent
+          ? DefaultTabController(
+              length: controller.availableSections.length,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(
+                    controller.pageTitle,
+                    style: context.textTheme.titleMedium,
+                  ),
+                  actions: [
+                    AiContextButton.iconButton(context: _buildPageContext()),
+                    IconButton(
+                      onPressed: controller.sharePage,
+                      icon: const Icon(LucideIcons.share),
+                      tooltip: 'Share',
+                    ),
+                  ],
+                  bottom: TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    tabs: controller.availableSections
+                        .map((section) => Tab(text: section.title))
+                        .toList(),
+                    onTap: (index) {
+                      controller.navigateToSection(
+                        controller.availableSections[index],
+                      );
+                    },
+                  ),
+                ),
+                body: ListView(
+                  controller: controller.scrollController,
+                  padding: EdgeInsets.all(
+                    Responsive.horizontalPadding(context),
+                  ),
+                  children: [
+                    if (controller.page.value?.description != null) ...[
+                      Text(
+                        controller.page.value!.description!,
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          color: context.theme.colorScheme.onSurfaceVariant,
                         ),
-                        body: ListView(
-                          controller: controller.scrollController,
-                          padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-                          children: [
-                            if (controller.page.value?.description != null) ...[
-                              Text(
-                                controller.page.value!.description!,
-                                style: context.textTheme.bodyLarge?.copyWith(
-                                  color: context.theme.colorScheme.onSurfaceVariant,
-                                ),
-                                textAlign: TextAlign.justify,
-                              ),
-                              AppSpacing.lg.gap,
-                            ],
-                            ...controller.availableSections.map(
-                              (section) => GenericPageSectionWidget(
-                                key: controller.getSectionKey(section),
-                                section: section,
-                              ),
-                            ),
-                            AppSpacing.xxl.gap,
-                          ],
-                        ),
+                        textAlign: TextAlign.justify,
                       ),
-                    )
-                  : Scaffold(
-                      appBar: AppBar(
-                        title: Text(
-                          controller.pageTitle,
-                          style: context.textTheme.titleMedium,
-                        ),
-                        actions: [
-                          AiContextButton.iconButton(
-                            context: _buildPageContext(),
-                          ),
-                          IconButton(
-                            onPressed: controller.sharePage,
-                            icon: const Icon(LucideIcons.share),
-                            tooltip: 'Share',
-                          ),
-                        ],
-                      ),
-                      body: ListView(
-                        padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-                        children: [
-                          if (controller.page.value?.description != null) ...[
-                            Text(
-                              controller.page.value!.description!,
-                              style: context.textTheme.bodyLarge?.copyWith(
-                                color: context.theme.colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.justify,
-                            ),
-                            AppSpacing.lg.gap,
-                          ],
-                          Html(
-                            data: controller.stringContent,
-                            style: HtmlStyles.content(context),
-                          ),
-                          AppSpacing.xxl.gap,
-                        ],
+                      AppSpacing.lg.gap,
+                    ],
+                    ...controller.availableSections.map(
+                      (section) => GenericPageSectionWidget(
+                        key: controller.getSectionKey(section),
+                        section: section,
                       ),
                     ),
+                    AppSpacing.xxl.gap,
+                  ],
+                ),
+              ),
+            )
+          : Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  controller.pageTitle,
+                  style: context.textTheme.titleMedium,
+                ),
+                actions: [
+                  AiContextButton.iconButton(context: _buildPageContext()),
+                  IconButton(
+                    onPressed: controller.sharePage,
+                    icon: const Icon(LucideIcons.share),
+                    tooltip: 'Share',
+                  ),
+                ],
+              ),
+              body: ListView(
+                padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
+                children: [
+                  if (controller.page.value?.description != null) ...[
+                    Text(
+                      controller.page.value!.description!,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        color: context.theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.justify,
+                    ),
+                    AppSpacing.lg.gap,
+                  ],
+                  Html(
+                    data: controller.stringContent,
+                    style: HtmlStyles.content(context),
+                  ),
+                  AppSpacing.xxl.gap,
+                ],
+              ),
+            ),
     );
   }
 
@@ -167,9 +167,12 @@ class GenericViewerPage extends GetWidget<GenericViewerController> {
     }
 
     final page = controller.page.value!;
-    final content = controller.isKeyValueContent 
-        ? AiContextService.to.cleanHtmlContent(controller.availableSections.map((s) => 
-            '${s.title}: ${s.content}').join('\n\n'))
+    final content = controller.isKeyValueContent
+        ? AiContextService.to.cleanHtmlContent(
+            controller.availableSections
+                .map((s) => '${s.title}: ${s.content}')
+                .join('\n\n'),
+          )
         : AiContextService.to.cleanHtmlContent(controller.stringContent);
 
     return AiContextService.to.extractGenericPageContext(

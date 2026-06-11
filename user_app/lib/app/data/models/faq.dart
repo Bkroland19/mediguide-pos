@@ -48,15 +48,14 @@ class FAQ {
       isFeatured: json['is_featured'] ?? false,
       targetAudience: json['target_audience'] ?? 'all',
       keywords: json['keywords'] ?? '',
-      publishedAt: json['published_at'] != null && json['published_at'].isNotEmpty
+      publishedAt:
+          json['published_at'] != null && json['published_at'].isNotEmpty
           ? DateTime.tryParse(json['published_at'])
           : null,
       reviewDue: json['review_due'] != null && json['review_due'].isNotEmpty
           ? DateTime.tryParse(json['review_due'])
           : null,
-      tags: json['tags'] is List
-          ? List<String>.from(json['tags'])
-          : [],
+      tags: json['tags'] is List ? List<String>.from(json['tags']) : [],
       relatedFaqs: json['related_faqs'] is List
           ? List<String>.from(json['related_faqs'])
           : [],
@@ -98,7 +97,8 @@ class FAQ {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'FAQ{id: $id, question: $question, isFeatured: $isFeatured}';
+  String toString() =>
+      'FAQ{id: $id, question: $question, isFeatured: $isFeatured}';
 }
 
 /// FAQ Priority enum with enhanced enum features

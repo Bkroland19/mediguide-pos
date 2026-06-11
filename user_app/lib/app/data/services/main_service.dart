@@ -15,22 +15,22 @@ class MainService extends GetxService {
   static MainService get to => Get.find();
 
   final RxBool isCheckingForUpdate = false.obs;
-  
+
   // Connectivity properties
   final Connectivity _connectivity = Connectivity();
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
-  
+
   final RxBool isOnline = false.obs;
   final RxBool wasOffline = false.obs;
-  
+
   Future<MainService> init() async {
     // Initialize language settings
     await _initializeLanguage();
-    
+
     // Initialize connectivity monitoring
     await _initConnectivity();
     _startListening();
-    
+
     // Check for app updates on Android
     if (Platform.isAndroid) checkForUpdate(showToast: false);
     return this;
@@ -46,12 +46,14 @@ class MainService extends GetxService {
   Future<void> _initializeLanguage() async {
     try {
       // Load saved language from preferences
-      final savedLanguageCode = PreferenceUtils.getString(SharedPreferencesKeys.language, 'en');
-      
+      final savedLanguageCode = PreferenceUtils.getString(
+        SharedPreferencesKeys.language,
+        'en',
+      );
+
       // Set the initial GetX locale
       final locale = _getLocaleForCode(savedLanguageCode);
       Get.updateLocale(locale);
-      
     } catch (e) {
       // Fallback to English if something goes wrong
       Get.updateLocale(const Locale('en', 'US'));
@@ -69,28 +71,53 @@ class MainService extends GetxService {
 
   Future<void> checkForUpdate({bool showToast = true}) async {
     if (!Platform.isAndroid) {
-      if (showToast) Common.quickToast(type: ToastificationType.info, title: AppTranslationKey.update.tr, description: 'Updates are only supported on Android devices');
+      if (showToast) {
+        Common.quickToast(
+          type: ToastificationType.info,
+          title: AppTranslationKey.update.tr,
+          description: 'Updates are only supported on Android devices',
+        );
+      }
       return;
     }
 
     try {
       isCheckingForUpdate.value = true;
       final updateInfo = await InAppUpdate.checkForUpdate();
-      
+
       if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
         // Try flexible update first, fallback to immediate if needed
         try {
           await InAppUpdate.startFlexibleUpdate();
-          if (showToast) Common.quickToast(type: ToastificationType.success, title: AppTranslationKey.downloadingUpdate.tr, description: AppTranslationKey.updateDownloadingInBackground.tr);
+          if (showToast) {
+            Common.quickToast(
+              type: ToastificationType.success,
+              title: AppTranslationKey.downloadingUpdate.tr,
+              description: AppTranslationKey.updateDownloadingInBackground.tr,
+            );
+          }
         } catch (flexError) {
           // Fallback to immediate update
           await InAppUpdate.performImmediateUpdate();
         }
-      } else if (updateInfo.updateAvailability == UpdateAvailability.updateNotAvailable) {
-        if (showToast) Common.quickToast(type: ToastificationType.info, title: AppTranslationKey.upToDate.tr, description: AppTranslationKey.appIsUpToDate.tr);
+      } else if (updateInfo.updateAvailability ==
+          UpdateAvailability.updateNotAvailable) {
+        if (showToast) {
+          Common.quickToast(
+            type: ToastificationType.info,
+            title: AppTranslationKey.upToDate.tr,
+            description: AppTranslationKey.appIsUpToDate.tr,
+          );
+        }
       }
     } catch (e) {
-      if (showToast) Common.quickToast(type: ToastificationType.error, title: AppTranslationKey.error.tr, description: AppTranslationKey.failedToCheckForUpdates.tr);
+      if (showToast) {
+        Common.quickToast(
+          type: ToastificationType.error,
+          title: AppTranslationKey.error.tr,
+          description: AppTranslationKey.failedToCheckForUpdates.tr,
+        );
+      }
     } finally {
       isCheckingForUpdate.value = false;
     }
@@ -118,17 +145,19 @@ class MainService extends GetxService {
 
   /// Update connection status based on connectivity results
   void _updateConnectionStatus(List<ConnectivityResult> results) {
-    final hasConnection = results.any((result) =>
-        result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet);
+    final hasConnection = results.any(
+      (result) =>
+          result == ConnectivityResult.mobile ||
+          result == ConnectivityResult.wifi ||
+          result == ConnectivityResult.ethernet,
+    );
 
     if (!hasConnection && isOnline.value) {
       wasOffline.value = true;
     }
 
     isOnline.value = hasConnection;
-    
+
     if (hasConnection && wasOffline.value) {
       wasOffline.value = false;
     }
@@ -145,5 +174,4 @@ class MainService extends GetxService {
   void resetOfflineFlag() {
     wasOffline.value = false;
   }
-
 }

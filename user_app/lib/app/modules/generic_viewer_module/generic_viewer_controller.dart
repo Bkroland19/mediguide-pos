@@ -10,7 +10,8 @@ class GenericViewerController extends GetxController {
   final Rx<GenericPage?> page = Rx<GenericPage?>(null);
   final RxBool isLoading = true.obs;
   final RxString currentSection = ''.obs;
-  final RxList<GenericPageSection> availableSections = <GenericPageSection>[].obs;
+  final RxList<GenericPageSection> availableSections =
+      <GenericPageSection>[].obs;
 
   // Scroll controller for section navigation
   final ScrollController scrollController = ScrollController();
@@ -21,7 +22,7 @@ class GenericViewerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
+
     // Check if GenericPage model was passed as argument (preferred)
     final pageArgument = Get.arguments;
     if (pageArgument is GenericPage) {
@@ -30,7 +31,7 @@ class GenericViewerController extends GetxController {
       isLoading.value = false;
       return;
     }
-    
+
     // Fallback to loading by key for backward compatibility
     final pageKey = Get.parameters['key'] ?? pageArgument;
     if (pageKey != null) {
@@ -50,7 +51,7 @@ class GenericViewerController extends GetxController {
   Future<void> loadPage(String pageKey) async {
     try {
       isLoading.value = true;
-      
+
       final records = await PocketBaseService.to.getRecordList(
         collectionName: 'generic_pages',
         filter: 'key="$pageKey"',
@@ -91,7 +92,7 @@ class GenericViewerController extends GetxController {
   /// Navigate to a specific section (scroll to it)
   void navigateToSection(GenericPageSection section) {
     currentSection.value = section.key;
-    
+
     final key = sectionKeys[section.key];
     if (key?.currentContext != null) {
       Scrollable.ensureVisible(
@@ -128,7 +129,7 @@ class GenericViewerController extends GetxController {
   /// Share the current page
   void sharePage() {
     if (page.value == null) return;
-    
+
     Common.quickToast(
       title: 'Share feature',
       description: 'Sharing ${page.value!.title}...',

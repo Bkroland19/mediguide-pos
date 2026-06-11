@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:user_app/app/data/models/models.dart';
@@ -72,7 +73,7 @@ class AuthService extends GetxService {
       }
       return success;
     } catch (e) {
-      print('Error saving user: $e');
+      debugPrint('Error saving user: $e');
       return false;
     }
   }
@@ -89,7 +90,7 @@ class AuthService extends GetxService {
         }
       }
     } catch (e) {
-      print('Error loading user: $e');
+      debugPrint('Error loading user: $e');
       // Clear corrupted data
       await clearUser();
     }
@@ -106,7 +107,7 @@ class AuthService extends GetxService {
       }
       return success;
     } catch (e) {
-      print('Error clearing user: $e');
+      debugPrint('Error clearing user: $e');
       return false;
     }
   }
@@ -154,7 +155,7 @@ class AuthService extends GetxService {
         await authenticateWithBiometrics();
       }
     } catch (e) {
-      print('Error initializing biometrics: $e');
+      debugPrint('Error initializing biometrics: $e');
       isBiometricAvailable.value = false;
     }
   }
@@ -168,7 +169,7 @@ class AuthService extends GetxService {
       isBiometricAvailable.value = isAvailable && isDeviceSupported;
       return isBiometricAvailable.value;
     } catch (e) {
-      print('Error checking biometric availability: $e');
+      debugPrint('Error checking biometric availability: $e');
       return false;
     }
   }
@@ -178,7 +179,7 @@ class AuthService extends GetxService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      print('Error getting available biometrics: $e');
+      debugPrint('Error getting available biometrics: $e');
       return [];
     }
   }
@@ -204,7 +205,7 @@ class AuthService extends GetxService {
 
       return didAuthenticate;
     } catch (e) {
-      print('Error during biometric authentication: $e');
+      debugPrint('Error during biometric authentication: $e');
       return false;
     }
   }
@@ -227,7 +228,7 @@ class AuthService extends GetxService {
 
       return success;
     } catch (e) {
-      print('Error toggling biometric setting: $e');
+      debugPrint('Error toggling biometric setting: $e');
       return false;
     }
   }

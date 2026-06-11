@@ -47,7 +47,6 @@ Future<void> _initServices() async {
 
   // Initialize LanguageController for language management
   // Get.put<LanguageController>(LanguageController(), permanent: true);
-
 }
 
 class MyApp extends StatelessWidget {

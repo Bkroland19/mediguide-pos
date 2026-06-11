@@ -19,10 +19,6 @@ import 'login_controller.dart';
 class LoginPage extends GetWidget<LoginController> {
   const LoginPage({super.key});
 
-  static const String _brandTitle = 'MOH Uganda';
-  static const String _brandSubtitle =
-      'Secure access to Ministry of Health Uganda digital services';
-
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;

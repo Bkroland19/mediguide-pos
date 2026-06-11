@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
@@ -46,9 +47,9 @@ class UseCalculatorController extends GetxController {
   /// LOAD FILE (FIXED VERSION)
   /// ================================
   Future<void> loadCalculatorFile() async {
-    print('📁 Loading calculator: ${calculator?.name}');
-    print('📄 appFile from DB: ${calculator?.appFile}');
-    print('📄 recordId: ${calculator?.id}');
+    debugPrint('📁 Loading calculator: ${calculator?.name}');
+    debugPrint('📄 appFile from DB: ${calculator?.appFile}');
+    debugPrint('📄 recordId: ${calculator?.id}');
 
     if (calculator?.appFile == null || calculator!.appFile.isEmpty) {
       hasError.value = true;
@@ -77,7 +78,7 @@ class UseCalculatorController extends GetxController {
       );
       contentBaseUrl = _deriveContentBaseUrl(downloadUrl);
 
-      print('🔗 FINAL URL: $downloadUrl');
+      debugPrint('🔗 FINAL URL: $downloadUrl');
 
       String? cachedHtml;
       final cacheMetadata = await _readCacheMetadata(metadataFile);
@@ -93,7 +94,7 @@ class UseCalculatorController extends GetxController {
           if (_isCacheCurrent(cacheMetadata, downloadUrl)) {
             htmlContent = cachedHtml;
             errorMessage = null;
-            print('✅ Loaded current calculator file from cache');
+            debugPrint('✅ Loaded current calculator file from cache');
             _loadIntoWebViewIfReady();
             isLoading.value = false;
             return;
@@ -111,7 +112,7 @@ class UseCalculatorController extends GetxController {
       /// ================================
       final response = await http.get(Uri.parse(downloadUrl));
 
-      print('📡 HTTP STATUS: ${response.statusCode}');
+      debugPrint('📡 HTTP STATUS: ${response.statusCode}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to download file: ${response.statusCode}');
@@ -138,7 +139,7 @@ class UseCalculatorController extends GetxController {
       htmlContent = body;
       errorMessage = null;
 
-      print('✅ Downloaded and upserted calculator cache');
+      debugPrint('✅ Downloaded and upserted calculator cache');
 
       _loadIntoWebViewIfReady();
     } catch (e) {
@@ -153,7 +154,9 @@ class UseCalculatorController extends GetxController {
           htmlContent = cached;
           hasError.value = false;
           errorMessage = null;
-          print('⚠️ Download failed, loaded calculator from offline cache: $e');
+          debugPrint(
+            '⚠️ Download failed, loaded calculator from offline cache: $e',
+          );
           _loadIntoWebViewIfReady();
           return;
         }
@@ -161,7 +164,7 @@ class UseCalculatorController extends GetxController {
 
       hasError.value = true;
       errorMessage = 'Failed to load calculator: $e';
-      print('❌ ERROR: $e');
+      debugPrint('❌ ERROR: $e');
     } finally {
       isLoading.value = false;
     }
@@ -183,7 +186,7 @@ class UseCalculatorController extends GetxController {
       baseUrl: WebUri(contentBaseUrl ?? pocketbaseUrl),
     );
 
-    print('🌐 HTML loaded into WebView');
+    debugPrint('🌐 HTML loaded into WebView');
   }
 
   void refreshWebView() {
@@ -214,7 +217,7 @@ class UseCalculatorController extends GetxController {
 
       currentUsageLogId = record.id;
     } catch (e) {
-      print('⚠️ Usage tracking failed: $e');
+      debugPrint('⚠️ Usage tracking failed: $e');
     }
   }
 
@@ -233,7 +236,7 @@ class UseCalculatorController extends GetxController {
         data: CalculatorUsageLog.forSessionEnd(sessionEnd: end),
       );
     } catch (e) {
-      print('⚠️ End tracking failed: $e');
+      debugPrint('⚠️ End tracking failed: $e');
     }
   }
 
@@ -258,12 +261,12 @@ class UseCalculatorController extends GetxController {
 
   void onLoadStart(InAppWebViewController controller, WebUri? url) {
     isWebViewReady.value = false;
-    print('🌐 WebView start: $url');
+    debugPrint('🌐 WebView start: $url');
   }
 
   void onLoadStop(InAppWebViewController controller, WebUri? url) {
     isWebViewReady.value = true;
-    print('🌐 WebView stop: $url');
+    debugPrint('🌐 WebView stop: $url');
   }
 
   void onLoadError(
@@ -274,7 +277,7 @@ class UseCalculatorController extends GetxController {
   ) {
     hasError.value = true;
     errorMessage = message;
-    print('❌ WebView error [$code]: $message');
+    debugPrint('❌ WebView error [$code]: $message');
   }
 
   Future<Map<String, dynamic>?> _readCacheMetadata(File file) async {

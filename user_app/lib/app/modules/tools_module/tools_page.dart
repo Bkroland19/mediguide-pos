@@ -35,8 +35,6 @@ class ToolsPage extends GetWidget<ToolsController> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,

@@ -37,6 +37,7 @@ dependencies:
   lucide_icons_flutter: ^3.1.9
   path_provider: ^2.1.5
   http: ^1.1.0
+  intl: ^0.20.2
   flutter_form_builder: ^10.1.0
   form_builder_validators: ^11.2.0
   form_builder_phone_field: ^3.0.0

@@ -51,7 +51,7 @@ class LanguageController extends GetxController {
 
       return languages;
     } catch (e) {
-      print('Error fetching languages: $e');
+      debugPrint('Error fetching languages: $e');
       // Fallback to default English if database fails
       final defaultEnglish = LanguageModel(
         id: 'default_en',
@@ -83,7 +83,7 @@ class LanguageController extends GetxController {
       final Map<String, dynamic> jsonData = json.decode(cachedData);
       return Map<String, String>.from(jsonData);
     } catch (e) {
-      print('Error getting cached translations: $e');
+      debugPrint('Error getting cached translations: $e');
       return null;
     }
   }
@@ -108,7 +108,7 @@ class LanguageController extends GetxController {
         );
       }
     } catch (e) {
-      print('Error caching translations: $e');
+      debugPrint('Error caching translations: $e');
     }
   }
 
@@ -135,7 +135,7 @@ class LanguageController extends GetxController {
 
       return null;
     } catch (e) {
-      print('Error downloading translations: $e');
+      debugPrint('Error downloading translations: $e');
       return null;
     }
   }
@@ -167,7 +167,7 @@ class LanguageController extends GetxController {
 
       HapticFeedback.selectionClick();
     } catch (e) {
-      print('Error setting language: $e');
+      debugPrint('Error setting language: $e');
     }
   }
 

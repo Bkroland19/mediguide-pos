@@ -5,11 +5,11 @@ import '../../utils/responsive.dart';
 
 class TermsAndConditionsPage extends StatelessWidget {
   const TermsAndConditionsPage({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(AppTranslationKey.termsAndConditions),
@@ -52,7 +52,7 @@ class TermsAndConditionsPage extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
             ),
             AppSpacing.gapLg,
-            
+
             Divider(color: theme.colorScheme.outlineVariant),
             AppSpacing.gapLg,
 
@@ -69,7 +69,7 @@ class TermsAndConditionsPage extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
             ),
             AppSpacing.gapLg,
-            
+
             Divider(color: theme.colorScheme.outlineVariant),
             AppSpacing.gapLg,
 
@@ -92,18 +92,15 @@ class TermsAndConditionsPage extends StatelessWidget {
               '• Use the application only for legitimate medical purposes',
               '• Maintain patient confidentiality at all times',
               '• Report any bugs or security vulnerabilities immediately',
-              '• Comply with local medical practice regulations and standards'
+              '• Comply with local medical practice regulations and standards',
             ].map(
               (obligation) => Padding(
                 padding: const EdgeInsets.only(bottom: 4.0),
-                child: Text(
-                  obligation,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                child: Text(obligation, style: theme.textTheme.bodyMedium),
               ),
             ),
             AppSpacing.gapLg,
-            
+
             Divider(color: theme.colorScheme.outlineVariant),
             AppSpacing.gapLg,
 
@@ -132,18 +129,15 @@ class TermsAndConditionsPage extends StatelessWidget {
               '• Usage analytics to improve app performance and features',
               '• Error logs for debugging and troubleshooting',
               '• App preferences and settings',
-              '• Anonymous usage statistics for research purposes'
+              '• Anonymous usage statistics for research purposes',
             ].map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4.0),
-                child: Text(
-                  item,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                child: Text(item, style: theme.textTheme.bodyMedium),
               ),
             ),
             AppSpacing.gapLg,
-            
+
             Divider(color: theme.colorScheme.outlineVariant),
             AppSpacing.gapLg,
 

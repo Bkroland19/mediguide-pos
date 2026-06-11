@@ -9,15 +9,13 @@ import '../../../widgets/user_avatar.dart';
 class TicketReplyCard extends StatelessWidget {
   final SupportTicketReply reply;
 
-  const TicketReplyCard({
-    super.key,
-    required this.reply,
-  });
+  const TicketReplyCard({super.key, required this.reply});
 
   @override
   Widget build(BuildContext context) {
     final currentUser = AuthService.to.currentUser.value;
-    final isFromCurrentUser = currentUser != null && reply.isFromUser(currentUser.id);
+    final isFromCurrentUser =
+        currentUser != null && reply.isFromUser(currentUser.id);
     final isFromSupport = reply.isFromSupport;
 
     return Row(
@@ -27,8 +25,9 @@ class TicketReplyCard extends StatelessWidget {
         if (!isFromCurrentUser) ...[
           UserAvatar.small(
             name: reply.authorName,
-            avatarUrl: null, // TODO: Add avatar support for support ticket replies
-            backgroundColor: isFromSupport 
+            avatarUrl:
+                null, // TODO: Add avatar support for support ticket replies
+            backgroundColor: isFromSupport
                 ? context.theme.colorScheme.primary
                 : context.theme.colorScheme.secondary,
             textColor: isFromSupport
@@ -41,14 +40,14 @@ class TicketReplyCard extends StatelessWidget {
         // Message content
         Expanded(
           child: Column(
-            crossAxisAlignment: isFromCurrentUser 
-                ? CrossAxisAlignment.end 
+            crossAxisAlignment: isFromCurrentUser
+                ? CrossAxisAlignment.end
                 : CrossAxisAlignment.start,
             children: [
               // Author and timestamp
               Row(
-                mainAxisAlignment: isFromCurrentUser 
-                    ? MainAxisAlignment.end 
+                mainAxisAlignment: isFromCurrentUser
+                    ? MainAxisAlignment.end
                     : MainAxisAlignment.start,
                 children: [
                   if (!isFromCurrentUser) ...[
@@ -94,15 +93,15 @@ class TicketReplyCard extends StatelessWidget {
                   color: isFromCurrentUser
                       ? context.theme.colorScheme.primary
                       : isFromSupport
-                          ? context.theme.colorScheme.secondaryContainer
-                          : context.theme.colorScheme.surfaceContainerHighest,
+                      ? context.theme.colorScheme.secondaryContainer
+                      : context.theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12).copyWith(
                     // Remove corner radius for the side the bubble points to
-                    bottomLeft: isFromCurrentUser 
+                    bottomLeft: isFromCurrentUser
                         ? const Radius.circular(12)
                         : const Radius.circular(4),
-                    bottomRight: isFromCurrentUser 
-                        ? const Radius.circular(4) 
+                    bottomRight: isFromCurrentUser
+                        ? const Radius.circular(4)
                         : const Radius.circular(12),
                   ),
                 ),
@@ -112,8 +111,8 @@ class TicketReplyCard extends StatelessWidget {
                     color: isFromCurrentUser
                         ? context.theme.colorScheme.onPrimary
                         : isFromSupport
-                            ? context.theme.colorScheme.onSecondaryContainer
-                            : context.theme.colorScheme.onSurface,
+                        ? context.theme.colorScheme.onSecondaryContainer
+                        : context.theme.colorScheme.onSurface,
                   ),
                 ),
               ),

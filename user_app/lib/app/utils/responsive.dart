@@ -175,13 +175,7 @@ class Responsive {
 
   /// Get responsive column count for grids
   static int columnCount(BuildContext context) {
-    return intValue(
-      context,
-      mobile: 1,
-      tablet: 2,
-      desktop: 3,
-      fourK: 4,
-    );
+    return intValue(context, mobile: 1, tablet: 2, desktop: 3, fourK: 4);
   }
 
   /// Get responsive cross axis count for GridView
@@ -250,19 +244,14 @@ class Responsive {
   /// Get responsive card padding
   static EdgeInsets cardPadding(BuildContext context) {
     return EdgeInsets.all(
-      doubleValue(
-        context,
-        mobile: 16.0,
-        tablet: 20.0,
-        desktop: 24.0,
-      ),
+      doubleValue(context, mobile: 16.0, tablet: 20.0, desktop: 24.0),
     );
   }
 
   /// Get responsive dialog width
   static double dialogWidth(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     if (isMobile(context)) {
       return screenWidth * 0.9;
     } else if (isTablet(context)) {
@@ -274,12 +263,7 @@ class Responsive {
 
   /// Get responsive list item height
   static double listItemHeight(BuildContext context) {
-    return doubleValue(
-      context,
-      mobile: 56.0,
-      tablet: 64.0,
-      desktop: 72.0,
-    );
+    return doubleValue(context, mobile: 56.0, tablet: 64.0, desktop: 72.0);
   }
 }
 
@@ -295,18 +279,14 @@ extension ResponsiveExtension on BuildContext {
   bool get isSmallerThanTablet => Responsive.isSmallerThanTablet(this);
 
   /// Get responsive values
-  T responsiveValue<T>({
-    required T mobile,
-    T? tablet,
-    T? desktop,
-    T? fourK,
-  }) => Responsive.value<T>(
-    this,
-    mobile: mobile,
-    tablet: tablet,
-    desktop: desktop,
-    fourK: fourK,
-  );
+  T responsiveValue<T>({required T mobile, T? tablet, T? desktop, T? fourK}) =>
+      Responsive.value<T>(
+        this,
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        fourK: fourK,
+      );
 
   /// Get responsive padding
   double get responsiveHorizontalPadding => Responsive.horizontalPadding(this);

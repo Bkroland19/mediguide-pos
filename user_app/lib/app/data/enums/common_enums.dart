@@ -4,6 +4,6 @@ enum Status {
   inactive(label: 'Inactive');
 
   const Status({required this.label});
-  
+
   final String label;
 }

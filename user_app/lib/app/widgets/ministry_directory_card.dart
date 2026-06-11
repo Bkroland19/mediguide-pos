@@ -12,7 +12,11 @@ class MinistryDirectoryCard extends StatelessWidget {
   final MinistryDirectory entry;
   final int index;
 
-  const MinistryDirectoryCard({super.key, required this.entry, required this.index});
+  const MinistryDirectoryCard({
+    super.key,
+    required this.entry,
+    required this.index,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +27,10 @@ class MinistryDirectoryCard extends StatelessWidget {
         InkWell(
           onTap: () => MinistryDirectoryDetailBottomSheet.show(context, entry),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               children: [
                 // Avatar with initials + emergency indicator
@@ -33,7 +40,9 @@ class MinistryDirectoryCard extends StatelessWidget {
                       radius: 22,
                       backgroundColor: cs.primaryContainer,
                       child: Text(
-                        entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?',
+                        entry.name.isNotEmpty
+                            ? entry.name[0].toUpperCase()
+                            : '?',
                         style: context.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: cs.onPrimaryContainer,
@@ -52,7 +61,11 @@ class MinistryDirectoryCard extends StatelessWidget {
                             shape: BoxShape.circle,
                             border: Border.all(color: cs.surface, width: 2),
                           ),
-                          child: const Icon(LucideIcons.shield, size: 8, color: Colors.white),
+                          child: const Icon(
+                            LucideIcons.shield,
+                            size: 8,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -65,14 +78,19 @@ class MinistryDirectoryCard extends StatelessWidget {
                     children: [
                       Text(
                         entry.displayName,
-                        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         entry.ministry.label,
-                        style: context.textTheme.bodySmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w500),
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -80,7 +98,10 @@ class MinistryDirectoryCard extends StatelessWidget {
                         const SizedBox(height: 1),
                         Text(
                           entry.phone,
-                          style: context.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontSize: 12),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],
@@ -88,7 +109,8 @@ class MinistryDirectoryCard extends StatelessWidget {
                 ),
                 // Quick call button
                 IconButton(
-                  onPressed: () => Common.makeCall(entry.phone, contactName: entry.name),
+                  onPressed: () =>
+                      Common.makeCall(entry.phone, contactName: entry.name),
                   icon: Icon(LucideIcons.phone, size: 18, color: cs.primary),
                   visualDensity: VisualDensity.compact,
                   tooltip: 'Call ${entry.name}',

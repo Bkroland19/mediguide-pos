@@ -9,10 +9,10 @@ import '../routes/app_pages.dart';
 class AiContextButton extends StatelessWidget {
   /// The context to pass to the AI assistant
   final AiContext context;
-  
+
   /// Optional custom tooltip text
   final String? tooltip;
-  
+
   /// Button style variant
   final AiButtonStyle style;
 
@@ -31,11 +31,8 @@ class AiContextButton extends StatelessWidget {
   }) : style = AiButtonStyle.iconButton;
 
   /// Create a floating action button variant
-  const AiContextButton.fab({
-    super.key,
-    required this.context,
-    this.tooltip,
-  }) : style = AiButtonStyle.fab;
+  const AiContextButton.fab({super.key, required this.context, this.tooltip})
+    : style = AiButtonStyle.fab;
 
   /// Create an action card variant for special cases
   const AiContextButton.actionCard({
@@ -80,7 +77,9 @@ class AiContextButton extends StatelessWidget {
       child: ListTile(
         leading: const Icon(LucideIcons.sparkles),
         title: Text(tooltip ?? 'Ask AI Assistant'),
-        subtitle: Text('Get help with ${context.sourceType.label.toLowerCase()}'),
+        subtitle: Text(
+          'Get help with ${context.sourceType.label.toLowerCase()}',
+        ),
         onTap: _navigateToAI,
         trailing: const Icon(LucideIcons.chevronRight),
       ),
@@ -124,10 +123,10 @@ class AiContextButton extends StatelessWidget {
 enum AiButtonStyle {
   /// Icon button for app bars (default)
   iconButton,
-  
+
   /// Floating action button
   fab,
-  
+
   /// Action card for special layouts
   actionCard,
 }
@@ -135,25 +134,13 @@ enum AiButtonStyle {
 /// Extension methods for easy context creation
 extension AiContextButtonHelpers on Widget {
   /// Add an AI context button to an app bar
-  static Widget appBarButton({
-    required AiContext context,
-    String? tooltip,
-  }) {
-    return AiContextButton.iconButton(
-      context: context,
-      tooltip: tooltip,
-    );
+  static Widget appBarButton({required AiContext context, String? tooltip}) {
+    return AiContextButton.iconButton(context: context, tooltip: tooltip);
   }
 
   /// Create a floating AI button
-  static Widget floatingButton({
-    required AiContext context,
-    String? tooltip,
-  }) {
-    return AiContextButton.fab(
-      context: context,
-      tooltip: tooltip,
-    );
+  static Widget floatingButton({required AiContext context, String? tooltip}) {
+    return AiContextButton.fab(context: context, tooltip: tooltip);
   }
 }
 
@@ -165,11 +152,7 @@ class QuickAiContext {
     required String content,
     String? id,
   }) {
-    return AiContext.guideline(
-      title: title,
-      content: content,
-      guidelineId: id,
-    );
+    return AiContext.guideline(title: title, content: content, guidelineId: id);
   }
 
   /// Quick context for generic pages
@@ -178,11 +161,7 @@ class QuickAiContext {
     required String content,
     String? id,
   }) {
-    return AiContext.genericPage(
-      title: title,
-      content: content,
-      pageId: id,
-    );
+    return AiContext.genericPage(title: title, content: content, pageId: id);
   }
 
   /// Quick context for drug pages
@@ -191,11 +170,7 @@ class QuickAiContext {
     required String content,
     String? id,
   }) {
-    return AiContext.drug(
-      drugName: name,
-      content: content,
-      drugId: id,
-    );
+    return AiContext.drug(drugName: name, content: content, drugId: id);
   }
 
   /// Quick context for calculator pages

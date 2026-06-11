@@ -69,7 +69,8 @@ class ContactModel {
   String get displayName => '$name - $title';
 
   /// Availability status text
-  String get availabilityText => isAvailable24h ? '24/7 Available' : 'Business Hours';
+  String get availabilityText =>
+      isAvailable24h ? '24/7 Available' : 'Business Hours';
 
   /// Category icon based on contact category
   String get categoryIcon => category.icon;
@@ -78,7 +79,8 @@ class ContactModel {
   int get priority => isEmergency ? 1 : category.priority;
 
   /// Primary service offered (first in services list)
-  String get primaryService => services.isNotEmpty ? services.first : 'General Support';
+  String get primaryService =>
+      services.isNotEmpty ? services.first : 'General Support';
 
   /// Formatted phone number for display
   String get formattedPhoneNumber {
@@ -113,8 +115,12 @@ enum ContactCategory {
   hospital(label: 'Hospital', icon: '🏥', priority: 4),
   general(label: 'General', icon: '📞', priority: 6);
 
-  const ContactCategory({required this.label, required this.icon, required this.priority});
-  
+  const ContactCategory({
+    required this.label,
+    required this.icon,
+    required this.priority,
+  });
+
   final String label;
   final String icon;
   final int priority;

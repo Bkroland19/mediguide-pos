@@ -12,7 +12,7 @@ enum RouteOfAdministration {
   subcutaneous(label: 'Subcutaneous');
 
   const RouteOfAdministration({required this.label});
-  
+
   final String label;
 }
 
@@ -26,7 +26,7 @@ enum PregnancyCategory {
   unknown(label: 'Unknown');
 
   const PregnancyCategory({required this.label});
-  
+
   final String label;
 }
 
@@ -40,7 +40,7 @@ enum ControlledSubstance {
   scheduleV(label: 'Schedule V');
 
   const ControlledSubstance({required this.label});
-  
+
   final String label;
 }
 
@@ -52,7 +52,7 @@ enum DrugStatus {
   archived(label: 'Archived');
 
   const DrugStatus({required this.label});
-  
+
   final String label;
 }
 
@@ -63,6 +63,6 @@ enum ReviewStatus {
   needsUpdate(label: 'Needs Update');
 
   const ReviewStatus({required this.label});
-  
+
   final String label;
 }

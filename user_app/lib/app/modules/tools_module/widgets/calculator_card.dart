@@ -24,7 +24,8 @@ class CalculatorTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final typeColor = _getTypeColor(context, calculator.type);
     final iconColor = calculator.color.toColorOrNull() ?? typeColor;
-    final bgColor = calculator.backgroundColor.toColorOrNull()?.withValues(alpha: 0.12) ??
+    final bgColor =
+        calculator.backgroundColor.toColorOrNull()?.withValues(alpha: 0.12) ??
         iconColor.withValues(alpha: 0.1);
 
     return Column(
@@ -32,14 +33,24 @@ class CalculatorTile extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
             child: Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(_getTypeIcon(calculator.type), size: 22, color: iconColor),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _getTypeIcon(calculator.type),
+                    size: 22,
+                    color: iconColor,
+                  ),
                 ),
                 AppSpacing.hGapMd,
                 Expanded(
@@ -48,7 +59,9 @@ class CalculatorTile extends StatelessWidget {
                     children: [
                       Text(
                         calculator.name,
-                        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -56,7 +69,9 @@ class CalculatorTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           calculator.description,
-                          style: context.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.theme.colorScheme.onSurfaceVariant,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -64,13 +79,19 @@ class CalculatorTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         "${calculator.typeDisplayName} • v${calculator.version}",
-                        style: context.textTheme.labelSmall?.w500.copyWith(color: typeColor.withValues(alpha: 0.8)),
+                        style: context.textTheme.labelSmall?.w500.copyWith(
+                          color: typeColor.withValues(alpha: 0.8),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 AppSpacing.hGapSm,
-                Icon(LucideIcons.chevronRight, size: 16, color: context.theme.colorScheme.onSurfaceVariant),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                ),
               ],
             ),
           ),
@@ -79,19 +100,22 @@ class CalculatorTile extends StatelessWidget {
           Divider(
             height: 1,
             indent: AppSpacing.md + 44 + AppSpacing.md,
-            color: context.theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            color: context.theme.colorScheme.outlineVariant.withValues(
+              alpha: 0.4,
+            ),
           ),
       ],
     );
   }
 
   IconData _getTypeIcon(CalculatorType type) => switch (type) {
-        CalculatorType.calculator => LucideIcons.calculator,
-        CalculatorType.decisionTool => LucideIcons.gitBranch,
-        CalculatorType.checklist => LucideIcons.listChecks,
-      };
+    CalculatorType.calculator => LucideIcons.calculator,
+    CalculatorType.decisionTool => LucideIcons.gitBranch,
+    CalculatorType.checklist => LucideIcons.listChecks,
+  };
 
-  Color _getTypeColor(BuildContext context, CalculatorType type) => switch (type) {
+  Color _getTypeColor(BuildContext context, CalculatorType type) =>
+      switch (type) {
         CalculatorType.calculator => context.theme.colorScheme.primary,
         CalculatorType.decisionTool => context.theme.colorScheme.tertiary,
         CalculatorType.checklist => context.theme.colorScheme.secondary,

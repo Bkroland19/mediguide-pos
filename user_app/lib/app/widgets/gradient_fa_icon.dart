@@ -11,7 +11,7 @@ class GradientIcon extends StatelessWidget {
     this.colors,
     this.semanticLabel,
     this.textDirection,
-  })  : assert(icon != null);
+  }) : assert(icon != null);
 
   /// The icon to display. The available icons are described in
   /// [FontAwesomeIcons].
@@ -80,13 +80,14 @@ class GradientIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderMask(
       key: key,
-      shaderCallback: (bounds) => (gradient ??
-              LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: colors ?? [Colors.red, Colors.green],
-              ))
-          .createShader(bounds),
+      shaderCallback: (bounds) =>
+          (gradient ??
+                  LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: colors ?? [Colors.red, Colors.green],
+                  ))
+              .createShader(bounds),
       child: Icon(
         icon,
         color: color ?? AppColors.white,

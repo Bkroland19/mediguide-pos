@@ -15,8 +15,6 @@ class GuidelinesIndexerPage extends GetWidget<GuidelinesIndexerController> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
     return Scaffold(
       appBar: AppBar(),
       body: Obx(() {

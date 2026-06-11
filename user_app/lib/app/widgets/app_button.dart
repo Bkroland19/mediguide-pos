@@ -86,19 +86,13 @@ class AppButton extends StatelessWidget {
   /// Build loading content using our Loading utility
   Widget _buildLoadingContent(ThemeData theme) {
     final loadingSize = height < 40 ? 16.0 : 20.0;
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Loading(
-          size: loadingSize,
-          strokeWidth: 2.0,
-        ),
-        if (loadingText != null) ...[
-          AppSpacing.sm.gap,
-          Text(loadingText!),
-        ],
+        Loading(size: loadingSize, strokeWidth: 2.0),
+        if (loadingText != null) ...[AppSpacing.sm.gap, Text(loadingText!)],
       ],
     );
   }
@@ -115,10 +109,7 @@ class AppButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icon != null) ...[
-          Icon(icon, size: iconSize),
-          AppSpacing.sm.gap,
-        ],
+        if (icon != null) ...[Icon(icon, size: iconSize), AppSpacing.sm.gap],
         Text(text),
         if (trailingIcon != null) ...[
           AppSpacing.sm.gap,
@@ -141,17 +132,15 @@ class AppButton extends StatelessWidget {
     // Use ElevatedButton as default with proper styling
     Widget button = ElevatedButton(
       onPressed: effectiveOnPressed,
-      style: style?.copyWith(
-        minimumSize: WidgetStateProperty.all(Size(0, height)),
-      ) ?? ElevatedButton.styleFrom(
-        minimumSize: Size(0, height),
-      ),
+      style:
+          style?.copyWith(
+            minimumSize: WidgetStateProperty.all(Size(0, height)),
+          ) ??
+          ElevatedButton.styleFrom(minimumSize: Size(0, height)),
       child: content,
     );
 
-    return width != null
-        ? SizedBox(width: width, child: button)
-        : button;
+    return width != null ? SizedBox(width: width, child: button) : button;
   }
 }
 
@@ -247,9 +236,9 @@ enum _ButtonType {
   outlined(label: 'Outlined'),
   text(label: 'Text'),
   filled(label: 'Filled');
-  
+
   const _ButtonType({required this.label});
-  
+
   final String label;
 }
 
@@ -282,19 +271,13 @@ class _TypedAppButton extends StatelessWidget {
   /// Build loading content using our Loading utility
   Widget _buildLoadingContent(ThemeData theme) {
     final loadingSize = height < 40 ? 16.0 : 20.0;
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Loading(
-          size: loadingSize,
-          strokeWidth: 2.0,
-        ),
-        if (loadingText != null) ...[
-          AppSpacing.sm.gap,
-          Text(loadingText!),
-        ],
+        Loading(size: loadingSize, strokeWidth: 2.0),
+        if (loadingText != null) ...[AppSpacing.sm.gap, Text(loadingText!)],
       ],
     );
   }
@@ -311,10 +294,7 @@ class _TypedAppButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icon != null) ...[
-          Icon(icon, size: iconSize),
-          AppSpacing.sm.gap,
-        ],
+        if (icon != null) ...[Icon(icon, size: iconSize), AppSpacing.sm.gap],
         Text(text),
         if (trailingIcon != null) ...[
           AppSpacing.sm.gap,
@@ -334,7 +314,7 @@ class _TypedAppButton extends StatelessWidget {
         : _buildNormalContent();
 
     Widget button;
-    
+
     switch (buttonType) {
       case _ButtonType.elevated:
         button = ElevatedButton(
@@ -366,25 +346,21 @@ class _TypedAppButton extends StatelessWidget {
         break;
     }
 
-    return width != null
-        ? SizedBox(width: width, child: button)
-        : button;
+    return width != null ? SizedBox(width: width, child: button) : button;
   }
 
   ButtonStyle? _getButtonStyle() {
     final baseStyle = switch (buttonType) {
       _ButtonType.elevated => ElevatedButton.styleFrom(
-          minimumSize: Size(0, height),
-        ),
+        minimumSize: Size(0, height),
+      ),
       _ButtonType.outlined => OutlinedButton.styleFrom(
-          minimumSize: Size(0, height),
-        ),
-      _ButtonType.text => TextButton.styleFrom(
-          minimumSize: Size(0, height),
-        ),
+        minimumSize: Size(0, height),
+      ),
+      _ButtonType.text => TextButton.styleFrom(minimumSize: Size(0, height)),
       _ButtonType.filled => FilledButton.styleFrom(
-          minimumSize: Size(0, height),
-        ),
+        minimumSize: Size(0, height),
+      ),
     };
 
     return style != null ? baseStyle.merge(style) : baseStyle;

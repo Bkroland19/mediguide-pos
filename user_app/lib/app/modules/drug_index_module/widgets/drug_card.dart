@@ -10,7 +10,12 @@ class DrugCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onBookmarkTap;
 
-  const DrugCard({super.key, required this.drug, this.onTap, this.onBookmarkTap});
+  const DrugCard({
+    super.key,
+    required this.drug,
+    this.onTap,
+    this.onBookmarkTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +26,10 @@ class DrugCard extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -43,7 +51,9 @@ class DrugCard extends StatelessWidget {
                     children: [
                       Text(
                         drug.name,
-                        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -51,7 +61,10 @@ class DrugCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           drug.brandNames,
-                          style: context.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            color: cs.onSurfaceVariant,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -61,12 +74,18 @@ class DrugCard extends StatelessWidget {
                       Row(
                         children: [
                           if (drug.categories.isNotEmpty) ...[
-                            Icon(LucideIcons.tag, size: 12, color: cs.onSurfaceVariant),
+                            Icon(
+                              LucideIcons.tag,
+                              size: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 3),
                             Flexible(
                               child: Text(
                                 drug.categories.first.name,
-                                style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -74,18 +93,34 @@ class DrugCard extends StatelessWidget {
                           ],
                           if (drug.routeOfAdministration.isNotEmpty) ...[
                             if (drug.categories.isNotEmpty) _dot(cs),
-                            Icon(LucideIcons.syringe, size: 12, color: cs.onSurfaceVariant),
+                            Icon(
+                              LucideIcons.syringe,
+                              size: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               drug.routeOfAdministration.first.displayName,
-                              style: context.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
                           ],
                           if (drug.whoEmlStatus) ...[
                             _dot(cs),
-                            Icon(LucideIcons.badgeCheck, size: 12, color: cs.primary),
+                            Icon(
+                              LucideIcons.badgeCheck,
+                              size: 12,
+                              color: cs.primary,
+                            ),
                             const SizedBox(width: 3),
-                            Text('WHO', style: context.textTheme.labelSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w600)),
+                            Text(
+                              'WHO',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: cs.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -93,7 +128,11 @@ class DrugCard extends StatelessWidget {
                   ),
                 ),
                 AppSpacing.hGapSm,
-                Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
+                ),
               ],
             ),
           ),
@@ -108,7 +147,10 @@ class DrugCard extends StatelessWidget {
   }
 
   Widget _dot(ColorScheme cs) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Text('·', style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.bold)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    child: Text(
+      '·',
+      style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.bold),
+    ),
+  );
 }

@@ -7,17 +7,17 @@ import '../enums/common_enums.dart';
 extension UserRoleExtension on UserRole {
   String get displayName => switch (this) {
     UserRole.superAdmin => "Super Admin",
-    UserRole.admin => "Admin", 
+    UserRole.admin => "Admin",
     UserRole.contentManager => "Content Manager",
     UserRole.reviewer => "Reviewer",
     UserRole.healthcareProvider => "Healthcare Provider",
     UserRole.observer => "Observer",
   };
-  
+
   String get value => switch (this) {
     UserRole.superAdmin => "super_admin",
     UserRole.admin => "admin",
-    UserRole.contentManager => "content_manager", 
+    UserRole.contentManager => "content_manager",
     UserRole.reviewer => "reviewer",
     UserRole.healthcareProvider => "healthcare_provider",
     UserRole.observer => "observer",
@@ -29,10 +29,10 @@ extension UserStatusExtension on UserStatus {
   String get displayName => switch (this) {
     UserStatus.active => "Active",
     UserStatus.inactive => "Inactive",
-    UserStatus.suspended => "Suspended", 
+    UserStatus.suspended => "Suspended",
     UserStatus.pendingActivation => "Pending Activation",
   };
-  
+
   String get value => switch (this) {
     UserStatus.active => "active",
     UserStatus.inactive => "inactive",
@@ -59,7 +59,7 @@ extension SpecializationExtension on Specialization {
     Specialization.publicHealth => "Public Health",
     Specialization.other => "Other",
   };
-  
+
   String get value => displayName;
 }
 
@@ -67,14 +67,14 @@ extension SpecializationExtension on Specialization {
 extension PreferredLanguageExtension on PreferredLanguage {
   String get displayName => switch (this) {
     PreferredLanguage.english => "English",
-    PreferredLanguage.french => "French", 
+    PreferredLanguage.french => "French",
     PreferredLanguage.spanish => "Spanish",
     PreferredLanguage.portuguese => "Portuguese",
     PreferredLanguage.arabic => "Arabic",
     PreferredLanguage.swahili => "Swahili",
     PreferredLanguage.amharic => "Amharic",
   };
-  
+
   String get value => displayName;
 }
 
@@ -82,7 +82,7 @@ extension PreferredLanguageExtension on PreferredLanguage {
 extension RouteOfAdministrationExtension on RouteOfAdministration {
   String get displayName => switch (this) {
     RouteOfAdministration.oral => "Oral",
-    RouteOfAdministration.iv => "IV", 
+    RouteOfAdministration.iv => "IV",
     RouteOfAdministration.im => "IM",
     RouteOfAdministration.topical => "Topical",
     RouteOfAdministration.inhaled => "Inhaled",
@@ -92,7 +92,7 @@ extension RouteOfAdministrationExtension on RouteOfAdministration {
     RouteOfAdministration.intranasal => "Intranasal",
     RouteOfAdministration.subcutaneous => "Subcutaneous",
   };
-  
+
   String get value => name;
 }
 
@@ -101,12 +101,12 @@ extension PregnancyCategoryExtension on PregnancyCategory {
   String get displayName => switch (this) {
     PregnancyCategory.a => "A",
     PregnancyCategory.b => "B",
-    PregnancyCategory.c => "C", 
+    PregnancyCategory.c => "C",
     PregnancyCategory.d => "D",
     PregnancyCategory.x => "X",
     PregnancyCategory.unknown => "Unknown",
   };
-  
+
   String get value => displayName;
 }
 
@@ -116,11 +116,11 @@ extension ControlledSubstanceExtension on ControlledSubstance {
     ControlledSubstance.none => "None",
     ControlledSubstance.scheduleI => "Schedule I",
     ControlledSubstance.scheduleII => "Schedule II",
-    ControlledSubstance.scheduleIII => "Schedule III", 
+    ControlledSubstance.scheduleIII => "Schedule III",
     ControlledSubstance.scheduleIV => "Schedule IV",
     ControlledSubstance.scheduleV => "Schedule V",
   };
-  
+
   String get value => displayName;
 }
 
@@ -132,10 +132,10 @@ extension DrugStatusExtension on DrugStatus {
     DrugStatus.underReview => "Under Review",
     DrugStatus.archived => "Archived",
   };
-  
+
   String get value => switch (this) {
     DrugStatus.active => "active",
-    DrugStatus.inactive => "inactive", 
+    DrugStatus.inactive => "inactive",
     DrugStatus.underReview => "under_review",
     DrugStatus.archived => "archived",
   };
@@ -148,11 +148,11 @@ extension ReviewStatusExtension on ReviewStatus {
     ReviewStatus.pending => "Pending",
     ReviewStatus.needsUpdate => "Needs Update",
   };
-  
+
   String get value => switch (this) {
     ReviewStatus.approved => "approved",
     ReviewStatus.pending => "pending",
-    ReviewStatus.needsUpdate => "needs_update", 
+    ReviewStatus.needsUpdate => "needs_update",
   };
 }
 
@@ -162,7 +162,7 @@ extension StatusExtension on Status {
     Status.active => "Active",
     Status.inactive => "Inactive",
   };
-  
+
   String get value => name;
 }
 
@@ -196,7 +196,7 @@ extension ConsultantSpecialtyExtension on ConsultantSpecialty {
     ConsultantSpecialty.laboratoryMedicine => "Laboratory Medicine",
     ConsultantSpecialty.other => "Other",
   };
-  
+
   String get value => displayName;
 }
 
@@ -208,6 +208,6 @@ extension ConsultantStatusExtension on ConsultantStatus {
     ConsultantStatus.pendingApproval => "Pending Approval",
     ConsultantStatus.suspended => "Suspended",
   };
-  
+
   String get value => name;
 }

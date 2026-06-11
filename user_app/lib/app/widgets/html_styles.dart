@@ -28,23 +28,14 @@ class HtmlStyles {
       margin: Margins.only(bottom: 12),
       padding: HtmlPaddings.only(left: 20),
     ),
-    "li": Style(
-      margin: Margins.only(bottom: 4),
-    ),
-    "strong, b": Style(
-      fontWeight: FontWeight.w600,
-    ),
-    "em, i": Style(
-      fontStyle: FontStyle.italic,
-    ),
+    "li": Style(margin: Margins.only(bottom: 4)),
+    "strong, b": Style(fontWeight: FontWeight.w600),
+    "em, i": Style(fontStyle: FontStyle.italic),
     "blockquote": Style(
       margin: Margins.only(left: 16, top: 8, bottom: 8),
       padding: HtmlPaddings.only(left: 16, top: 8, bottom: 8),
       border: Border(
-        left: BorderSide(
-          color: context.theme.colorScheme.primary,
-          width: 4,
-        ),
+        left: BorderSide(color: context.theme.colorScheme.primary, width: 4),
       ),
       backgroundColor: context.theme.colorScheme.surfaceContainer,
     ),
@@ -62,9 +53,7 @@ class HtmlStyles {
       fontSize: FontSize.smaller,
       fontFamily: 'monospace',
     ),
-    "table": Style(
-      margin: Margins.only(bottom: 12),
-    ),
+    "table": Style(margin: Margins.only(bottom: 12)),
     "th": Style(
       backgroundColor: context.theme.colorScheme.surfaceContainer,
       padding: HtmlPaddings.all(8),
@@ -100,15 +89,9 @@ class HtmlStyles {
       margin: Margins.only(bottom: 6),
       padding: HtmlPaddings.only(left: 16),
     ),
-    "li": Style(
-      margin: Margins.only(bottom: 2),
-    ),
-    "strong, b": Style(
-      fontWeight: FontWeight.w600,
-    ),
-    "em, i": Style(
-      fontStyle: FontStyle.italic,
-    ),
+    "li": Style(margin: Margins.only(bottom: 2)),
+    "strong, b": Style(fontWeight: FontWeight.w600),
+    "em, i": Style(fontStyle: FontStyle.italic),
   };
 
   /// Large HTML styles for prominent content
@@ -133,14 +116,8 @@ class HtmlStyles {
       margin: Margins.only(bottom: 16),
       padding: HtmlPaddings.only(left: 24),
     ),
-    "li": Style(
-      margin: Margins.only(bottom: 6),
-    ),
-    "strong, b": Style(
-      fontWeight: FontWeight.w700,
-    ),
-    "em, i": Style(
-      fontStyle: FontStyle.italic,
-    ),
+    "li": Style(margin: Margins.only(bottom: 6)),
+    "strong, b": Style(fontWeight: FontWeight.w700),
+    "em, i": Style(fontStyle: FontStyle.italic),
   };
 }

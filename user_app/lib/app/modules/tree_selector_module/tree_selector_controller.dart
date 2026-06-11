@@ -17,7 +17,7 @@ class TreeSelectorController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool hasLoadError = false.obs;
 
-  /// Faster than Map<String,bool> for reactive checks
+  /// Faster than `Map<String, bool>` for reactive checks
   final RxSet<String> loadingNodes = <String>{}.obs;
 
   /// Cache prevents re-fetching same node twice

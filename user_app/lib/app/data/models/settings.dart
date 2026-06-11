@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:pocketbase/pocketbase.dart';
 import 'base_model.dart';
 
@@ -71,7 +73,7 @@ class Settings extends BaseModel {
     return false;
   }
 
-  /// Get value as List<String> (returns empty list if not valid)
+  /// Get value as `List<String>` (returns empty list if not valid)
   List<String> get stringListValue {
     if (value is List) {
       return value.map((item) => item.toString()).toList();
@@ -79,7 +81,7 @@ class Settings extends BaseModel {
     return <String>[];
   }
 
-  /// Get value as Map<String, dynamic> (returns empty map if not valid)
+  /// Get value as `Map<String, dynamic>` (returns empty map if not valid)
   Map<String, dynamic> get mapValue {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);

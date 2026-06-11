@@ -115,8 +115,8 @@ class ChatInterfaceController extends GetxController {
           final message = Message.fromRecord(record);
           messages.add(message);
         } catch (e) {
-          print('Error creating Message from record: $e');
-          print('Record data: ${record.data}');
+          debugPrint('Error creating Message from record: $e');
+          debugPrint('Record data: ${record.data}');
         }
       }
 

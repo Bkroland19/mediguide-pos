@@ -36,8 +36,6 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.md,

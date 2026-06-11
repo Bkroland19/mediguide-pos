@@ -8,19 +8,12 @@ class Extensions {}
 extension StringLog on String {
   void printStr() {
     if (kDebugMode) {
-      print(this);
+      debugPrint(this);
     }
   }
 
-  void logStr({
-    String? name,
-    Object? error,
-  }) {
-    return log(
-      this,
-      name: name ?? "",
-      error: error,
-    );
+  void logStr({String? name, Object? error}) {
+    return log(this, name: name ?? "", error: error);
   }
 }
 
@@ -51,7 +44,7 @@ extension NumToPadding on num {
   /// Usage: AppSpacing.sm.hPadding
   EdgeInsets get hPadding => EdgeInsets.symmetric(horizontal: toDouble());
 
-  /// Create vertical padding from a number  
+  /// Create vertical padding from a number
   /// Usage: AppSpacing.md.vPadding
   EdgeInsets get vPadding => EdgeInsets.symmetric(vertical: toDouble());
 
@@ -75,7 +68,7 @@ extension NumToPadding on num {
   /// Usage: AppSpacing.md.tbPadding
   EdgeInsets get tbPadding => EdgeInsets.symmetric(vertical: toDouble());
 
-  /// Create padding with left and right values  
+  /// Create padding with left and right values
   /// Usage: AppSpacing.lg.lrPadding
   EdgeInsets get lrPadding => EdgeInsets.symmetric(horizontal: toDouble());
 }
@@ -87,17 +80,17 @@ extension StringColorExtension on String? {
   /// Regular expression for validating hex color strings
   /// Supports: #RGB, #RRGGBB, #AARRGGBB, RGB, RRGGBB, AARRGGBB
   static final RegExp _hexColorRegex = RegExp(
-    r'^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8}|[A-Fa-f0-9]{3})$'
+    r'^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8}|[A-Fa-f0-9]{3})$',
   );
 
   /// Converts a hex color string to a Flutter Color object
-  /// 
+  ///
   /// Supported formats:
   /// - #RGB (3 digits) -> expanded to #RRGGBB
   /// - #RRGGBB (6 digits) -> RGB with full opacity
   /// - #AARRGGBB (8 digits) -> ARGB with alpha
   /// - Same formats without # prefix
-  /// 
+  ///
   /// Examples:
   /// ```dart
   /// '#FF0000'.toColor()    // Red
@@ -105,7 +98,7 @@ extension StringColorExtension on String? {
   /// '#F00'.toColor()       // Red (short form)
   /// '#80FF0000'.toColor()  // Semi-transparent red
   /// ```
-  /// 
+  ///
   /// Returns [Colors.transparent] for null or invalid input
   Color toColor() {
     if (this == null || this!.isEmpty) {
@@ -113,24 +106,24 @@ extension StringColorExtension on String? {
     }
 
     final cleanHex = this!.replaceFirst('#', '').toUpperCase();
-    
+
     if (!_hexColorRegex.hasMatch('#$cleanHex')) {
       return Colors.transparent;
     }
 
     try {
       String processedHex = cleanHex;
-      
+
       // Handle 3-digit RGB format (#RGB -> #RRGGBB)
       if (processedHex.length == 3) {
         processedHex = processedHex.split('').map((c) => c + c).join();
       }
-      
+
       // Add full opacity for 6-digit format (RRGGBB -> FFRRGGBB)
       if (processedHex.length == 6) {
         processedHex = 'FF$processedHex';
       }
-      
+
       // Parse as ARGB hex value
       final colorValue = int.parse(processedHex, radix: 16);
       return Color(colorValue);
@@ -140,9 +133,9 @@ extension StringColorExtension on String? {
   }
 
   /// Safely converts a hex color string to a Flutter Color object
-  /// 
+  ///
   /// Returns null for invalid or null input instead of Colors.transparent
-  /// 
+  ///
   /// Examples:
   /// ```dart
   /// '#FF0000'.toColorOrNull()  // Red
@@ -155,24 +148,24 @@ extension StringColorExtension on String? {
     }
 
     final cleanHex = this!.replaceFirst('#', '').toUpperCase();
-    
+
     if (!_hexColorRegex.hasMatch('#$cleanHex')) {
       return null;
     }
 
     try {
       String processedHex = cleanHex;
-      
+
       // Handle 3-digit RGB format
       if (processedHex.length == 3) {
         processedHex = processedHex.split('').map((c) => c + c).join();
       }
-      
+
       // Add full opacity for 6-digit format
       if (processedHex.length == 6) {
         processedHex = 'FF$processedHex';
       }
-      
+
       final colorValue = int.parse(processedHex, radix: 16);
       return Color(colorValue);
     } catch (e) {
@@ -181,15 +174,15 @@ extension StringColorExtension on String? {
   }
 
   /// Converts a hex color string to a Flutter Color object with specified opacity
-  /// 
+  ///
   /// The opacity parameter should be between 0.0 (transparent) and 1.0 (opaque)
-  /// 
+  ///
   /// Examples:
   /// ```dart
   /// '#FF0000'.toColorWithOpacity(0.5)  // Semi-transparent red
   /// '#00FF00'.toColorWithOpacity(0.8)  // 80% opaque green
   /// ```
-  /// 
+  ///
   /// Returns [Colors.transparent] for null or invalid input
   Color toColorWithOpacity(double opacity) {
     final baseColor = toColor();
@@ -200,9 +193,9 @@ extension StringColorExtension on String? {
   }
 
   /// Checks if the string is a valid hex color format
-  /// 
+  ///
   /// Supports: #RGB, #RRGGBB, #AARRGGBB, RGB, RRGGBB, AARRGGBB
-  /// 
+  ///
   /// Examples:
   /// ```dart
   /// '#FF0000'.isValidHexColor  // true
@@ -215,7 +208,7 @@ extension StringColorExtension on String? {
     if (this == null || this!.isEmpty) {
       return false;
     }
-    
+
     final cleanHex = this!.replaceFirst('#', '');
     return _hexColorRegex.hasMatch('#$cleanHex');
   }

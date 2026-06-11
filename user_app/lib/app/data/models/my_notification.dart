@@ -58,7 +58,7 @@ class MyNotification extends BaseModel {
   String get formattedDate {
     final createdDateTime = createdDate;
     if (createdDateTime == null) return "Unknown";
-    
+
     final now = DateTime.now();
     final difference = now.difference(createdDateTime);
 

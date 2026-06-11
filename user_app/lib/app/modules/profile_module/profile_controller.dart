@@ -15,8 +15,6 @@ class ProfileController extends GetxController {
   // Observable state
   final RxBool isLoading = false.obs;
 
-
-
   /// Handle logout
   Future<void> logout() async {
     try {
@@ -64,15 +62,15 @@ class ProfileController extends GetxController {
     }
   }
 
-
-
   /// Delete account with confirmation
   Future<void> deleteAccount() async {
     // Show confirmation dialog
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: Text(AppTranslationKey.deleteAccount.tr),
-        content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete your account? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -118,10 +116,8 @@ class ProfileController extends GetxController {
     }
   }
 
-
   // Settings getters for ProfilePage compatibility
   DummySettings get settings => DummySettings();
-  
 }
 
 /// Settings class for ProfilePage compatibility
@@ -133,11 +129,11 @@ class DummySettings {
   bool get vibrationEnabled => true;
   bool get dataBackupEnabled => true;
   bool get analyticsEnabled => true;
-  
+
   String get languageCode {
     return PreferenceUtils.getString(SharedPreferencesKeys.language, 'en');
   }
-  
+
   String get languageDisplayName {
     try {
       final controller = Get.find<LanguageController>();

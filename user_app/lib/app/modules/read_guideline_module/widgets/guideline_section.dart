@@ -67,10 +67,7 @@ class GuidelineSectionWidget extends StatelessWidget {
           ],
         ),
         AppSpacing.gapMd,
-        Html(
-          data: content,
-          style: HtmlStyles.content(context),
-        ),
+        Html(data: content, style: HtmlStyles.content(context)),
         AppSpacing.elementGap,
       ],
     );

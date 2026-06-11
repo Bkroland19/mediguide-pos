@@ -30,7 +30,10 @@ class _FaqExpansionItemState extends State<FaqExpansionItem> {
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 4,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -41,7 +44,10 @@ class _FaqExpansionItemState extends State<FaqExpansionItem> {
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: cs.primary),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: cs.primary,
+                      ),
                     ),
                   ),
                 Expanded(
@@ -57,7 +63,11 @@ class _FaqExpansionItemState extends State<FaqExpansionItem> {
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: Icon(LucideIcons.chevronDown, size: 18, color: cs.onSurfaceVariant),
+                  child: Icon(
+                    LucideIcons.chevronDown,
+                    size: 18,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -82,24 +92,49 @@ class _FaqExpansionItemState extends State<FaqExpansionItem> {
                     "body": Style(
                       margin: Margins.zero,
                       padding: HtmlPaddings.zero,
-                      fontSize: FontSize(Responsive.fontSize(context, mobile: 14.0, tablet: 15.0, desktop: 16.0)),
+                      fontSize: FontSize(
+                        Responsive.fontSize(
+                          context,
+                          mobile: 14.0,
+                          tablet: 15.0,
+                          desktop: 16.0,
+                        ),
+                      ),
                       lineHeight: const LineHeight(1.5),
                       color: cs.onSurfaceVariant,
                     ),
                     "p": Style(margin: Margins.only(bottom: AppSpacing.sm)),
-                    "ul, ol": Style(margin: Margins.only(left: AppSpacing.md, bottom: AppSpacing.sm)),
+                    "ul, ol": Style(
+                      margin: Margins.only(
+                        left: AppSpacing.md,
+                        bottom: AppSpacing.sm,
+                      ),
+                    ),
                     "li": Style(margin: Margins.only(bottom: AppSpacing.xs)),
                     "h1, h2, h3, h4, h5, h6": Style(
                       fontWeight: FontWeight.w600,
-                      margin: Margins.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
+                      margin: Margins.only(
+                        top: AppSpacing.sm,
+                        bottom: AppSpacing.xs,
+                      ),
                     ),
                     "strong, b": Style(fontWeight: FontWeight.w600),
-                    "a": Style(color: cs.primary, textDecoration: TextDecoration.underline),
+                    "a": Style(
+                      color: cs.primary,
+                      textDecoration: TextDecoration.underline,
+                    ),
                     "blockquote": Style(
-                      border: Border(left: BorderSide(color: cs.primary, width: 3)),
+                      border: Border(
+                        left: BorderSide(color: cs.primary, width: 3),
+                      ),
                       padding: HtmlPaddings.only(left: AppSpacing.md),
-                      margin: Margins.only(left: AppSpacing.sm, bottom: AppSpacing.sm),
-                      backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+                      margin: Margins.only(
+                        left: AppSpacing.sm,
+                        bottom: AppSpacing.sm,
+                      ),
+                      backgroundColor: cs.surfaceContainerHighest.withValues(
+                        alpha: 0.3,
+                      ),
                     ),
                   },
                 ),
@@ -109,34 +144,62 @@ class _FaqExpansionItemState extends State<FaqExpansionItem> {
                   Row(
                     children: [
                       if (widget.faq.isFeatured)
-                        _tag(context, AppTranslationKey.featured.tr, cs.primary),
+                        _tag(
+                          context,
+                          AppTranslationKey.featured.tr,
+                          cs.primary,
+                        ),
                       if (widget.faq.priority != 'normal')
-                        _tag(context, FaqPriority.fromString(widget.faq.priority).label, _priorityColor(context)),
+                        _tag(
+                          context,
+                          FaqPriority.fromString(widget.faq.priority).label,
+                          _priorityColor(context),
+                        ),
                       if (widget.faq.targetAudience != 'all')
-                        _tag(context, FaqTargetAudience.fromString(widget.faq.targetAudience).label, cs.secondary),
+                        _tag(
+                          context,
+                          FaqTargetAudience.fromString(
+                            widget.faq.targetAudience,
+                          ).label,
+                          cs.secondary,
+                        ),
                     ],
                   ),
                 ],
               ],
             ),
           ),
-          crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
 
         // Divider
-        Divider(height: 1, indent: AppSpacing.md, color: cs.outlineVariant.withValues(alpha: 0.3)),
+        Divider(
+          height: 1,
+          indent: AppSpacing.md,
+          color: cs.outlineVariant.withValues(alpha: 0.3),
+        ),
       ],
     );
   }
 
   bool _shouldShowMetadata() =>
-      widget.faq.isFeatured || widget.faq.priority != 'normal' || widget.faq.targetAudience != 'all';
+      widget.faq.isFeatured ||
+      widget.faq.priority != 'normal' ||
+      widget.faq.targetAudience != 'all';
 
   Widget _tag(BuildContext context, String label, Color color) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
-      child: Text(label, style: context.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: context.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 

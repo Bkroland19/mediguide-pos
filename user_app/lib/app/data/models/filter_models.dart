@@ -10,7 +10,7 @@ enum FilterInputType {
   multiSelect(label: 'Multi-Select');
 
   const FilterInputType({required this.label});
-  
+
   final String label;
 }
 
@@ -154,10 +154,7 @@ class FilterResult {
   final Map<String, dynamic> values;
   final bool hasValues;
 
-  const FilterResult({
-    required this.values,
-    required this.hasValues,
-  });
+  const FilterResult({required this.values, required this.hasValues});
 
   /// Convert the result to JSON map
   Map<String, dynamic> toJson() => values;

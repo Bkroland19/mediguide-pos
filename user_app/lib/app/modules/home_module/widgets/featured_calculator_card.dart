@@ -23,7 +23,8 @@ class FeaturedCalculatorChip extends StatelessWidget {
     final isDark = context.theme.brightness == Brightness.dark;
     final typeColor = _typeColor(context, calculator.type);
     final iconColor = calculator.color.toColorOrNull() ?? typeColor;
-    final bgColor = calculator.backgroundColor.toColorOrNull()?.withValues(alpha: 0.12) ??
+    final bgColor =
+        calculator.backgroundColor.toColorOrNull()?.withValues(alpha: 0.12) ??
         iconColor.withValues(alpha: 0.1);
 
     return SizedBox(
@@ -37,10 +38,18 @@ class FeaturedCalculatorChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? cs.surfaceContainerHigh : cs.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: cs.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.25)),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(
+                  alpha: isDark ? 0.15 : 0.25,
+                ),
+              ),
               boxShadow: [
                 if (!isDark)
-                  BoxShadow(color: cs.shadow.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                  BoxShadow(
+                    color: cs.shadow.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
               ],
             ),
             child: Padding(
@@ -52,14 +61,23 @@ class FeaturedCalculatorChip extends StatelessWidget {
                   Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
-                    child: Icon(_typeIcon(calculator.type), size: 18, color: iconColor),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _typeIcon(calculator.type),
+                      size: 18,
+                      color: iconColor,
+                    ),
                   ),
                   AppSpacing.gapSm,
                   // Title
                   Text(
                     calculator.name,
-                    style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -67,7 +85,9 @@ class FeaturedCalculatorChip extends StatelessWidget {
                   // Type label
                   Text(
                     calculator.typeDisplayName,
-                    style: context.textTheme.labelSmall?.copyWith(color: typeColor),
+                    style: context.textTheme.labelSmall?.copyWith(
+                      color: typeColor,
+                    ),
                   ),
                 ],
               ),
@@ -79,14 +99,14 @@ class FeaturedCalculatorChip extends StatelessWidget {
   }
 
   IconData _typeIcon(CalculatorType type) => switch (type) {
-        CalculatorType.calculator => LucideIcons.calculator,
-        CalculatorType.decisionTool => LucideIcons.gitBranch,
-        CalculatorType.checklist => LucideIcons.listChecks,
-      };
+    CalculatorType.calculator => LucideIcons.calculator,
+    CalculatorType.decisionTool => LucideIcons.gitBranch,
+    CalculatorType.checklist => LucideIcons.listChecks,
+  };
 
   Color _typeColor(BuildContext context, CalculatorType type) => switch (type) {
-        CalculatorType.calculator => context.theme.colorScheme.primary,
-        CalculatorType.decisionTool => context.theme.colorScheme.tertiary,
-        CalculatorType.checklist => context.theme.colorScheme.secondary,
-      };
+    CalculatorType.calculator => context.theme.colorScheme.primary,
+    CalculatorType.decisionTool => context.theme.colorScheme.tertiary,
+    CalculatorType.checklist => context.theme.colorScheme.secondary,
+  };
 }

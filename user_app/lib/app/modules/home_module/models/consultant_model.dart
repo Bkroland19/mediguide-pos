@@ -60,10 +60,10 @@ class ConsultantModel {
 
   /// Status display text based on availability
   String get statusText => isAvailable ? 'Available' : 'Busy';
-  
+
   /// Formatted consultation fee
   String get formattedFee => '\$${consultationFee.toStringAsFixed(0)}';
-  
+
   /// Short description combining specialty and hospital
   String get shortDescription => '$specialty at $hospital';
 

@@ -29,21 +29,37 @@ class MessagesCard extends GetWidget<HomeController> {
                 AppSpacing.hGapSm,
                 Text(
                   'Messages',
-                  style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 if (unread > 0) ...[
                   AppSpacing.hGapSm,
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(color: cs.error, borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.error,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: Text(
                       unread > 99 ? '99+' : unread.toString(),
-                      style: context.textTheme.labelSmall?.copyWith(color: cs.onError, fontWeight: FontWeight.bold, fontSize: 11),
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: cs.onError,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
                 const Spacer(),
-                Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
+                ),
               ],
             ),
           ),

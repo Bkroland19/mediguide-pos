@@ -154,4 +154,8 @@ class AllActionsController extends GetxController {
   void openGenericPage(GenericPage page) {
     Get.toNamed(AppRoutes.genericViewer, arguments: page);
   }
+
+  Future<void> reloadData() async {
+    await loadGenericPages();
+  }
 }

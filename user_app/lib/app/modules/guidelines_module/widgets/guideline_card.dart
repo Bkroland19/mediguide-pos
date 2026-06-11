@@ -51,7 +51,7 @@ class GuidelineCard extends StatelessWidget {
                   _buildPriorityChip(context),
                 ],
               ),
-              
+
               AppSpacing.sm.gap,
 
               // ICD-10 code if available
@@ -90,7 +90,8 @@ class GuidelineCard extends StatelessWidget {
               ],
 
               // Target population and healthcare level
-              if (guideline.hasTargetPopulation || guideline.healthcareLevelRequired.isNotEmpty) ...[
+              if (guideline.hasTargetPopulation ||
+                  guideline.healthcareLevelRequired.isNotEmpty) ...[
                 Row(
                   children: [
                     if (guideline.hasTargetPopulation) ...[
@@ -109,7 +110,8 @@ class GuidelineCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (guideline.hasTargetPopulation && guideline.healthcareLevelRequired.isNotEmpty)
+                    if (guideline.hasTargetPopulation &&
+                        guideline.healthcareLevelRequired.isNotEmpty)
                       AppSpacing.sm.gap,
                     if (guideline.healthcareLevelRequired.isNotEmpty) ...[
                       Icon(

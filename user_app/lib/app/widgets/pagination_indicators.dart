@@ -39,10 +39,7 @@ class PaginationIndicators {
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapLg,
-            ElevatedButton(
-              onPressed: onRetry,
-              child: Text('tryAgain'.tr),
-            ),
+            ElevatedButton(onPressed: onRetry, child: Text('tryAgain'.tr)),
           ],
         ),
       ),
@@ -73,10 +70,7 @@ class PaginationIndicators {
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapMd,
-            ElevatedButton(
-              onPressed: onRetry,
-              child: Text('tryAgain'.tr),
-            ),
+            ElevatedButton(onPressed: onRetry, child: Text('tryAgain'.tr)),
           ],
         ),
       ),
@@ -84,30 +78,20 @@ class PaginationIndicators {
   }
 
   /// First page loading indicator - shown while initial data loads
-  static Widget firstPageProgress({
-    String? loadingText,
-  }) {
+  static Widget firstPageProgress({String? loadingText}) {
     return Center(
       child: Padding(
         padding: AppSpacing.paddingXl,
-        child: Loading.large(
-          text: loadingText,
-        ),
+        child: Loading.large(text: loadingText),
       ),
     );
   }
 
   /// New page loading indicator - shown while loading additional pages
-  static Widget newPageProgress({
-    String? loadingText,
-  }) {
+  static Widget newPageProgress({String? loadingText}) {
     return Padding(
       padding: AppSpacing.paddingMd,
-      child: Center(
-        child: Loading.medium(
-          text: loadingText,
-        ),
-      ),
+      child: Center(child: Loading.medium(text: loadingText)),
     );
   }
 
@@ -141,10 +125,7 @@ class PaginationIndicators {
               style: Get.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            if (action != null) ...[
-              AppSpacing.gapLg,
-              action,
-            ],
+            if (action != null) ...[AppSpacing.gapLg, action],
           ],
         ),
       ),
@@ -152,9 +133,7 @@ class PaginationIndicators {
   }
 
   /// No more items indicator - shown when all data has been loaded
-  static Widget noMoreItems({
-    String? message,
-  }) {
+  static Widget noMoreItems({String? message}) {
     return Padding(
       padding: AppSpacing.paddingMd,
       child: Center(
@@ -169,5 +148,3 @@ class PaginationIndicators {
     );
   }
 }
-
-

@@ -28,7 +28,7 @@ enum ConsultantSpecialty {
   other(label: 'Other');
 
   const ConsultantSpecialty({required this.label});
-  
+
   final String label;
 }
 
@@ -54,7 +54,7 @@ enum ConsultantQualification {
   doDegree(label: 'DO Degree');
 
   const ConsultantQualification({required this.label});
-  
+
   final String label;
 }
 
@@ -72,7 +72,7 @@ enum ConsultationType {
   healthEducation(label: 'Health Education');
 
   const ConsultationType({required this.label});
-  
+
   final String label;
 }
 
@@ -84,6 +84,6 @@ enum ConsultantStatus {
   suspended(label: 'Suspended');
 
   const ConsultantStatus({required this.label});
-  
+
   final String label;
 }

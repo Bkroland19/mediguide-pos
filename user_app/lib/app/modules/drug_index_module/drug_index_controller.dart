@@ -263,6 +263,10 @@ class DrugIndexController extends GetxController {
       await _loadFilterOptions();
     }
 
+    if (!context.mounted) {
+      return;
+    }
+
     final fields = <FilterField>[
       FilterField.text('search', 'search'.tr),
       FilterField.boolean('whoEmlOnly', AppTranslationKey.whoEmlOnly),

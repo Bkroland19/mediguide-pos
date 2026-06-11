@@ -8,7 +8,7 @@ enum UserRole {
   observer(label: 'Observer');
 
   const UserRole({required this.label});
-  
+
   final String label;
 }
 
@@ -20,7 +20,7 @@ enum UserStatus {
   pendingActivation(label: 'Pending Activation');
 
   const UserStatus({required this.label});
-  
+
   final String label;
 }
 
@@ -42,7 +42,7 @@ enum Specialization {
   other(label: 'Other');
 
   const Specialization({required this.label});
-  
+
   final String label;
 }
 
@@ -57,6 +57,6 @@ enum PreferredLanguage {
   amharic(label: 'Amharic');
 
   const PreferredLanguage({required this.label});
-  
+
   final String label;
 }

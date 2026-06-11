@@ -11,11 +11,7 @@ class StatsWidget extends StatelessWidget {
   final StatsModel stats;
   final VoidCallback? onTap;
 
-  const StatsWidget({
-    super.key,
-    required this.stats,
-    this.onTap,
-  });
+  const StatsWidget({super.key, required this.stats, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +36,9 @@ class StatsWidget extends StatelessWidget {
                 icon: LucideIcons.fileText,
                 label: AppTranslationKey.guidelines,
                 value: stats.formattedGuidelinesCount,
-                color: context.theme.colorScheme.secondary.withValues(alpha: 0.8),
+                color: context.theme.colorScheme.secondary.withValues(
+                  alpha: 0.8,
+                ),
               ),
             ),
             AppSpacing.md.gap,
@@ -50,14 +48,16 @@ class StatsWidget extends StatelessWidget {
                 icon: LucideIcons.building2,
                 label: AppTranslationKey.healthcareFacilities,
                 value: stats.formattedHealthcareFacilitiesCount,
-                color: context.theme.colorScheme.tertiary.withValues(alpha: 0.8),
+                color: context.theme.colorScheme.tertiary.withValues(
+                  alpha: 0.8,
+                ),
               ),
             ),
           ],
         ),
-        
+
         AppSpacing.xl.gap,
-        
+
         // Second row with new stats
         Row(
           children: [
@@ -67,7 +67,9 @@ class StatsWidget extends StatelessWidget {
                 icon: LucideIcons.userCheck,
                 label: 'Consultants',
                 value: stats.formattedConsultantsCount,
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.9,
+                ),
               ),
             ),
             AppSpacing.md.gap,
@@ -92,9 +94,9 @@ class StatsWidget extends StatelessWidget {
             ),
           ],
         ),
-        
+
         AppSpacing.xl.gap,
-        
+
         // Third row with user conversations and FAQs
         Row(
           children: [
@@ -114,7 +116,9 @@ class StatsWidget extends StatelessWidget {
                 icon: LucideIcons.info,
                 label: 'FAQs',
                 value: stats.formattedFaqsCount,
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.7,
+                ),
               ),
             ),
             AppSpacing.md.gap,
@@ -132,7 +136,6 @@ class StatsWidget extends StatelessWidget {
     required String value,
     required Color color,
   }) {
-    
     final iconSize = Responsive.iconSize(
       context,
       mobile: 28.0,
@@ -140,7 +143,7 @@ class StatsWidget extends StatelessWidget {
       desktop: 36.0,
       fourK: 40.0,
     );
-    
+
     final iconPadding = Responsive.doubleValue(
       context,
       mobile: AppSpacing.sm,
@@ -156,23 +159,18 @@ class StatsWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: color.withValues(alpha: 0.15),
-              width: 1,
-            ),
+            border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
           ),
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: color,
+          child: Icon(icon, size: iconSize, color: color),
+        ),
+        SizedBox(
+          height: Responsive.doubleValue(
+            context,
+            mobile: 6,
+            tablet: 8,
+            desktop: 10,
           ),
         ),
-        SizedBox(height: Responsive.doubleValue(
-          context,
-          mobile: 6,
-          tablet: 8,
-          desktop: 10,
-        )),
         Text(
           value,
           style: context.textTheme.titleLarge?.copyWith(
@@ -186,12 +184,14 @@ class StatsWidget extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: Responsive.doubleValue(
-          context,
-          mobile: 2,
-          tablet: 3,
-          desktop: 4,
-        )),
+        SizedBox(
+          height: Responsive.doubleValue(
+            context,
+            mobile: 2,
+            tablet: 3,
+            desktop: 4,
+          ),
+        ),
         Flexible(
           child: Text(
             label,
@@ -219,11 +219,7 @@ class CompactStatsWidget extends StatelessWidget {
   final StatsModel stats;
   final VoidCallback? onTap;
 
-  const CompactStatsWidget({
-    super.key,
-    required this.stats,
-    this.onTap,
-  });
+  const CompactStatsWidget({super.key, required this.stats, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +232,9 @@ class CompactStatsWidget extends StatelessWidget {
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: context.theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.3,
+          ),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: context.theme.colorScheme.outline.withValues(alpha: 0.2),
@@ -257,7 +255,12 @@ class CompactStatsWidget extends StatelessWidget {
                 color: context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            Text(' • ', style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant)),
+            Text(
+              ' • ',
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             Text(
               '${stats.formattedGuidelinesCount} guidelines',
               style: context.textTheme.labelMedium?.copyWith(

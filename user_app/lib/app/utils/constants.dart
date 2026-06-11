@@ -12,8 +12,8 @@ const String _configuredPocketbaseUrl = String.fromEnvironment(
 final String mediguideApiBaseUrl = _configuredApiBaseUrl.isNotEmpty
     ? _configuredApiBaseUrl
     : _configuredPocketbaseUrl.isNotEmpty
-        ? _configuredPocketbaseUrl
-        : _defaultLocalApiBaseUrl();
+    ? _configuredPocketbaseUrl
+    : _defaultLocalApiBaseUrl();
 
 final String pocketbaseUrl = mediguideApiBaseUrl;
 

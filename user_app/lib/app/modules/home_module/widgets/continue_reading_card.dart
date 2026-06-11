@@ -76,7 +76,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                   context.theme.colorScheme.primary,
                 ),
               ),
-              
+
               // Card content
               Expanded(
                 child: Padding(
@@ -103,13 +103,19 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                                 Icon(
                                   LucideIcons.stethoscope,
                                   size: 12,
-                                  color: context.theme.colorScheme.onPrimaryContainer,
+                                  color: context
+                                      .theme
+                                      .colorScheme
+                                      .onPrimaryContainer,
                                 ),
                                 AppSpacing.xs.gap,
                                 Text(
                                   'Guideline',
                                   style: context.textTheme.labelSmall?.copyWith(
-                                    color: context.theme.colorScheme.onPrimaryContainer,
+                                    color: context
+                                        .theme
+                                        .colorScheme
+                                        .onPrimaryContainer,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -130,7 +136,10 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                                 size: 18,
                                 color: widget.progress.isBookmarked
                                     ? context.theme.colorScheme.primary
-                                    : context.theme.colorScheme.onSurfaceVariant,
+                                    : context
+                                          .theme
+                                          .colorScheme
+                                          .onSurfaceVariant,
                               ),
                               constraints: const BoxConstraints(
                                 minWidth: 32,
@@ -149,7 +158,8 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               height: 16,
                               width: 200,
                               decoration: BoxDecoration(
-                                color: context.theme.colorScheme.surfaceContainer,
+                                color:
+                                    context.theme.colorScheme.surfaceContainer,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             )
@@ -177,7 +187,8 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                             child: Text(
                               'Section: ${widget.progress.currentSection}',
                               style: context.textTheme.bodySmall?.copyWith(
-                                color: context.theme.colorScheme.onSurfaceVariant,
+                                color:
+                                    context.theme.colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -247,7 +258,9 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  widget.progress.progressPercentage > 0 ? 'Continue' : 'Start',
+                                  widget.progress.progressPercentage > 0
+                                      ? 'Continue'
+                                      : 'Start',
                                   style: context.textTheme.labelSmall?.copyWith(
                                     color: context.theme.colorScheme.onPrimary,
                                     fontWeight: FontWeight.w500,

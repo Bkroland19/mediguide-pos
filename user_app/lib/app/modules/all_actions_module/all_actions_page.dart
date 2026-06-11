@@ -43,7 +43,7 @@ class AllActionsPage extends GetWidget<AllActionsController> {
         return RefreshIndicator(
           onRefresh: () async {
             if (controller.isLoadingPages.value) return;
-            controller.refresh();
+            await controller.reloadData();
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),

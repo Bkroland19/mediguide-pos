@@ -69,7 +69,7 @@ class GenericPage {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    
+
     return other is GenericPage && other.id == id;
   }
 
@@ -77,7 +77,7 @@ class GenericPage {
   int get hashCode => id.hashCode;
 
   /// Content type detection and parsing methods
-  
+
   /// Check if content is a simple string
   bool get isStringContent {
     if (content == null) return false;
@@ -90,12 +90,13 @@ class GenericPage {
   bool get isKeyValueContent {
     if (content == null || content!.isEmpty) return false;
     if (isStringContent) return false;
-    
+
     // Check if all values are maps with title/content structure
-    return content!.values.every((value) => 
-      value is Map<String, dynamic> && 
-      value.containsKey('title') && 
-      value.containsKey('content')
+    return content!.values.every(
+      (value) =>
+          value is Map<String, dynamic> &&
+          value.containsKey('title') &&
+          value.containsKey('content'),
     );
   }
 
@@ -108,7 +109,7 @@ class GenericPage {
   /// Get sections for key-value content
   List<GenericPageSection> get sections {
     if (!isKeyValueContent) return [];
-    
+
     return content!.entries.map((entry) {
       final sectionData = entry.value as Map<String, dynamic>;
       return GenericPageSection(

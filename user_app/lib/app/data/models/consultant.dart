@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:pocketbase/pocketbase.dart';
 import '../enums/consultant_enums.dart';
 import '../enums/user_enums.dart';

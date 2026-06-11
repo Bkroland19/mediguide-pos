@@ -9,10 +9,7 @@ import 'package:user_app/app/utils/responsive.dart';
 class GuidelineTreeTile extends StatelessWidget {
   final TreeNode<GuidelineIndex> node;
 
-  const GuidelineTreeTile({
-    super.key,
-    required this.node,
-  });
+  const GuidelineTreeTile({super.key, required this.node});
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +24,7 @@ class GuidelineTreeTile extends StatelessWidget {
       title: Text(
         nodeData.title,
         style: context.textTheme.titleMedium?.copyWith(
-          fontWeight: hasChildren
-              ? FontWeight.w600
-              : FontWeight.w500,
+          fontWeight: hasChildren ? FontWeight.w600 : FontWeight.w500,
           color: hasChildren
               ? context.theme.colorScheme.onSurface
               : context.theme.colorScheme.onSurface,
@@ -60,7 +55,7 @@ class GuidelineTreeTile extends StatelessWidget {
         ),
         child: Icon(
           hasChildren ? LucideIcons.folder : LucideIcons.fileText,
-          color: hasChildren 
+          color: hasChildren
               ? context.theme.colorScheme.primary
               : context.theme.colorScheme.onSurfaceVariant,
           size: 20,

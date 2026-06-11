@@ -44,13 +44,13 @@ class Common {
   }
 
   /// Make a phone call
-  static Future<void> makeCall(String phoneNumber, {String? contactName}) async {
+  static Future<void> makeCall(
+    String phoneNumber, {
+    String? contactName,
+  }) async {
     try {
-      final Uri phoneUri = Uri(
-        scheme: 'tel',
-        path: phoneNumber,
-      );
-      
+      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
       } else {
@@ -80,15 +80,17 @@ class Common {
       final Map<String, String> queryParams = {};
       if (subject != null) queryParams['subject'] = subject;
       if (body != null) queryParams['body'] = body;
-      
+
       final Uri emailUri = Uri(
         scheme: 'mailto',
         path: email,
-        query: queryParams.isNotEmpty 
-          ? queryParams.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')
-          : null,
+        query: queryParams.isNotEmpty
+            ? queryParams.entries
+                  .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+                  .join('&')
+            : null,
       );
-      
+
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
       } else {

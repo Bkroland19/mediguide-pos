@@ -6,13 +6,13 @@ import '../utils/app_spacing.dart';
 class ProfileSectionHeader extends StatelessWidget {
   /// The title text to display
   final String title;
-  
+
   /// Optional custom text style
   final TextStyle? textStyle;
-  
+
   /// Optional custom color
   final Color? color;
-  
+
   /// Custom padding around the text
   final EdgeInsetsGeometry? padding;
 
@@ -27,16 +27,17 @@ class ProfileSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding ?? EdgeInsets.only(
-        left: AppSpacing.md,
-        bottom: AppSpacing.sm,
-      ),
+      padding:
+          padding ??
+          EdgeInsets.only(left: AppSpacing.md, bottom: AppSpacing.sm),
       child: Text(
         title,
-        style: textStyle ?? context.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: color ?? context.theme.colorScheme.primary,
-        ),
+        style:
+            textStyle ??
+            context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: color ?? context.theme.colorScheme.primary,
+            ),
       ),
     );
   }

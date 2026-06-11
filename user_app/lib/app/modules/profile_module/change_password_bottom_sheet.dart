@@ -45,7 +45,6 @@ class ChangePasswordController extends GetxController {
 
       // Close bottom sheet
       Get.back(result: true);
-
     } catch (e) {
       // Error handling
       String errorMessage = AppTranslationKey.passwordChangeError.tr;
@@ -54,7 +53,8 @@ class ChangePasswordController extends GetxController {
         errorMessage = AppTranslationKey.currentPasswordIncorrect.tr;
       } else if (e.toString().contains('validation')) {
         errorMessage = AppTranslationKey.passwordValidationError.tr;
-      } else if (e.toString().contains('network') || e.toString().contains('connection')) {
+      } else if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
         errorMessage = AppTranslationKey.networkError.tr;
       }
 
@@ -72,11 +72,11 @@ class ChangePasswordController extends GetxController {
   String? validatePasswordMatch(String? value) {
     final formValues = formKey.currentState?.instantValue;
     final newPassword = formValues?['newPassword']?.toString();
-    
+
     if (value != newPassword) {
       return AppTranslationKey.passwordsDoNotMatch.tr;
     }
-    
+
     return null;
   }
 
@@ -84,11 +84,11 @@ class ChangePasswordController extends GetxController {
   String? validateNewPasswordDifferent(String? value) {
     final formValues = formKey.currentState?.instantValue;
     final currentPassword = formValues?['currentPassword']?.toString();
-    
+
     if (value == currentPassword) {
       return AppTranslationKey.newPasswordSameAsCurrent.tr;
     }
-    
+
     return null;
   }
 }
@@ -109,8 +109,9 @@ class ChangePasswordBottomSheet extends StatelessWidget {
             left: context.responsiveHorizontalPadding,
             right: context.responsiveHorizontalPadding,
             top: context.responsiveVerticalPadding,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 
-                   context.responsiveVerticalPadding,
+            bottom:
+                MediaQuery.of(context).viewInsets.bottom +
+                context.responsiveVerticalPadding,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -158,7 +159,9 @@ class ChangePasswordBottomSheet extends StatelessWidget {
               Text(
                 AppTranslationKey.updateSecurityCredentials.tr,
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: context.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.7,
+                  ),
                 ),
               ),
 
@@ -170,94 +173,109 @@ class ChangePasswordBottomSheet extends StatelessWidget {
                 child: Column(
                   children: [
                     // Current Password Field
-                    Obx(() => FormBuilderTextField(
-                      name: 'currentPassword',
-                      obscureText: controller.obscureCurrentPassword.value,
-                      decoration: InputDecoration(
-                        labelText: AppTranslationKey.currentPassword.tr,
-                        hintText: AppTranslationKey.enterCurrentPassword.tr,
-                        prefixIcon: Icon(LucideIcons.lock),
-                        suffixIcon: IconButton(
-                          onPressed: () => controller.obscureCurrentPassword.toggle(),
-                          icon: Icon(
-                            controller.obscureCurrentPassword.value
-                                ? LucideIcons.eyeOff
-                                : LucideIcons.eye,
+                    Obx(
+                      () => FormBuilderTextField(
+                        name: 'currentPassword',
+                        obscureText: controller.obscureCurrentPassword.value,
+                        decoration: InputDecoration(
+                          labelText: AppTranslationKey.currentPassword.tr,
+                          hintText: AppTranslationKey.enterCurrentPassword.tr,
+                          prefixIcon: Icon(LucideIcons.lock),
+                          suffixIcon: IconButton(
+                            onPressed: () =>
+                                controller.obscureCurrentPassword.toggle(),
+                            icon: Icon(
+                              controller.obscureCurrentPassword.value
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
+                            ),
                           ),
                         ),
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.required(
+                            errorText:
+                                AppTranslationKey.currentPasswordRequired.tr,
+                          ),
+                        ]),
+                        textInputAction: TextInputAction.next,
                       ),
-                      validator: FormBuilderValidators.compose([
-                        FormBuilderValidators.required(
-                          errorText: AppTranslationKey.currentPasswordRequired.tr,
-                        ),
-                      ]),
-                      textInputAction: TextInputAction.next,
-                    )),
+                    ),
 
                     SizedBox(height: AppSpacing.lg),
 
                     // New Password Field
-                    Obx(() => FormBuilderTextField(
-                      name: 'newPassword',
-                      obscureText: controller.obscureNewPassword.value,
-                      decoration: InputDecoration(
-                        labelText: AppTranslationKey.newPassword.tr,
-                        hintText: AppTranslationKey.enterNewPassword.tr,
-                        prefixIcon: Icon(LucideIcons.key),
-                        suffixIcon: IconButton(
-                          onPressed: () => controller.obscureNewPassword.toggle(),
-                          icon: Icon(
-                            controller.obscureNewPassword.value
-                                ? LucideIcons.eyeOff
-                                : LucideIcons.eye,
+                    Obx(
+                      () => FormBuilderTextField(
+                        name: 'newPassword',
+                        obscureText: controller.obscureNewPassword.value,
+                        decoration: InputDecoration(
+                          labelText: AppTranslationKey.newPassword.tr,
+                          hintText: AppTranslationKey.enterNewPassword.tr,
+                          prefixIcon: Icon(LucideIcons.key),
+                          suffixIcon: IconButton(
+                            onPressed: () =>
+                                controller.obscureNewPassword.toggle(),
+                            icon: Icon(
+                              controller.obscureNewPassword.value
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
+                            ),
                           ),
                         ),
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.required(
+                            errorText: AppTranslationKey.newPasswordRequired.tr,
+                          ),
+                          FormBuilderValidators.minLength(
+                            8,
+                            errorText: AppTranslationKey.passwordMinLength.tr,
+                          ),
+                          controller.validateNewPasswordDifferent,
+                        ]),
+                        textInputAction: TextInputAction.next,
+                        onChanged: (value) {
+                          // Re-validate confirm password when new password changes
+                          controller
+                              .formKey
+                              .currentState
+                              ?.fields['confirmPassword']
+                              ?.validate();
+                        },
                       ),
-                      validator: FormBuilderValidators.compose([
-                        FormBuilderValidators.required(
-                          errorText: AppTranslationKey.newPasswordRequired.tr,
-                        ),
-                        FormBuilderValidators.minLength(
-                          8,
-                          errorText: AppTranslationKey.passwordMinLength.tr,
-                        ),
-                        controller.validateNewPasswordDifferent,
-                      ]),
-                      textInputAction: TextInputAction.next,
-                      onChanged: (value) {
-                        // Re-validate confirm password when new password changes
-                        controller.formKey.currentState?.fields['confirmPassword']?.validate();
-                      },
-                    )),
+                    ),
 
                     SizedBox(height: AppSpacing.lg),
 
                     // Confirm Password Field
-                    Obx(() => FormBuilderTextField(
-                      name: 'confirmPassword',
-                      obscureText: controller.obscureConfirmPassword.value,
-                      decoration: InputDecoration(
-                        labelText: AppTranslationKey.confirmNewPassword.tr,
-                        hintText: AppTranslationKey.enterConfirmPassword.tr,
-                        prefixIcon: Icon(LucideIcons.shieldCheck),
-                        suffixIcon: IconButton(
-                          onPressed: () => controller.obscureConfirmPassword.toggle(),
-                          icon: Icon(
-                            controller.obscureConfirmPassword.value
-                                ? LucideIcons.eyeOff
-                                : LucideIcons.eye,
+                    Obx(
+                      () => FormBuilderTextField(
+                        name: 'confirmPassword',
+                        obscureText: controller.obscureConfirmPassword.value,
+                        decoration: InputDecoration(
+                          labelText: AppTranslationKey.confirmNewPassword.tr,
+                          hintText: AppTranslationKey.enterConfirmPassword.tr,
+                          prefixIcon: Icon(LucideIcons.shieldCheck),
+                          suffixIcon: IconButton(
+                            onPressed: () =>
+                                controller.obscureConfirmPassword.toggle(),
+                            icon: Icon(
+                              controller.obscureConfirmPassword.value
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
+                            ),
                           ),
                         ),
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.required(
+                            errorText:
+                                AppTranslationKey.confirmPasswordRequired.tr,
+                          ),
+                          controller.validatePasswordMatch,
+                        ]),
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => controller.changePassword(),
                       ),
-                      validator: FormBuilderValidators.compose([
-                        FormBuilderValidators.required(
-                          errorText: AppTranslationKey.confirmPasswordRequired.tr,
-                        ),
-                        controller.validatePasswordMatch,
-                      ]),
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => controller.changePassword(),
-                    )),
+                    ),
 
                     SizedBox(height: AppSpacing.xl),
 
@@ -266,10 +284,13 @@ class ChangePasswordBottomSheet extends StatelessWidget {
                       width: double.infinity,
                       padding: EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
-                        color: context.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        color: context.theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: context.theme.colorScheme.outline.withValues(alpha: 0.2),
+                          color: context.theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
                         ),
                       ),
                       child: Column(
@@ -296,7 +317,8 @@ class ChangePasswordBottomSheet extends StatelessWidget {
                           Text(
                             AppTranslationKey.passwordRequirementsDetails.tr,
                             style: context.textTheme.bodySmall?.copyWith(
-                              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: context.theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -314,18 +336,24 @@ class ChangePasswordBottomSheet extends StatelessWidget {
                   Expanded(
                     child: AppButtonVariants.outlined(
                       text: AppTranslationKey.cancel.tr,
-                      onPressed: controller.isLoading.value ? null : () => Get.back(),
+                      onPressed: controller.isLoading.value
+                          ? null
+                          : () => Get.back(),
                     ),
                   ),
                   SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Obx(() => AppButton(
-                      text: AppTranslationKey.changePassword.tr,
-                      onPressed: controller.isLoading.value ? null : controller.changePassword,
-                      isLoading: controller.isLoading.value,
-                      loadingText: AppTranslationKey.changing.tr,
-                      icon: LucideIcons.save,
-                    )),
+                    child: Obx(
+                      () => AppButton(
+                        text: AppTranslationKey.changePassword.tr,
+                        onPressed: controller.isLoading.value
+                            ? null
+                            : controller.changePassword,
+                        isLoading: controller.isLoading.value,
+                        loadingText: AppTranslationKey.changing.tr,
+                        icon: LucideIcons.save,
+                      ),
+                    ),
                   ),
                 ],
               ),

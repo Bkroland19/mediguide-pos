@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 class Loading extends StatelessWidget {
   /// The size of the loading indicator
   final double size;
-  
+
   /// The stroke width of the circular progress indicator
   final double strokeWidth;
-  
+
   /// The color of the progress indicator
   final Color? color;
-  
+
   /// Optional text to display below the loading indicator
   final String? text;
-  
+
   /// Text style for the loading text
   final TextStyle? textStyle;
-  
+
   /// Spacing between indicator and text
   final double spacing;
 
@@ -94,9 +94,11 @@ class Loading extends StatelessWidget {
           SizedBox(height: spacing),
           Text(
             text!,
-            style: textStyle ?? theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
+            style:
+                textStyle ??
+                theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -110,37 +112,23 @@ class CenteredLoading extends StatelessWidget {
   /// The loading widget to center
   final Loading loading;
 
-  const CenteredLoading({
-    super.key,
-    required this.loading,
-  });
+  const CenteredLoading({super.key, required this.loading});
 
   /// Centered small loading
-  const CenteredLoading.small({
-    super.key,
-    String? text,
-    Color? color,
-  }) : loading = const Loading.small();
+  const CenteredLoading.small({super.key, String? text, Color? color})
+    : loading = const Loading.small();
 
   /// Centered medium loading (default)
-  const CenteredLoading.medium({
-    super.key,
-    String? text,
-    Color? color,
-  }) : loading = const Loading.medium();
+  const CenteredLoading.medium({super.key, String? text, Color? color})
+    : loading = const Loading.medium();
 
   /// Centered large loading
-  const CenteredLoading.large({
-    super.key,
-    String? text,
-    Color? color,
-  }) : loading = const Loading.large();
+  const CenteredLoading.large({super.key, String? text, Color? color})
+    : loading = const Loading.large();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: loading,
-    );
+    return Center(child: loading);
   }
 }
 

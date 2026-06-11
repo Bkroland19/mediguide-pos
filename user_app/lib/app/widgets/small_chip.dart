@@ -6,16 +6,16 @@ import '../utils/app_spacing.dart';
 class SmallChip extends StatelessWidget {
   /// The text label to display
   final String label;
-  
+
   /// The icon to display before the label
   final IconData icon;
-  
+
   /// The background color of the chip
   final Color backgroundColor;
-  
+
   /// Optional text color override
   final Color? textColor;
-  
+
   /// Optional icon color override
   final Color? iconColor;
 
@@ -32,7 +32,7 @@ class SmallChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveTextColor = textColor ?? context.theme.colorScheme.onSurface;
     final effectiveIconColor = iconColor ?? context.theme.colorScheme.onSurface;
-    
+
     return Card.filled(
       color: backgroundColor,
       child: Padding(
@@ -43,11 +43,7 @@ class SmallChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 12,
-              color: effectiveIconColor,
-            ),
+            Icon(icon, size: 12, color: effectiveIconColor),
             AppSpacing.hGapXs,
             Text(
               label,

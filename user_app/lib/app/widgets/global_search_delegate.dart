@@ -75,7 +75,8 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
     }
 
     return Obx(() {
-      if (GlobalSearchController.to.isLoading.value && GlobalSearchController.to.searchResults.isEmpty) {
+      if (GlobalSearchController.to.isLoading.value &&
+          GlobalSearchController.to.searchResults.isEmpty) {
         return _buildLoadingState(context);
       }
 
@@ -98,7 +99,6 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
     return _buildSearchPrompt(context);
   }
 
-
   /// Build loading state
   Widget _buildLoadingState(BuildContext context) {
     return Center(
@@ -117,7 +117,6 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
       ),
     );
   }
-
 
   /// Build empty state
   Widget _buildEmptyState(
@@ -179,7 +178,10 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: context.responsiveHorizontalPadding, vertical: AppSpacing.sm),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.responsiveHorizontalPadding,
+        vertical: AppSpacing.sm,
+      ),
       itemCount: grouped.length,
       itemBuilder: (context, sectionIndex) {
         final category = grouped.keys.elementAt(sectionIndex);
@@ -194,7 +196,11 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Row(
                 children: [
-                  Icon(_getCategoryIcon(category), size: 14, color: context.theme.colorScheme.primary),
+                  Icon(
+                    _getCategoryIcon(category),
+                    size: 14,
+                    color: context.theme.colorScheme.primary,
+                  ),
                   AppSpacing.hGapXs,
                   Text(
                     category.displayName.toUpperCase(),
@@ -205,14 +211,24 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
                     ),
                   ),
                   AppSpacing.hGapSm,
-                  Expanded(child: Divider(height: 1, color: context.theme.colorScheme.outlineVariant)),
+                  Expanded(
+                    child: Divider(
+                      height: 1,
+                      color: context.theme.colorScheme.outlineVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
             // Items
             ...items.asMap().entries.map((entry) {
               final isLast = entry.key == items.length - 1;
-              return _buildSearchResultItem(context, entry.value, controller, showDivider: !isLast);
+              return _buildSearchResultItem(
+                context,
+                entry.value,
+                controller,
+                showDivider: !isLast,
+              );
             }),
           ],
         );
@@ -246,7 +262,9 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
                     children: [
                       Text(
                         result.title,
-                        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        style: context.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -266,7 +284,9 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
                         AppSpacing.gapXs,
                         Text(
                           result.description!,
-                          style: context.textTheme.bodySmall?.copyWith(color: context.theme.colorScheme.onSurfaceVariant),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.theme.colorScheme.onSurfaceVariant,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -275,21 +295,28 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
                   ),
                 ),
                 AppSpacing.hGapSm,
-                Icon(LucideIcons.chevronRight, size: 16, color: context.theme.colorScheme.onSurfaceVariant),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                ),
               ],
             ),
             if (showDivider)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Divider(height: 1, color: context.theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                child: Divider(
+                  height: 1,
+                  color: context.theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
               ),
           ],
         ),
       ),
     );
   }
-
-
 
   /// Build search prompt
   Widget _buildSearchPrompt(BuildContext context) {

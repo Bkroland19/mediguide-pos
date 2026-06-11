@@ -29,7 +29,7 @@ class UserAvatar extends StatelessWidget {
   /// Background color when showing initials (optional, uses theme color if null)
   final Color? backgroundColor;
 
-  /// Text color for initials (optional, uses theme color if null)  
+  /// Text color for initials (optional, uses theme color if null)
   final Color? textColor;
 
   /// Border color (optional)
@@ -114,10 +114,10 @@ class UserAvatar extends StatelessWidget {
       children: [
         // Main avatar
         _buildAvatar(context),
-        
+
         // Loading overlay
         if (isLoading) _buildLoadingOverlay(context),
-        
+
         // Edit button
         if (showEditButton && onEdit != null && !isLoading)
           _buildEditButton(context),
@@ -127,9 +127,10 @@ class UserAvatar extends StatelessWidget {
 
   /// Build the main avatar widget
   Widget _buildAvatar(BuildContext context) {
-    final effectiveBackgroundColor = backgroundColor ?? context.theme.colorScheme.primary;
+    final effectiveBackgroundColor =
+        backgroundColor ?? context.theme.colorScheme.primary;
     final effectiveTextColor = textColor ?? context.theme.colorScheme.onPrimary;
-    
+
     return Container(
       width: radius * 2,
       height: radius * 2,
@@ -152,7 +153,10 @@ class UserAvatar extends StatelessWidget {
                   width: radius * 2,
                   height: radius * 2,
                   fit: BoxFit.cover,
-                  placeholder: _buildInitialsWidget(context, effectiveTextColor),
+                  placeholder: _buildInitialsWidget(
+                    context,
+                    effectiveTextColor,
+                  ),
                   errorBuilder: (context, error, stackTrace) =>
                       _buildInitialsWidget(context, effectiveTextColor),
                 ),
@@ -166,7 +170,7 @@ class UserAvatar extends StatelessWidget {
   Widget _buildInitialsWidget(BuildContext context, Color textColor) {
     final initials = _getInitials(name);
     final fontSize = _getResponsiveFontSize(context);
-    
+
     return Text(
       initials,
       style: context.textTheme.titleMedium?.copyWith(
@@ -187,10 +191,7 @@ class UserAvatar extends StatelessWidget {
         color: Colors.black.withValues(alpha: 0.5),
       ),
       child: Center(
-        child: Loading.small(
-          color: Colors.white,
-          size: radius * 0.5,
-        ),
+        child: Loading.small(color: Colors.white, size: radius * 0.5),
       ),
     );
   }
@@ -225,7 +226,7 @@ class UserAvatar extends StatelessWidget {
   /// Get initials from name
   String _getInitials(String name) {
     if (name.isEmpty) return 'U';
-    
+
     final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();

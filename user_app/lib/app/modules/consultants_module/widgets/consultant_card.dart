@@ -23,16 +23,16 @@ class ConsultantCard extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               children: [
                 // Avatar with online indicator
                 Stack(
                   children: [
-                    UserAvatar(
-                      name: consultant.name,
-                      radius: 24,
-                    ),
+                    UserAvatar(name: consultant.name, radius: 24),
                     Positioned(
                       right: 0,
                       bottom: 0,
@@ -59,7 +59,9 @@ class ConsultantCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               consultant.name,
-                              style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                              style: context.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -67,14 +69,21 @@ class ConsultantCard extends StatelessWidget {
                           if (consultant.isVerified)
                             Padding(
                               padding: const EdgeInsets.only(left: 4),
-                              child: Icon(LucideIcons.badgeCheck, size: 16, color: cs.primary),
+                              child: Icon(
+                                LucideIcons.badgeCheck,
+                                size: 16,
+                                color: cs.primary,
+                              ),
                             ),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
                         consultant.specialty?.displayName ?? 'General Practice',
-                        style: context.textTheme.bodySmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w500),
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -82,7 +91,10 @@ class ConsultantCard extends StatelessWidget {
                         const SizedBox(height: 1),
                         Text(
                           consultant.organization,
-                          style: context.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontSize: 12),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -99,16 +111,26 @@ class ConsultantCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.star, size: 12, color: Colors.amber),
+                          const Icon(
+                            LucideIcons.star,
+                            size: 12,
+                            color: Colors.amber,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             consultant.rating.toStringAsFixed(1),
-                            style: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                            style: context.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                     const SizedBox(height: 2),
-                    Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 16,
+                      color: cs.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ],

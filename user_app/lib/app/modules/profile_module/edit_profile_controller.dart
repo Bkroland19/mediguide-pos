@@ -34,26 +34,35 @@ class EditProfileController extends GetxController {
       if (user == null) throw Exception('User not found');
 
       final formValues = formKey.currentState!.value;
-      
+
       // Debug: Print all form values to see what's being sent
-      print('Form values: $formValues');
+      debugPrint('Form values: $formValues');
 
       // Create a clean update data with only the fields we want to update
       final allowedFields = [
-        'name', 'phone', 'alternativePhone', 'address', 'city', 
-        'state', 'country', 'postalCode', 'organization', 
-        'department', 'jobTitle', 'specialization'
+        'name',
+        'phone',
+        'alternativePhone',
+        'address',
+        'city',
+        'state',
+        'country',
+        'postalCode',
+        'organization',
+        'department',
+        'jobTitle',
+        'specialization',
       ];
-      
+
       final updateData = <String, dynamic>{};
-      
+
       for (final fieldName in allowedFields) {
         final value = formValues[fieldName]?.toString().trim();
         if (value != null && value.isNotEmpty) {
           updateData[fieldName] = value;
         }
       }
-      
+
       // PocketBase seems to validate enum fields even when not being updated
       // Include current enum values to prevent validation errors
       if (user.role != null) {
@@ -67,8 +76,8 @@ class EditProfileController extends GetxController {
       }
 
       // Debug: Print the final update data being sent
-      print('Update data being sent: $updateData');
-      
+      debugPrint('Update data being sent: $updateData');
+
       // Update user profile via PocketBase
       final updatedRecord = await PocketBaseService.to.updateRecord(
         collectionName: User.collection,
@@ -90,7 +99,7 @@ class EditProfileController extends GetxController {
       // Close dialog
       Get.back(result: true);
     } catch (e) {
-      print(e.toString());
+      debugPrint(e.toString());
       Common.quickToast(
         type: ToastificationType.error,
         title: AppTranslationKey.error.tr,

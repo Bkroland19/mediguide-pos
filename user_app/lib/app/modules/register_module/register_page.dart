@@ -165,17 +165,38 @@ class RegisterPage extends GetWidget<RegisterController> {
                                   labelText: AppTranslationKey.phoneNumber.tr,
                                   hintText: '7XX XXX XXX',
                                   isDense: true,
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.primary,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
                                 iconSelector: const SizedBox.shrink(),
                                 countryPicker: (flag, code) => Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [SizedBox(width: 20, height: 14, child: flag), const SizedBox(width: 4), Text(code, style: theme.textTheme.bodyMedium)],
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 14,
+                                      child: flag,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      code,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ],
                                 ),
                                 defaultSelectedCountryIsoCode: 'UG',
                                 priorityListByIsoCode: ['UG', 'KE', 'TZ', 'RW'],
-                                validator: FormBuilderValidators.compose([FormBuilderValidators.required()]),
+                                validator: FormBuilderValidators.compose([
+                                  FormBuilderValidators.required(),
+                                ]),
                               ),
 
                               AppSpacing.fieldGap,
@@ -187,13 +208,32 @@ class RegisterPage extends GetWidget<RegisterController> {
                                   labelText: 'Alternative Phone (Optional)',
                                   hintText: '7XX XXX XXX',
                                   isDense: true,
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.primary,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
                                 iconSelector: const SizedBox.shrink(),
                                 countryPicker: (flag, code) => Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [SizedBox(width: 20, height: 14, child: flag), const SizedBox(width: 4), Text(code, style: theme.textTheme.bodyMedium)],
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 14,
+                                      child: flag,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      code,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ],
                                 ),
                                 defaultSelectedCountryIsoCode: 'UG',
                                 priorityListByIsoCode: ['UG', 'KE', 'TZ', 'RW'],
@@ -230,8 +270,10 @@ class RegisterPage extends GetWidget<RegisterController> {
                               FormBuilderDropdown<String>(
                                 name: 'specialization',
                                 decoration: InputDecoration(
-                                  labelText: AppTranslationKey.specialization.tr,
-                                  hintText: AppTranslationKey.selectSpecialization.tr,
+                                  labelText:
+                                      AppTranslationKey.specialization.tr,
+                                  hintText:
+                                      AppTranslationKey.selectSpecialization.tr,
                                   prefixIcon: Icon(
                                     LucideIcons.userCheck,
                                     color: theme.colorScheme.primary,
@@ -248,10 +290,12 @@ class RegisterPage extends GetWidget<RegisterController> {
                                   ),
                                 ),
                                 items: Specialization.values
-                                    .map((specialization) => DropdownMenuItem(
-                                          value: specialization.name,
-                                          child: Text(specialization.label),
-                                        ))
+                                    .map(
+                                      (specialization) => DropdownMenuItem(
+                                        value: specialization.name,
+                                        child: Text(specialization.label),
+                                      ),
+                                    )
                                     .toList(),
                                 validator: FormBuilderValidators.required(),
                               ),
@@ -312,12 +356,16 @@ class RegisterPage extends GetWidget<RegisterController> {
                                       ),
                                       TextSpan(
                                         text: 'Terms of Service',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
                                         recognizer: TapGestureRecognizer()
-                                          ..onTap = () => Get.toNamed(AppRoutes.termsAndConditions),
+                                          ..onTap = () => Get.toNamed(
+                                            AppRoutes.termsAndConditions,
+                                          ),
                                       ),
                                       TextSpan(
                                         text: ' and ',
@@ -325,12 +373,16 @@ class RegisterPage extends GetWidget<RegisterController> {
                                       ),
                                       TextSpan(
                                         text: 'Privacy Policy',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
                                         recognizer: TapGestureRecognizer()
-                                          ..onTap = () => Get.toNamed(AppRoutes.termsAndConditions),
+                                          ..onTap = () => Get.toNamed(
+                                            AppRoutes.termsAndConditions,
+                                          ),
                                       ),
                                     ],
                                   ),
