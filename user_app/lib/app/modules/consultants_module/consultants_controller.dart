@@ -61,21 +61,27 @@ class ConsultantsController extends GetxController {
       final filters = <String>['(status="active" || status="pendingApproval")'];
 
       if (searchQuery.value.isNotEmpty) {
-        filters.add(
-          '(name~"${searchQuery.value}" || organization~"${searchQuery.value}" || specialty~"${searchQuery.value}")',
-        );
+        final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+        filters.add('(name~"$q" || organization~"$q" || specialty~"$q")');
       }
 
       if (selectedSpecialty.value.isNotEmpty) {
-        filters.add('specialty="${selectedSpecialty.value}"');
+        final specialty = PocketBaseService.escapeFilterValue(
+          selectedSpecialty.value,
+        );
+        filters.add('specialty="$specialty"');
       }
 
       if (selectedRegion.value.isNotEmpty) {
-        filters.add('region="${selectedRegion.value}"');
+        final region = PocketBaseService.escapeFilterValue(
+          selectedRegion.value,
+        );
+        filters.add('region="$region"');
       }
 
       if (selectedCity.value.isNotEmpty) {
-        filters.add('city="${selectedCity.value}"');
+        final city = PocketBaseService.escapeFilterValue(selectedCity.value);
+        filters.add('city="$city"');
       }
 
       if (showOnlineOnly.value) {

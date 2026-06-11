@@ -89,14 +89,15 @@ class MinistryDirectoryController extends GetxController {
 
     // Status logic
     if (selectedStatus.value.isNotEmpty) {
-      filters.add('status="${selectedStatus.value}"');
+      final status = PocketBaseService.escapeFilterValue(selectedStatus.value);
+      filters.add('status="$status"');
     } else if (showActiveOnly.value) {
       filters.add('status="active"');
     }
 
     // Search
     if (searchQuery.value.isNotEmpty) {
-      final q = searchQuery.value;
+      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
       filters.add(
         '(name~"$q" || title~"$q" || department~"$q" || ministry~"$q" || email~"$q")',
       );
@@ -104,19 +105,29 @@ class MinistryDirectoryController extends GetxController {
 
     // Simple filters
     if (selectedMinistry.value.isNotEmpty) {
-      filters.add('ministry="${selectedMinistry.value}"');
+      final ministry = PocketBaseService.escapeFilterValue(
+        selectedMinistry.value,
+      );
+      filters.add('ministry="$ministry"');
     }
 
     if (selectedDepartment.value.isNotEmpty) {
-      filters.add('department~"${selectedDepartment.value}"');
+      final department = PocketBaseService.escapeFilterValue(
+        selectedDepartment.value,
+      );
+      filters.add('department~"$department"');
     }
 
     if (selectedDistrict.value.isNotEmpty) {
-      filters.add('district.name~"${selectedDistrict.value}"');
+      final district = PocketBaseService.escapeFilterValue(
+        selectedDistrict.value,
+      );
+      filters.add('district.name~"$district"');
     }
 
     if (selectedRegion.value.isNotEmpty) {
-      filters.add('region.name~"${selectedRegion.value}"');
+      final region = PocketBaseService.escapeFilterValue(selectedRegion.value);
+      filters.add('region.name~"$region"');
     }
 
     // Flags

@@ -137,30 +137,31 @@ class DrugIndexController extends GetxController {
     final parts = <String>['status = "active"'];
 
     if (searchQuery.value.isNotEmpty) {
-      parts.add(
-        '(name ~ "${searchQuery.value}" || generic_name ~ "${searchQuery.value}" || brand_names ~ "${searchQuery.value}")',
-      );
+      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+      parts.add('(name ~ "$q" || generic_name ~ "$q" || brand_names ~ "$q")');
     }
 
     if (selectedCategories.isNotEmpty) {
       parts.add(
-        '(${selectedCategories.map((e) => 'categories ~ "$e"').join(' || ')})',
+        '(${selectedCategories.map((e) => 'categories ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
     if (selectedTags.isNotEmpty) {
-      parts.add('(${selectedTags.map((e) => 'tags ~ "$e"').join(' || ')})');
+      parts.add(
+        '(${selectedTags.map((e) => 'tags ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
+      );
     }
 
     if (selectedRoutes.isNotEmpty) {
       parts.add(
-        '(${selectedRoutes.map((e) => 'route_of_administration ~ "$e"').join(' || ')})',
+        '(${selectedRoutes.map((e) => 'route_of_administration ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
     if (selectedPregnancyCategories.isNotEmpty) {
       parts.add(
-        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "$e"').join(' || ')})',
+        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 

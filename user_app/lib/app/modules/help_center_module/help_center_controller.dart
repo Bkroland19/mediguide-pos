@@ -560,7 +560,8 @@ class HelpCenterController extends GetxController {
 
     // Search in subject and description
     if (query.isNotEmpty) {
-      filters.add('(subject ~ "$query" || description ~ "$query")');
+      final q = PocketBaseService.escapeFilterValue(query);
+      filters.add('(subject ~ "$q" || description ~ "$q")');
     }
 
     // Status filter
@@ -575,7 +576,8 @@ class HelpCenterController extends GetxController {
 
     // Category filter
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      filters.add('category = "$categoryFilter"');
+      final category = PocketBaseService.escapeFilterValue(categoryFilter);
+      filters.add('category = "$category"');
     }
 
     final combinedFilter = filters.join(' && ');

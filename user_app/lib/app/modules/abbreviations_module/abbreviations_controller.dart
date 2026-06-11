@@ -235,19 +235,23 @@ class AbbreviationsController extends GetxController {
     final filters = <String>[];
 
     if (query.search.isNotEmpty) {
+      final q = PocketBaseService.escapeFilterValue(query.search);
       filters.add(
-        '(abbreviation ~ "${query.search}" || '
-        'meaning ~ "${query.search}" || '
-        'description ~ "${query.search}")',
+        '(abbreviation ~ "$q" || '
+        'meaning ~ "$q" || '
+        'description ~ "$q")',
       );
     }
 
     if (query.categoryId != null) {
-      filters.add('category = "${query.categoryId}"');
+      final categoryId = PocketBaseService.escapeFilterValue(query.categoryId);
+      filters.add('category = "$categoryId"');
     }
 
     if (query.tagIds.isNotEmpty) {
-      final tagFilter = query.tagIds.map((e) => 'tags ~ "$e"').join(' || ');
+      final tagFilter = query.tagIds
+          .map((e) => 'tags ~ "${PocketBaseService.escapeFilterValue(e)}"')
+          .join(' || ');
 
       filters.add('($tagFilter)');
     }

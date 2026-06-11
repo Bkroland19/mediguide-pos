@@ -75,6 +75,13 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
     }
 
     return Obx(() {
+      if (GlobalSearchController.to.validationMessage.value.isNotEmpty) {
+        return _buildMessageState(
+          context,
+          GlobalSearchController.to.validationMessage.value,
+        );
+      }
+
       if (GlobalSearchController.to.isLoading.value &&
           GlobalSearchController.to.searchResults.isEmpty) {
         return _buildLoadingState(context);
@@ -97,6 +104,34 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
 
     // Always show search prompt in suggestions (no auto-search)
     return _buildSearchPrompt(context);
+  }
+
+  Widget _buildMessageState(BuildContext context, String message) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(context.responsiveHorizontalPadding),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              LucideIcons.search,
+              size: 56,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            AppSpacing.md.gap,
+            Text(
+              message,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Build loading state

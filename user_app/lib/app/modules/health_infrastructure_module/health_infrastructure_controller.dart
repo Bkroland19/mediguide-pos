@@ -91,24 +91,34 @@ class HealthInfrastructureController extends GetxController {
     final f = <String>[];
 
     if (_filters.query.isNotEmpty) {
-      final q = _filters.query;
+      final q = PocketBaseService.escapeFilterValue(_filters.query);
       f.add('(name ~ "$q" || nhpi_code ~ "$q" || hsdt_code ~ "$q")');
     }
 
     if (_filters.regionId.isNotEmpty) {
-      f.add('region = "${_filters.regionId}"');
+      final regionId = PocketBaseService.escapeFilterValue(_filters.regionId);
+      f.add('region = "$regionId"');
     }
 
     if (_filters.districtId.isNotEmpty) {
-      f.add('district = "${_filters.districtId}"');
+      final districtId = PocketBaseService.escapeFilterValue(
+        _filters.districtId,
+      );
+      f.add('district = "$districtId"');
     }
 
     if (_filters.facilityLevelId.isNotEmpty) {
-      f.add('facility_level = "${_filters.facilityLevelId}"');
+      final facilityLevelId = PocketBaseService.escapeFilterValue(
+        _filters.facilityLevelId,
+      );
+      f.add('facility_level = "$facilityLevelId"');
     }
 
     if (_filters.ownershipTypeId.isNotEmpty) {
-      f.add('ownership_type = "${_filters.ownershipTypeId}"');
+      final ownershipTypeId = PocketBaseService.escapeFilterValue(
+        _filters.ownershipTypeId,
+      );
+      f.add('ownership_type = "$ownershipTypeId"');
     }
 
     return f.join(' && ');

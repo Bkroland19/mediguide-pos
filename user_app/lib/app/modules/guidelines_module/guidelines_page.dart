@@ -291,17 +291,31 @@ class _GuidelinesSearchBox extends StatefulWidget {
 
 class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
   late final TextEditingController _textController;
+  Worker? _searchWorker;
 
   @override
   void initState() {
     super.initState();
+
     _textController = TextEditingController(
       text: widget.controller.searchQuery.value,
     );
+
+    _searchWorker = ever<String>(widget.controller.searchQuery, (value) {
+      if (!mounted) return;
+
+      if (_textController.text != value) {
+        _textController.value = TextEditingValue(
+          text: value,
+          selection: TextSelection.collapsed(offset: value.length),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _searchWorker?.dispose();
     _textController.dispose();
     super.dispose();
   }
@@ -324,14 +338,7 @@ class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
     final cs = context.theme.colorScheme;
 
     return Obx(() {
-      final hasSearch = widget.controller.searchQuery.value.isNotEmpty;
-
-      if (_textController.text != widget.controller.searchQuery.value) {
-        _textController.text = widget.controller.searchQuery.value;
-        _textController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _textController.text.length),
-        );
-      }
+      final hasSearch = widget.controller.searchQuery.value.trim().isNotEmpty;
 
       return TextField(
         controller: _textController,

@@ -221,28 +221,47 @@ class PocketBaseService extends GetxService {
       );
     }
 
-    final rawItems = await _fetchAllCollectionItems(collectionName);
-
-    var filteredItems = _applyClientSideFilter(rawItems, filter);
-    filteredItems = _applyClientSideSort(filteredItems, sort);
-
-    final totalItems = filteredItems.length;
     final safePage = page < 1 ? 1 : page;
     final safePerPage = perPage < 1 ? 1 : perPage;
-    final offset = (safePage - 1) * safePerPage;
-    final pagedItems = offset >= filteredItems.length
-        ? <Map<String, dynamic>>[]
-        : filteredItems.skip(offset).take(safePerPage).toList();
+    final query = <String, String>{
+      'page': '$safePage',
+      'per_page': '$safePerPage',
+      if (filter != null && filter.trim().isNotEmpty) 'filter': filter.trim(),
+      if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
+      if (expand != null && expand.trim().isNotEmpty) 'expand': expand.trim(),
+    };
 
-    final recordItems = pagedItems.map(RecordModel.new).toList();
-    final totalPages = totalItems == 0 ? 0 : (totalItems / safePerPage).ceil();
+    final response = await _requestJson(
+      '/api/v1/collections/$collectionName/records',
+      method: 'GET',
+      query: query,
+    );
+
+    final rawItems = (response['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) {
+          return _normalizeRecord(
+            collectionName: collectionName,
+            raw: _asMap(item),
+          );
+        })
+        .toList();
+
+    final totalItems =
+        (response['total_items'] as num?)?.toInt() ??
+        (response['totalItems'] as num?)?.toInt() ??
+        rawItems.length;
+    final totalPages =
+        (response['total_pages'] as num?)?.toInt() ??
+        (response['totalPages'] as num?)?.toInt() ??
+        (totalItems == 0 ? 0 : (totalItems / safePerPage).ceil());
 
     return ResultList<RecordModel>(
       page: safePage,
       perPage: safePerPage,
       totalItems: totalItems,
       totalPages: totalPages,
-      items: recordItems,
+      items: rawItems.map(RecordModel.new).toList(),
     );
   }
 
@@ -352,53 +371,6 @@ class PocketBaseService extends GetxService {
       '/api/v1/collections/$collectionName/records/$recordId',
       method: 'DELETE',
     );
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchAllCollectionItems(
-    String collectionName,
-  ) async {
-    const batchSize = 100;
-    final items = <Map<String, dynamic>>[];
-    final seenIds = <String>{};
-    var currentPage = 1;
-    var totalItems = 0;
-
-    while (true) {
-      final response = await _requestJson(
-        '/api/v1/collections/$collectionName/records',
-        method: 'GET',
-        query: {'page': '$currentPage', 'per_page': '$batchSize'},
-      );
-
-      final pageItems = (response['items'] as List? ?? const [])
-          .whereType<Map>()
-          .map((item) => _asMap(item))
-          .toList();
-
-      for (final item in pageItems) {
-        final normalized = _normalizeRecord(
-          collectionName: collectionName,
-          raw: item,
-        );
-        final id = normalized['id']?.toString() ?? '';
-        if (id.isEmpty || seenIds.add(id)) {
-          items.add(normalized);
-        }
-      }
-
-      totalItems =
-          (response['total_items'] as num?)?.toInt() ??
-          (response['totalItems'] as num?)?.toInt() ??
-          items.length;
-
-      if (pageItems.isEmpty || items.length >= totalItems) {
-        break;
-      }
-
-      currentPage++;
-    }
-
-    return items;
   }
 
   Future<RecordModel> upsertRecord({
@@ -602,9 +574,13 @@ class PocketBaseService extends GetxService {
   String createFilter(String filterTemplate, Map<String, dynamic> params) {
     var result = filterTemplate;
     params.forEach((key, value) {
-      result = result.replaceAll('{$key}', '$value');
+      result = result.replaceAll('{$key}', escapeFilterValue(value));
     });
     return result;
+  }
+
+  static String escapeFilterValue(Object? value) {
+    return '$value'.replaceAll('\\', '\\\\').replaceAll('"', '\\"').trim();
   }
 
   Future<void> _onReconnect() async {
@@ -1121,7 +1097,7 @@ class PocketBaseService extends GetxService {
       final char = expression[i];
       final next = i + 1 < expression.length ? expression[i + 1] : '';
 
-      if (char == '"') {
+      if (char == '"' && !_isEscaped(expression, i)) {
         inQuote = !inQuote;
       }
 
@@ -1176,12 +1152,20 @@ class PocketBaseService extends GetxService {
     return result;
   }
 
+  bool _isEscaped(String value, int index) {
+    var slashCount = 0;
+    for (var i = index - 1; i >= 0 && value[i] == '\\'; i--) {
+      slashCount++;
+    }
+    return slashCount.isOdd;
+  }
+
   bool _evaluateCondition(Map<String, dynamic> record, String condition) {
     final match = RegExp(
       r'^([A-Za-z0-9_\.]+)\s*(=|!=|>=|<=|>|<|~)\s*(.+)$',
     ).firstMatch(condition.trim());
     if (match == null) {
-      return true;
+      return false;
     }
 
     final field = match.group(1)!.trim();
@@ -1207,7 +1191,7 @@ class PocketBaseService extends GetxService {
           '${rawExpected ?? ''}'.toLowerCase(),
         );
       default:
-        return true;
+        return false;
     }
   }
 
@@ -1233,7 +1217,10 @@ class PocketBaseService extends GetxService {
   dynamic _parseLiteral(String value) {
     final trimmed = _trimOuterParens(value).trim();
     if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-      return trimmed.substring(1, trimmed.length - 1);
+      return trimmed
+          .substring(1, trimmed.length - 1)
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\\', '\\');
     }
     if (trimmed == 'true') return true;
     if (trimmed == 'false') return false;

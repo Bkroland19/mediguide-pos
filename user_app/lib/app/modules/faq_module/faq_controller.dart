@@ -99,8 +99,8 @@ class FaqController extends GetxController {
     int page = 1,
     int perPage = 10,
   }) async {
-    final searchFilter =
-        'question ~ "$query" || keywords ~ "$query" || answer ~ "$query"';
+    final q = PocketBaseService.escapeFilterValue(query);
+    final searchFilter = 'question ~ "$q" || keywords ~ "$q" || answer ~ "$q"';
 
     return _getFAQs(
       page: page,
