@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: mediguide
       POSTGRES_PASSWORD: mediguide
     ports:
-      - "${POSTGRES_PUBLIC_PORT:-5432}:5432"
+      - "${POSTGRES_PUBLIC_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mediguide -d mediguide"]
       interval: 5s
