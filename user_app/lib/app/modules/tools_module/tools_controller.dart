@@ -78,7 +78,7 @@ class ToolsController extends GetxController {
 
     // search
     if (searchQuery.value.isNotEmpty) {
-      final q = searchQuery.value;
+      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
       parts.add('(name ~ "$q" || description ~ "$q")');
     }
 

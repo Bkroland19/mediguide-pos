@@ -82,16 +82,20 @@ class NotificationsController extends GetxController {
     }
 
     if (searchQuery.value.isNotEmpty) {
-      final q = searchQuery.value;
+      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
       filters.add('(title ~ "$q" || message ~ "$q")');
     }
 
     if (selectedType.value.isNotEmpty) {
-      filters.add('type = "${selectedType.value}"');
+      final type = PocketBaseService.escapeFilterValue(selectedType.value);
+      filters.add('type = "$type"');
     }
 
     if (selectedPriority.value.isNotEmpty) {
-      filters.add('priority = "${selectedPriority.value}"');
+      final priority = PocketBaseService.escapeFilterValue(
+        selectedPriority.value,
+      );
+      filters.add('priority = "$priority"');
     }
 
     return filters.join(' && ');

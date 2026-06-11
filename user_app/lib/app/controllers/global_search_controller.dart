@@ -25,9 +25,12 @@ class GlobalSearchController extends GetxController {
   final RxList<SearchResult> searchResults = <SearchResult>[].obs;
   final RxBool isLoading = false.obs;
   final RxString currentQuery = ''.obs;
+  final RxString validationMessage = ''.obs;
 
   // Pagination
   static const int pageSize = 10;
+  static const int minSearchLength = 2;
+  int _searchGeneration = 0;
 
   @override
   void onClose() {
@@ -42,10 +45,15 @@ class GlobalSearchController extends GetxController {
 
     if (query.isEmpty) {
       searchResults.clear();
+      validationMessage.value = '';
       return;
     }
 
-    if (query.length < 2) return;
+    if (query.length < minSearchLength) {
+      searchResults.clear();
+      validationMessage.value = 'Enter at least $minSearchLength characters';
+      return;
+    }
 
     // Start search on submit/enter
     performSearch(query);
@@ -53,27 +61,42 @@ class GlobalSearchController extends GetxController {
 
   /// Perform search with the given query
   Future<void> performSearch(String query) async {
-    if (query.trim().isEmpty) return;
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.isEmpty) return;
+    if (trimmedQuery.length < minSearchLength) {
+      searchResults.clear();
+      validationMessage.value = 'Enter at least $minSearchLength characters';
+      return;
+    }
+
+    final generation = ++_searchGeneration;
 
     try {
+      validationMessage.value = '';
       isLoading.value = true;
       searchResults.clear();
 
-      final results = await _searchAllCollections(query.trim());
+      final results = await _searchAllCollections(trimmedQuery);
 
+      if (generation != _searchGeneration) return;
       searchResults.assignAll(results);
-      currentQuery.value = query;
+      currentQuery.value = trimmedQuery;
     } catch (e) {
+      if (generation != _searchGeneration) return;
       Common.quickToast(title: 'Search failed. Please try again.');
     } finally {
-      isLoading.value = false;
+      if (generation == _searchGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 
   /// Clear search and reset state
   void clearSearch() {
+    _searchGeneration++;
     searchController.clear();
     currentQuery.value = '';
+    validationMessage.value = '';
     searchResults.clear();
   }
 
@@ -217,7 +240,7 @@ class GlobalSearchController extends GetxController {
     },
     SearchCategory.healthFacilities: {
       'collection': 'health_facilities',
-      'fields': ['name', 'parish', 'subcounty'],
+      'fields': ['name', 'nhpi_code', 'hsdt_code'],
       'expand': null,
     },
     SearchCategory.abbreviations: {
@@ -267,6 +290,12 @@ class GlobalSearchController extends GetxController {
       allResults.addAll(categoryResults);
     }
 
+    allResults.sort((a, b) {
+      final scoreComparison = b.relevanceScore.compareTo(a.relevanceScore);
+      if (scoreComparison != 0) return scoreComparison;
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+
     // Return top results (limited to 20)
     return allResults.take(20).toList();
   }
@@ -282,7 +311,10 @@ class GlobalSearchController extends GetxController {
     try {
       // Build filter for search fields
       final fields = config['fields'] as List<String>;
-      final filterParts = fields.map((field) => '$field ~ "$query"').toList();
+      final escapedQuery = PocketBaseService.escapeFilterValue(query);
+      final filterParts = fields
+          .map((field) => '$field ~ "$escapedQuery"')
+          .toList();
       final filter = '(${filterParts.join(' || ')})';
 
       final response = await PocketBaseService.to.getRecordList(
@@ -310,6 +342,37 @@ class GlobalSearchController extends GetxController {
   String _stripHtml(String html) =>
       html.replaceAll(RegExp(r'<[^>]*>'), '').trim();
 
+  double _calculateRelevance({
+    required String query,
+    required String title,
+    String? subtitle,
+    String? description,
+  }) {
+    final normalizedQuery = query.toLowerCase();
+    final normalizedTitle = title.toLowerCase();
+    final normalizedSubtitle = subtitle?.toLowerCase() ?? '';
+    final normalizedDescription = description?.toLowerCase() ?? '';
+
+    var score = 0.0;
+    if (normalizedTitle == normalizedQuery) score += 100;
+    if (normalizedTitle.startsWith(normalizedQuery)) score += 50;
+    if (normalizedTitle.contains(normalizedQuery)) score += 25;
+    if (normalizedSubtitle.contains(normalizedQuery)) score += 10;
+    if (normalizedDescription.contains(normalizedQuery)) score += 5;
+    return score;
+  }
+
+  SearchResult _withRelevance(SearchResult result, String query) {
+    return result.copyWith(
+      relevanceScore: _calculateRelevance(
+        query: query,
+        title: result.title,
+        subtitle: result.subtitle,
+        description: result.description,
+      ),
+    );
+  }
+
   /// Create SearchResult from PocketBase record
   SearchResult _createSearchResult(
     dynamic record,
@@ -320,114 +383,137 @@ class GlobalSearchController extends GetxController {
       case SearchCategory.drugs:
         final drug = Drug.fromRecord(record);
         final drugDesc = _stripHtml(drug.description);
-        return SearchResult(
-          id: drug.id,
-          title: drug.name,
-          subtitle: drug.brandNames.isNotEmpty
-              ? _stripHtml(drug.brandNames)
-              : null,
-          description: drugDesc.isNotEmpty ? drugDesc : null,
-          category: category,
-          route: null,
-          routeArguments: null,
-          relevanceScore: 0.0,
-          item: drug,
+        return _withRelevance(
+          SearchResult(
+            id: drug.id,
+            title: drug.name,
+            subtitle: drug.brandNames.isNotEmpty
+                ? _stripHtml(drug.brandNames)
+                : null,
+            description: drugDesc.isNotEmpty ? drugDesc : null,
+            category: category,
+            route: null,
+            routeArguments: null,
+            relevanceScore: 0.0,
+            item: drug,
+          ),
+          query,
         );
 
       case SearchCategory.guidelines:
         final guideline = Guideline.fromRecord(record);
         final guidelineDesc = _stripHtml(guideline.definition);
-        return SearchResult(
-          id: guideline.id,
-          title: guideline.conditionName,
-          subtitle: guideline.icd10Code.isNotEmpty ? guideline.icd10Code : null,
-          description: guidelineDesc.isNotEmpty ? guidelineDesc : null,
-          category: category,
-          route: AppRoutes.readGuideline,
-          routeArguments: {'guidelineId': guideline.id},
-          relevanceScore: 0.0,
-          item: guideline,
+        return _withRelevance(
+          SearchResult(
+            id: guideline.id,
+            title: guideline.conditionName,
+            subtitle: guideline.icd10Code.isNotEmpty
+                ? guideline.icd10Code
+                : null,
+            description: guidelineDesc.isNotEmpty ? guidelineDesc : null,
+            category: category,
+            route: AppRoutes.readGuideline,
+            routeArguments: {'guidelineId': guideline.id},
+            relevanceScore: 0.0,
+            item: guideline,
+          ),
+          query,
         );
 
       case SearchCategory.consultants:
         final consultant = Consultant.fromRecord(record);
-        return SearchResult(
-          id: consultant.id,
-          title: consultant.name,
-          subtitle: consultant.specialty?.name,
-          description: consultant.department.isNotEmpty
-              ? consultant.department
-              : null,
-          category: category,
-          route: AppRoutes.consultants,
-          routeArguments: {'consultantId': consultant.id},
-          relevanceScore: 0.0,
-          item: consultant,
+        return _withRelevance(
+          SearchResult(
+            id: consultant.id,
+            title: consultant.name,
+            subtitle: consultant.specialty?.name,
+            description: consultant.department.isNotEmpty
+                ? consultant.department
+                : null,
+            category: category,
+            route: AppRoutes.consultants,
+            routeArguments: {'consultantId': consultant.id},
+            relevanceScore: 0.0,
+            item: consultant,
+          ),
+          query,
         );
 
       case SearchCategory.healthFacilities:
         final facility = HealthFacility.fromRecord(record);
-        return SearchResult(
-          id: facility.id,
-          title: facility.name,
-          subtitle: facility.facilityLevelName.isNotEmpty
-              ? facility.facilityLevelName
-              : null,
-          description: facility.parishName.isNotEmpty
-              ? facility.parishName
-              : null,
-          category: category,
-          route: AppRoutes.healthInfrastructure,
-          routeArguments: {'facilityId': facility.id},
-          relevanceScore: 0.0,
-          item: facility,
+        return _withRelevance(
+          SearchResult(
+            id: facility.id,
+            title: facility.name,
+            subtitle: facility.facilityLevelName.isNotEmpty
+                ? facility.facilityLevelName
+                : null,
+            description: facility.parishName.isNotEmpty
+                ? facility.parishName
+                : null,
+            category: category,
+            route: AppRoutes.healthInfrastructure,
+            routeArguments: {'facilityId': facility.id},
+            relevanceScore: 0.0,
+            item: facility,
+          ),
+          query,
         );
 
       case SearchCategory.abbreviations:
         final abbreviation = Abbreviation.fromRecord(record);
         final abbrDesc = _stripHtml(abbreviation.description);
-        return SearchResult(
-          id: abbreviation.id,
-          title: abbreviation.displayAbbreviation,
-          subtitle: abbreviation.meaning,
-          description: abbrDesc.isNotEmpty ? abbrDesc : null,
-          category: category,
-          route: AppRoutes.abbreviations,
-          routeArguments: {'abbreviationId': abbreviation.id},
-          relevanceScore: 0.0,
-          item: abbreviation,
+        return _withRelevance(
+          SearchResult(
+            id: abbreviation.id,
+            title: abbreviation.displayAbbreviation,
+            subtitle: abbreviation.meaning,
+            description: abbrDesc.isNotEmpty ? abbrDesc : null,
+            category: category,
+            route: AppRoutes.abbreviations,
+            routeArguments: {'abbreviationId': abbreviation.id},
+            relevanceScore: 0.0,
+            item: abbreviation,
+          ),
+          query,
         );
 
       case SearchCategory.tools:
         final calculator = Calculator.fromRecord(record);
         final calcDesc = _stripHtml(calculator.description);
-        return SearchResult(
-          id: calculator.id,
-          title: calculator.name,
-          subtitle: calculator.type.name,
-          description: calcDesc.isNotEmpty ? calcDesc : null,
-          category: category,
-          route: AppRoutes.useCalculator,
-          routeArguments: {'calculatorId': calculator.id},
-          relevanceScore: 0.0,
-          item: calculator,
+        return _withRelevance(
+          SearchResult(
+            id: calculator.id,
+            title: calculator.name,
+            subtitle: calculator.type.name,
+            description: calcDesc.isNotEmpty ? calcDesc : null,
+            category: category,
+            route: AppRoutes.useCalculator,
+            routeArguments: {'calculatorId': calculator.id},
+            relevanceScore: 0.0,
+            item: calculator,
+          ),
+          query,
         );
 
       case SearchCategory.faq:
         final data = record.data;
         final faqAnswer = _stripHtml(data['answer'] ?? '');
-        return SearchResult(
-          id: record.id,
-          title: _stripHtml(data['question'] ?? 'FAQ'),
-          subtitle: null,
-          description: faqAnswer.length > 100
-              ? '${faqAnswer.substring(0, 100)}...'
-              : faqAnswer,
-          category: category,
-          route: AppRoutes.faq,
-          routeArguments: {'faqId': record.id},
-          relevanceScore: 0.0,
-          item: record,
+        return _withRelevance(
+          SearchResult(
+            id: record.id,
+            title: _stripHtml(data['question'] ?? 'FAQ'),
+            subtitle: null,
+            description: faqAnswer.length > 100
+                ? '${faqAnswer.substring(0, 100)}...'
+                : faqAnswer,
+            category: category,
+            route: AppRoutes.faq,
+            routeArguments: {'faqId': record.id},
+            relevanceScore: 0.0,
+            item: record,
+          ),
+          query,
         );
 
       default:
@@ -438,7 +524,8 @@ class GlobalSearchController extends GetxController {
   /// Fallback search for FAQ with alternative collection name
   Future<List<SearchResult>> _searchFAQFallback(String query) async {
     try {
-      final filter = '(question ~ "$query" || answer ~ "$query")';
+      final escapedQuery = PocketBaseService.escapeFilterValue(query);
+      final filter = '(question ~ "$escapedQuery" || answer ~ "$escapedQuery")';
       final response = await PocketBaseService.to.getRecordList(
         collectionName: 'faq',
         page: 1,

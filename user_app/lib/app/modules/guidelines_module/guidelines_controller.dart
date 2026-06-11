@@ -55,6 +55,7 @@ class GuidelinesController extends GetxController {
       <GuidelineCategory>[].obs;
   final RxList<GuidelineTag> availableTags = <GuidelineTag>[].obs;
   final RxBool isLoadingFilters = false.obs;
+
   Timer? _searchDebounce;
 
   // ==================== INIT ====================
@@ -63,8 +64,10 @@ class GuidelinesController extends GetxController {
     super.onInit();
 
     pagingController = PagingController<int, Guideline>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      getNextPageKey: (state) {
+        if (state.lastPageIsEmpty) return null;
+        return state.nextIntPageKey;
+      },
       fetchPage: _loadPage,
     );
 
@@ -98,7 +101,7 @@ class GuidelinesController extends GetxController {
   }
 
   bool get _hasFilters {
-    return searchQuery.value.isNotEmpty ||
+    return searchQuery.value.trim().isNotEmpty ||
         selectedCategoryId.value.isNotEmpty ||
         selectedTagIds.isNotEmpty ||
         selectedPriority.value.isNotEmpty ||
@@ -347,7 +350,7 @@ class GuidelinesController extends GetxController {
         collectionName: GuidelineCategory.collection,
         perPage: 100,
         filter:
-            'status="active" && parent_category="${_escapeFilterValue(parentCategoryId)}"',
+            'status="active" && parent_category="${PocketBaseService.escapeFilterValue(parentCategoryId)}"',
         sort: 'sort_order,name',
       );
 
@@ -375,7 +378,7 @@ class GuidelinesController extends GetxController {
           collectionName: GuidelineCategory.collection,
           perPage: 100,
           filter:
-              'status="active" && parent_category="${_escapeFilterValue(parentCategoryId)}"',
+              'status="active" && parent_category="${PocketBaseService.escapeFilterValue(parentCategoryId)}"',
           sort: 'sort_order,name',
         );
 
@@ -396,17 +399,18 @@ class GuidelinesController extends GetxController {
 
   // ==================== QUICK FILTER ACTIONS ====================
   void setSearchQuery(String value) {
-    searchQuery.value = value.trim();
+    searchQuery.value = value;
     _updateFilterState();
+
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
       pagingController.refresh();
     });
   }
 
   void submitSearchQuery(String value) {
     _searchDebounce?.cancel();
-    searchQuery.value = value.trim();
+    searchQuery.value = value;
     _updateFilterState();
     pagingController.refresh();
   }
@@ -473,6 +477,8 @@ class GuidelinesController extends GetxController {
     try {
       final filter = _buildFilter();
 
+      debugPrint('Guidelines filter: $filter');
+
       final result = await PocketBaseService.to.getRecordList(
         collectionName: Guideline.collection,
         page: pageKey,
@@ -486,6 +492,7 @@ class GuidelinesController extends GetxController {
           .map((record) => Guideline.fromRecord(record))
           .toList();
     } catch (e) {
+      debugPrint('Failed to load guidelines: $e');
       Common.quickToast(title: 'errorLoadingGuidelines'.tr);
       rethrow;
     }
@@ -499,7 +506,7 @@ class GuidelinesController extends GetxController {
 
     if (isInIndexMode.value && selectedIndex.value != null) {
       filters.add(
-        'index_item="${_escapeFilterValue(selectedIndex.value!.id)}"',
+        'index_item="${PocketBaseService.escapeFilterValue(selectedIndex.value!.id)}"',
       );
     }
 
@@ -512,7 +519,9 @@ class GuidelinesController extends GetxController {
 
       if (categoryIds.isNotEmpty) {
         final categoryFilter = categoryIds
-            .map((id) => 'categories~"${_escapeFilterValue(id)}"')
+            .map(
+              (id) => 'categories~"${PocketBaseService.escapeFilterValue(id)}"',
+            )
             .join(' || ');
 
         filters.add('($categoryFilter)');
@@ -521,43 +530,55 @@ class GuidelinesController extends GetxController {
 
     if (!isInCategoryMode.value && selectedCategoryId.value.isNotEmpty) {
       filters.add(
-        'categories~"${_escapeFilterValue(selectedCategoryId.value)}"',
+        'categories~"${PocketBaseService.escapeFilterValue(selectedCategoryId.value)}"',
       );
     }
 
     if (isInTagMode.value && selectedTagId.value.isNotEmpty) {
-      filters.add('tags~"${_escapeFilterValue(selectedTagId.value)}"');
+      filters.add(
+        'tags~"${PocketBaseService.escapeFilterValue(selectedTagId.value)}"',
+      );
     }
 
-    if (searchQuery.value.trim().isNotEmpty) {
-      final q = _escapeFilterValue(searchQuery.value.trim());
+    final search = searchQuery.value.trim();
+    if (search.isNotEmpty) {
+      final q = PocketBaseService.escapeFilterValue(search);
 
       filters.add(
-        '(condition_name~"$q" || definition~"$q" || clinical_features~"$q" || causes~"$q" || icd10_code~"$q")',
+        '('
+        'condition_name~"$q" || '
+        'definition~"$q" || '
+        'clinical_features~"$q" || '
+        'causes~"$q" || '
+        'icd10_code~"$q" || '
+        'icd11_code~"$q"'
+        ')',
       );
     }
 
     if (selectedTagIds.isNotEmpty) {
       final tagFilter = selectedTagIds
-          .map((id) => 'tags~"${_escapeFilterValue(id)}"')
+          .map((id) => 'tags~"${PocketBaseService.escapeFilterValue(id)}"')
           .join(' || ');
 
       filters.add('($tagFilter)');
     }
 
     if (selectedPriority.value.isNotEmpty) {
-      filters.add('priority="${_escapeFilterValue(selectedPriority.value)}"');
+      filters.add(
+        'priority="${PocketBaseService.escapeFilterValue(selectedPriority.value)}"',
+      );
     }
 
     if (selectedHealthcareLevel.value.isNotEmpty) {
       filters.add(
-        'healthcare_level_required~"${_escapeFilterValue(selectedHealthcareLevel.value)}"',
+        'healthcare_level_required~"${PocketBaseService.escapeFilterValue(selectedHealthcareLevel.value)}"',
       );
     }
 
     if (selectedTargetPopulation.value.isNotEmpty) {
       filters.add(
-        'target_population~"${_escapeFilterValue(selectedTargetPopulation.value)}"',
+        'target_population~"${PocketBaseService.escapeFilterValue(selectedTargetPopulation.value)}"',
       );
     }
 
@@ -566,10 +587,6 @@ class GuidelinesController extends GetxController {
     }
 
     return filters.join(' && ');
-  }
-
-  String _escapeFilterValue(String value) {
-    return value.replaceAll('"', r'\"');
   }
 
   void _updateFilterState() {
@@ -698,7 +715,8 @@ class GuidelinesController extends GetxController {
     ];
 
     final values = <String, dynamic>{
-      if (searchQuery.value.isNotEmpty) 'search': searchQuery.value,
+      if (searchQuery.value.trim().isNotEmpty)
+        'search': searchQuery.value.trim(),
       if (selectedCategoryId.value.isNotEmpty)
         'category': _categoryNameForId(selectedCategoryId.value),
       if (selectedTagIds.isNotEmpty) 'tags': _tagNamesForIds(selectedTagIds),
