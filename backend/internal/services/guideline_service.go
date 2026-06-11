@@ -51,13 +51,22 @@ func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.Guide
 	}
 	return &d, s.DB.Create(&d).Error
 }
-func (s GuidelineService) ListDocuments(programArea string) ([]models.GuidelineDocument, error) {
+func (s GuidelineService) ListDocuments(programArea string, page PageInput) (*PageResult[models.GuidelineDocument], error) {
 	var docs []models.GuidelineDocument
-	q := s.DB.Preload("Versions").Order("created_at desc")
+	normalized := page.Normalize(20, 100)
+	q := s.DB.Model(&models.GuidelineDocument{})
 	if programArea != "" {
 		q = q.Where("program_area = ?", programArea)
 	}
-	return docs, q.Find(&docs).Error
+
+	var total int64
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Session(&gorm.Session{}).Preload("Versions").Order("created_at desc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&docs).Error; err != nil {
+		return nil, err
+	}
+	return NewPageResult(docs, normalized, total), nil
 }
 func (s GuidelineService) GetDocument(id uuid.UUID) (*models.GuidelineDocument, error) {
 	var d models.GuidelineDocument
@@ -113,13 +122,33 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 		return tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error
 	})
 }
-func (s GuidelineService) Sections(versionID uuid.UUID, limit, offset int) ([]models.GuidelineSection, error) {
+func (s GuidelineService) Sections(versionID uuid.UUID, page PageInput) (*PageResult[models.GuidelineSection], error) {
 	var rows []models.GuidelineSection
-	return rows, s.DB.Where("version_id = ?", versionID).Order("sort_order asc").Limit(limit).Offset(offset).Find(&rows).Error
+	normalized := page.Normalize(100, 500)
+	q := s.DB.Model(&models.GuidelineSection{}).Where("version_id = ?", versionID)
+
+	var total int64
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Session(&gorm.Session{}).Order("sort_order asc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return NewPageResult(rows, normalized, total), nil
 }
-func (s GuidelineService) Chunks(versionID uuid.UUID, limit, offset int) ([]models.GuidelineChunk, error) {
+func (s GuidelineService) Chunks(versionID uuid.UUID, page PageInput) (*PageResult[models.GuidelineChunk], error) {
 	var rows []models.GuidelineChunk
-	return rows, s.DB.Where("version_id = ?", versionID).Order("created_at asc").Limit(limit).Offset(offset).Find(&rows).Error
+	normalized := page.Normalize(100, 500)
+	q := s.DB.Model(&models.GuidelineChunk{}).Where("version_id = ?", versionID)
+
+	var total int64
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Session(&gorm.Session{}).Order("created_at asc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return NewPageResult(rows, normalized, total), nil
 }
 
 func (s GuidelineService) loadVersionDocument(tx *gorm.DB, versionID uuid.UUID) (*models.GuidelineVersion, *models.GuidelineDocument, error) {

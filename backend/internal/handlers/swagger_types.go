@@ -80,9 +80,17 @@ type GuidelineDocumentEnvelope struct {
 	Data    models.GuidelineDocument `json:"data"`
 }
 
-type GuidelineDocumentsEnvelope struct {
-	Success bool                       `json:"success" example:"true"`
-	Data    []models.GuidelineDocument `json:"data"`
+type PaginatedGuidelineDocuments struct {
+	Items      []models.GuidelineDocument `json:"items"`
+	Page       int                        `json:"page" example:"1"`
+	PerPage    int                        `json:"per_page" example:"20"`
+	TotalItems int64                      `json:"total_items" example:"1"`
+	TotalPages int                        `json:"total_pages" example:"1"`
+}
+
+type PaginatedGuidelineDocumentsEnvelope struct {
+	Success bool                        `json:"success" example:"true"`
+	Data    PaginatedGuidelineDocuments `json:"data"`
 }
 
 type GuidelineVersionEnvelope struct {
@@ -100,14 +108,30 @@ type PublishEnvelope struct {
 	Data    PublishResult `json:"data"`
 }
 
-type GuidelineSectionsEnvelope struct {
-	Success bool                      `json:"success" example:"true"`
-	Data    []models.GuidelineSection `json:"data"`
+type PaginatedGuidelineSections struct {
+	Items      []models.GuidelineSection `json:"items"`
+	Page       int                       `json:"page" example:"1"`
+	PerPage    int                       `json:"per_page" example:"100"`
+	TotalItems int64                     `json:"total_items" example:"1"`
+	TotalPages int                       `json:"total_pages" example:"1"`
 }
 
-type GuidelineChunksEnvelope struct {
-	Success bool                    `json:"success" example:"true"`
-	Data    []models.GuidelineChunk `json:"data"`
+type PaginatedGuidelineSectionsEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    PaginatedGuidelineSections `json:"data"`
+}
+
+type PaginatedGuidelineChunks struct {
+	Items      []models.GuidelineChunk `json:"items"`
+	Page       int                     `json:"page" example:"1"`
+	PerPage    int                     `json:"per_page" example:"100"`
+	TotalItems int64                   `json:"total_items" example:"1"`
+	TotalPages int                     `json:"total_pages" example:"1"`
+}
+
+type PaginatedGuidelineChunksEnvelope struct {
+	Success bool                     `json:"success" example:"true"`
+	Data    PaginatedGuidelineChunks `json:"data"`
 }
 
 type SearchResultsEnvelope struct {
@@ -125,9 +149,17 @@ type ClinicalProtocolEnvelope struct {
 	Data    models.ClinicalProtocol `json:"data"`
 }
 
-type ClinicalProtocolsEnvelope struct {
-	Success bool                      `json:"success" example:"true"`
-	Data    []models.ClinicalProtocol `json:"data"`
+type PaginatedClinicalProtocols struct {
+	Items      []models.ClinicalProtocol `json:"items"`
+	Page       int                       `json:"page" example:"1"`
+	PerPage    int                       `json:"per_page" example:"20"`
+	TotalItems int64                     `json:"total_items" example:"1"`
+	TotalPages int                       `json:"total_pages" example:"1"`
+}
+
+type PaginatedClinicalProtocolsEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    PaginatedClinicalProtocols `json:"data"`
 }
 
 type ProtocolRunEnvelope struct {
@@ -150,9 +182,17 @@ type SettingEnvelope struct {
 	Data    models.Setting `json:"data"`
 }
 
-type SettingsEnvelope struct {
-	Success bool             `json:"success" example:"true"`
-	Data    []models.Setting `json:"data"`
+type PaginatedSettings struct {
+	Items      []models.Setting `json:"items"`
+	Page       int              `json:"page" example:"1"`
+	PerPage    int              `json:"per_page" example:"20"`
+	TotalItems int64            `json:"total_items" example:"1"`
+	TotalPages int              `json:"total_pages" example:"1"`
+}
+
+type PaginatedSettingsEnvelope struct {
+	Success bool              `json:"success" example:"true"`
+	Data    PaginatedSettings `json:"data"`
 }
 
 type LanguageEnvelope struct {
@@ -160,9 +200,17 @@ type LanguageEnvelope struct {
 	Data    models.Language `json:"data"`
 }
 
-type LanguagesEnvelope struct {
-	Success bool              `json:"success" example:"true"`
-	Data    []models.Language `json:"data"`
+type PaginatedLanguages struct {
+	Items      []models.Language `json:"items"`
+	Page       int               `json:"page" example:"1"`
+	PerPage    int               `json:"per_page" example:"20"`
+	TotalItems int64             `json:"total_items" example:"1"`
+	TotalPages int               `json:"total_pages" example:"1"`
+}
+
+type PaginatedLanguagesEnvelope struct {
+	Success bool               `json:"success" example:"true"`
+	Data    PaginatedLanguages `json:"data"`
 }
 
 type LegacyTreeNode = services.TreeNode

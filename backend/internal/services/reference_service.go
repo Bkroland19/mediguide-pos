@@ -48,7 +48,7 @@ func (s ReferenceService) CreateSetting(in CreateSettingInput) (*models.Setting,
 	return &setting, s.DB.Create(&setting).Error
 }
 
-func (s ReferenceService) ListSettings(category string, publicOnly *bool) ([]models.Setting, error) {
+func (s ReferenceService) ListSettings(category string, publicOnly *bool, page PageInput) (*PageResult[models.Setting], error) {
 	var rows []models.Setting
 	q := s.DB.Model(&models.Setting{})
 	if category != "" {
@@ -57,8 +57,16 @@ func (s ReferenceService) ListSettings(category string, publicOnly *bool) ([]mod
 	if publicOnly != nil {
 		q = q.Where("is_public = ?", *publicOnly)
 	}
-	err := q.Order("key asc").Find(&rows).Error
-	return rows, err
+
+	var total int64
+	normalized := page.Normalize(20, 100)
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Session(&gorm.Session{}).Order("key asc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return NewPageResult(rows, normalized, total), nil
 }
 
 func (s ReferenceService) CreateLanguage(in CreateLanguageInput) (*models.Language, error) {
@@ -78,12 +86,20 @@ func (s ReferenceService) CreateLanguage(in CreateLanguageInput) (*models.Langua
 	return &lang, s.DB.Create(&lang).Error
 }
 
-func (s ReferenceService) ListLanguages(activeOnly *bool) ([]models.Language, error) {
+func (s ReferenceService) ListLanguages(activeOnly *bool, page PageInput) (*PageResult[models.Language], error) {
 	var rows []models.Language
 	q := s.DB.Model(&models.Language{})
 	if activeOnly != nil {
 		q = q.Where("is_active = ?", *activeOnly)
 	}
-	err := q.Order("is_default desc, name asc").Find(&rows).Error
-	return rows, err
+
+	var total int64
+	normalized := page.Normalize(20, 100)
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Session(&gorm.Session{}).Order("is_default desc, name asc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return NewPageResult(rows, normalized, total), nil
 }

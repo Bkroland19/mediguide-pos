@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
@@ -51,13 +50,21 @@ func (h GuidelineHandler) Create(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param program_area query string false "Program area filter"
-// @Success 200 {object} handlers.GuidelineDocumentsEnvelope
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Success 200 {object} handlers.PaginatedGuidelineDocumentsEnvelope
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/guidelines [get]
 func (h GuidelineHandler) List(c *gin.Context) {
-	rows, err := h.Service.ListDocuments(c.Query("program_area"))
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+
+	rows, err := h.Service.ListDocuments(c.Query("program_area"), page)
 	if err != nil {
 		httpx.Error(c, 500, "internal server error")
 		return
@@ -196,9 +203,11 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(500)
 // @Param limit query int false "Maximum results" minimum(1) maximum(500)
 // @Param offset query int false "Offset" minimum(0)
-// @Success 200 {object} handlers.GuidelineSectionsEnvelope
+// @Success 200 {object} handlers.PaginatedGuidelineSectionsEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
@@ -210,9 +219,12 @@ func (h GuidelineHandler) Sections(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid id")
 		return
 	}
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	rows, err := h.Service.Sections(id, limit, offset)
+	page, err := parsePageOrOffsetQuery(c, 100, 500)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	rows, err := h.Service.Sections(id, page)
 	if err != nil {
 		httpx.Error(c, 500, "failed to load sections")
 		return
@@ -226,9 +238,11 @@ func (h GuidelineHandler) Sections(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(500)
 // @Param limit query int false "Maximum results" minimum(1) maximum(500)
 // @Param offset query int false "Offset" minimum(0)
-// @Success 200 {object} handlers.GuidelineChunksEnvelope
+// @Success 200 {object} handlers.PaginatedGuidelineChunksEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
@@ -240,9 +254,12 @@ func (h GuidelineHandler) Chunks(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid id")
 		return
 	}
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	rows, err := h.Service.Chunks(id, limit, offset)
+	page, err := parsePageOrOffsetQuery(c, 100, 500)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	rows, err := h.Service.Chunks(id, page)
 	if err != nil {
 		httpx.Error(c, 500, "failed to load chunks")
 		return

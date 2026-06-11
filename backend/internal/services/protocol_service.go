@@ -61,9 +61,20 @@ func (s ProtocolService) Create(in CreateProtocolInput) (*models.ClinicalProtoco
 	}
 	return &p, s.DB.Create(&p).Error
 }
-func (s ProtocolService) List() ([]models.ClinicalProtocol, error) {
+func (s ProtocolService) List(page PageInput) (*PageResult[models.ClinicalProtocol], error) {
 	var rows []models.ClinicalProtocol
-	return rows, s.DB.Order("created_at desc").Find(&rows).Error
+	var total int64
+	normalized := page.Normalize(20, 100)
+	query := s.DB.Model(&models.ClinicalProtocol{})
+
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := query.Session(&gorm.Session{}).Order("created_at desc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	return NewPageResult(rows, normalized, total), nil
 }
 func (s ProtocolService) Get(id uuid.UUID) (*models.ClinicalProtocol, error) {
 	var p models.ClinicalProtocol

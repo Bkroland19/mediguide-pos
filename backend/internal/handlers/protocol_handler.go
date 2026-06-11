@@ -43,13 +43,21 @@ func (h ProtocolHandler) Create(c *gin.Context) {
 // @Tags protocols
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} handlers.ClinicalProtocolsEnvelope
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Success 200 {object} handlers.PaginatedClinicalProtocolsEnvelope
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/protocols [get]
 func (h ProtocolHandler) List(c *gin.Context) {
-	rows, err := h.Service.List()
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+
+	rows, err := h.Service.List(page)
 	if err != nil {
 		httpx.Error(c, 500, "internal server error")
 		return

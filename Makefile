@@ -124,3 +124,8 @@ ai-api: ai-deps
 .PHONY: ai-worker
 ai-worker: ai-deps
 	cd $(AI_WORKER_DIR) && $(PYTHON) -m app.worker
+
+.PHONY: run-cfdp-ios-simulator
+run-cfdp-ios-simulator:
+	cd user_app && \
+	flutter run --dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug

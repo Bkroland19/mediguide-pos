@@ -21,18 +21,26 @@ type ReferenceHandler struct {
 // @Security BearerAuth
 // @Param category query string false "Settings category filter"
 // @Param is_public query boolean false "Public settings filter"
-// @Success 200 {object} handlers.SettingsEnvelope
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Success 200 {object} handlers.PaginatedSettingsEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Router /api/v2/settings [get]
 func (h ReferenceHandler) ListSettings(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+
 	publicOnly, err := optionalBoolQuery(c, "is_public")
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	rows, err := h.Service.ListSettings(c.Query("category"), publicOnly)
+	rows, err := h.Service.ListSettings(c.Query("category"), publicOnly, page)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "internal server error")
 		return
@@ -72,17 +80,25 @@ func (h ReferenceHandler) CreateSetting(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param is_active query boolean false "Active languages filter"
-// @Success 200 {object} handlers.LanguagesEnvelope
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Success 200 {object} handlers.PaginatedLanguagesEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Router /api/v2/languages [get]
 func (h ReferenceHandler) ListLanguages(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+
 	activeOnly, err := optionalBoolQuery(c, "is_active")
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	rows, err := h.Service.ListLanguages(activeOnly)
+	rows, err := h.Service.ListLanguages(activeOnly, page)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "internal server error")
 		return
