@@ -1,0 +1,21 @@
+package_rename_config:
+  android:
+    app_name: MediGuide
+    package_name: com.mediguide.ug
+    override_old_package: com.omarsoft.mediguide
+    lang: kotlin
+
+  ios:
+    app_name: MediGuide
+    bundle_name: MediGuide
+    package_name: com.mediguide.ug
+
+  macos:
+    app_name: MediGuide
+    package_name: com.mediguide.ug
+    copyright_notice: © 2025 OmarSoft. All rights reserved.
+
+  web:
+    app_name: MediGuide - Digital Health Companion
+    short_app_name: MediGuide
+    description: A digital companion for frontline health workers to access clinical tools, treatment protocols, and guidelines at the point of care.
