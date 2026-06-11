@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
 import 'dart:io';
 
 import '../../data/services/pocketbase_service.dart';
@@ -20,6 +21,7 @@ class UseCalculatorController extends GetxController {
 
   String? htmlContent;
   String? errorMessage;
+  String? contentBaseUrl;
 
   DateTime? sessionStartTime;
   String? currentUsageLogId;
@@ -63,6 +65,22 @@ class UseCalculatorController extends GetxController {
       final localFile = File(
         '${directory.path}/calculator_${calculator!.id}.html',
       );
+      final metadataFile = File(
+        '${directory.path}/calculator_${calculator!.id}.json',
+      );
+      const collectionName = 'calculators';
+
+      final downloadUrl = PocketBaseService.to.getFileUrl(
+        collectionName: collectionName,
+        recordId: calculator!.id,
+        filename: calculator!.appFile,
+      );
+      contentBaseUrl = _deriveContentBaseUrl(downloadUrl);
+
+      print('🔗 FINAL URL: $downloadUrl');
+
+      String? cachedHtml;
+      final cacheMetadata = await _readCacheMetadata(metadataFile);
 
       /// ================================
       /// 1. CHECK CACHE
@@ -71,31 +89,25 @@ class UseCalculatorController extends GetxController {
         final cached = await localFile.readAsString();
 
         if (cached.trim().startsWith('<')) {
-          htmlContent = cached;
-          print('✅ Loaded from cache');
-          _loadIntoWebViewIfReady();
-          isLoading.value = false;
-          return;
+          cachedHtml = cached;
+          if (_isCacheCurrent(cacheMetadata, downloadUrl)) {
+            htmlContent = cachedHtml;
+            errorMessage = null;
+            print('✅ Loaded current calculator file from cache');
+            _loadIntoWebViewIfReady();
+            isLoading.value = false;
+            return;
+          }
         } else {
           await localFile.delete();
+          if (await metadataFile.exists()) {
+            await metadataFile.delete();
+          }
         }
       }
 
       /// ================================
-      /// 2. BUILD FILE URL (FIXED)
-      /// ================================
-      const collectionName = 'calculators';
-
-      final downloadUrl = PocketBaseService.to.getFileUrl(
-        collectionName: collectionName,
-        recordId: calculator!.id,
-        filename: calculator!.appFile,
-      );
-
-      print('🔗 FINAL URL: $downloadUrl');
-
-      /// ================================
-      /// 3. DOWNLOAD FILE
+      /// 2. DOWNLOAD OR UPSERT FILE
       /// ================================
       final response = await http.get(Uri.parse(downloadUrl));
 
@@ -112,16 +124,41 @@ class UseCalculatorController extends GetxController {
       }
 
       /// ================================
-      /// 4. CACHE + STORE
+      /// 3. CACHE + STORE
       /// ================================
       await localFile.writeAsString(body);
+      await metadataFile.writeAsString(
+        jsonEncode({
+          'version': calculator!.version,
+          'appFile': calculator!.appFile,
+          'downloadUrl': downloadUrl,
+        }),
+      );
 
       htmlContent = body;
+      errorMessage = null;
 
-      print('✅ Download + cache success');
+      print('✅ Downloaded and upserted calculator cache');
 
       _loadIntoWebViewIfReady();
     } catch (e) {
+      final directory = await getApplicationDocumentsDirectory();
+      final localFile = File(
+        '${directory.path}/calculator_${calculator!.id}.html',
+      );
+
+      if (await localFile.exists()) {
+        final cached = await localFile.readAsString();
+        if (cached.trim().startsWith('<')) {
+          htmlContent = cached;
+          hasError.value = false;
+          errorMessage = null;
+          print('⚠️ Download failed, loaded calculator from offline cache: $e');
+          _loadIntoWebViewIfReady();
+          return;
+        }
+      }
+
       hasError.value = true;
       errorMessage = 'Failed to load calculator: $e';
       print('❌ ERROR: $e');
@@ -143,7 +180,7 @@ class UseCalculatorController extends GetxController {
 
     await webViewController!.loadData(
       data: htmlContent!,
-      baseUrl: WebUri(pocketbaseUrl),
+      baseUrl: WebUri(contentBaseUrl ?? pocketbaseUrl),
     );
 
     print('🌐 HTML loaded into WebView');
@@ -238,5 +275,42 @@ class UseCalculatorController extends GetxController {
     hasError.value = true;
     errorMessage = message;
     print('❌ WebView error [$code]: $message');
+  }
+
+  Future<Map<String, dynamic>?> _readCacheMetadata(File file) async {
+    if (!await file.exists()) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(await file.readAsString());
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isCacheCurrent(Map<String, dynamic>? metadata, String downloadUrl) {
+    if (metadata == null) {
+      return false;
+    }
+
+    return metadata['version']?.toString() == calculator!.version &&
+        metadata['appFile']?.toString() == calculator!.appFile &&
+        metadata['downloadUrl']?.toString() == downloadUrl;
+  }
+
+  String _deriveContentBaseUrl(String downloadUrl) {
+    final uri = Uri.parse(downloadUrl);
+    final segments = uri.pathSegments.toList();
+    if (segments.isEmpty) {
+      return mediguideApiBaseUrl;
+    }
+
+    segments.removeLast();
+    final directoryPath = segments.isEmpty ? '/' : '/${segments.join('/')}';
+    return uri
+        .replace(path: directoryPath, query: null, fragment: null)
+        .toString();
   }
 }

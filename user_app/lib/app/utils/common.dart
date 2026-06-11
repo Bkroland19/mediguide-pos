@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
-import 'package:pocketbase/pocketbase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Common {
@@ -33,31 +32,15 @@ class Common {
     );
   }
 
-  /// Parse error message from PocketBase ClientException for user-friendly display
-  static String parsePocketBaseError(ClientException e) {
-    if (e.response.containsKey('data')) {
-      final data = e.response['data'] as Map<String, dynamic>?;
-      if (data != null) {
-        // Handle field-specific errors
-        final errors = <String>[];
-        data.forEach((field, error) {
-          if (error is Map && error.containsKey('message')) {
-            errors.add('$field: ${error['message']}');
-          } else if (error is String) {
-            errors.add('$field: $error');
-          }
-        });
-        if (errors.isNotEmpty) {
-          return errors.join('\n');
-        }
-      }
+  static String parseApiError(Object error) {
+    final message = error.toString().trim();
+    if (message.startsWith('Exception:')) {
+      return message.substring('Exception:'.length).trim();
     }
-    
-    if (e.response.containsKey('message')) {
-      return e.response['message'].toString();
+    if (message.isEmpty) {
+      return 'An error occurred. Please try again.';
     }
-    
-    return 'An error occurred. Please try again.';
+    return message;
   }
 
   /// Make a phone call

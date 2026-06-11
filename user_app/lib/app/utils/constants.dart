@@ -1,7 +1,32 @@
-const String pocketbaseUrl = String.fromEnvironment(
-  'MEDIGUIDE_POCKETBASE_URL',
-  defaultValue: 'http://127.0.0.1:8090',
+import 'package:flutter/foundation.dart';
+
+const String _configuredApiBaseUrl = String.fromEnvironment(
+  'MEDIGUIDE_API_BASE_URL',
+  defaultValue: '',
 );
+const String _configuredPocketbaseUrl = String.fromEnvironment(
+  'MEDIGUIDE_POCKETBASE_URL',
+  defaultValue: '',
+);
+
+final String mediguideApiBaseUrl = _configuredApiBaseUrl.isNotEmpty
+    ? _configuredApiBaseUrl
+    : _configuredPocketbaseUrl.isNotEmpty
+        ? _configuredPocketbaseUrl
+        : _defaultLocalApiBaseUrl();
+
+final String pocketbaseUrl = mediguideApiBaseUrl;
+
+String _defaultLocalApiBaseUrl() {
+  if (kIsWeb) {
+    return 'http://127.0.0.1:8080';
+  }
+
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'http://10.0.2.2:8080',
+    _ => 'http://127.0.0.1:8080',
+  };
+}
 
 const String openRouterApiKey = String.fromEnvironment(
   'MEDIGUIDE_OPENROUTER_API_KEY',

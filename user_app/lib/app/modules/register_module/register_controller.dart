@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
-import 'package:pocketbase/pocketbase.dart';
 import 'package:toastification/toastification.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
@@ -42,7 +41,6 @@ class RegisterController extends GetxController {
       isLoading.value = true;
 
       try {
-        // Create user data using PocketBase model - only essential fields
         final userData = User.forCreate(
           email: formData['email'] as String,
           password: formData['password'] as String,
@@ -56,7 +54,6 @@ class RegisterController extends GetxController {
           preferredLanguage: PreferredLanguage.english,
         );
 
-        // Register with PocketBase
         final userRecord = await PocketBaseService.to.register(
           email: formData['email'] as String,
           password: formData['password'] as String,
@@ -64,25 +61,15 @@ class RegisterController extends GetxController {
           additionalData: userData,
         );
 
-        // Convert PocketBase RecordModel to User model and save via AuthService
         final user = User.fromRecord(userRecord);
         await AuthService.to.saveUser(user);
 
-        // Navigate to main screen since user is now registered and logged in
         Get.offNamed(AppRoutes.main);
-      } on ClientException catch (e) {
-        // Handle PocketBase specific errors
-        final errorMessage = Common.parsePocketBaseError(e);
-        Common.quickToast(
-          type: ToastificationType.error,
-          title: AppTranslationKey.registrationError,
-          description: errorMessage,
-        );
       } catch (e) {
         Common.quickToast(
           type: ToastificationType.error,
           title: AppTranslationKey.registrationError,
-          description: 'An unexpected error occurred',
+          description: Common.parseApiError(e),
         );
       } finally {
         isLoading.value = false;

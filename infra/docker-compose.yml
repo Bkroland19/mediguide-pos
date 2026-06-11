@@ -48,6 +48,7 @@ services:
       APP_NAME: mediguide-backend
       APP_ENV: development
       HTTP_PORT: 8080
+      STATIC_SAMPLES_DIR: /app/dashboard/samples
       DATABASE_URL: postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable
       JWT_SECRET: change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u
       JWT_ACCESS_TTL_MINUTES: 60
@@ -65,6 +66,8 @@ services:
       DEFAULT_ADMIN_PASSWORD: Admin123!
     ports:
       - "${API_PUBLIC_PORT:-8080}:8080"
+    volumes:
+      - ../dashboard/samples:/app/dashboard/samples:ro
     depends_on:
       postgres:
         condition: service_healthy

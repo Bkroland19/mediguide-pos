@@ -1,85 +1,79 @@
-import 'package:get/get.dart';
-import 'package:openai_dart/openai_dart.dart';
-import '../../utils/constants.dart';
-import '../../utils/common.dart';
+import 'dart:convert';
 
-/// Service for handling the optional assistant feature
-/// Follows GetX service patterns with proper async initialization
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+
+import '../../utils/common.dart';
+import '../../utils/constants.dart';
+import '../../utils/preference_utils.dart';
+import 'auth_service.dart';
+import 'pocketbase_service.dart';
+
 class OpenAiService extends GetxService {
   static OpenAiService get to => Get.find();
 
-  OpenAIClient? _client;
-  bool get isConfigured => openRouterApiKey.trim().isNotEmpty;
+  String? _sessionId;
 
-  /// Initialize the service with proper async pattern
+  bool get isConfigured => PocketBaseService.to.isAuthenticated;
+  String? get sessionId => _sessionId;
+
   Future<OpenAiService> init() async {
-    try {
-      if (isConfigured) {
-        _client = OpenAIClient(
-          apiKey: openRouterApiKey,
-          baseUrl: openRouterBaseUrl,
-        );
-      }
-      return this;
-    } catch (e) {
-      Common.quickToast(
-        title: 'AI Service Error',
-        description: 'Failed to initialize AI assistant: ${e.toString()}',
-      );
-      rethrow;
-    }
+    return this;
   }
 
-  String get _defaultInstructions => '''
-Provide concise, medically cautious answers.
-Use available application context when relevant.
-State clearly when more clinical judgment or urgent in-person care is needed.
-''';
+  void resetSession() {
+    _sessionId = null;
+  }
 
-  /// Create a chat completion with medical context
   Future<String> createChatCompletion({
     required String userMessage,
     List<String>? conversationHistory,
     String? customInstructions,
   }) async {
     try {
-      if (!isConfigured || _client == null) {
+      if (!isConfigured) {
         return _getFallbackResponse(userMessage);
       }
 
-      // Build conversation messages
-      final messages = <ChatCompletionMessage>[
-        ChatCompletionMessage.system(content: customInstructions ?? _defaultInstructions),
-        
-        // Add conversation history if provided
-        if (conversationHistory != null)
-          ...conversationHistory.asMap().entries.map((entry) {
-            final isUser = entry.key % 2 == 0;
-            return isUser 
-              ? ChatCompletionMessage.user(content: ChatCompletionUserMessageContent.string(entry.value))
-              : ChatCompletionMessage.assistant(content: entry.value);
-          }),
-        
-        // Add current user message
-        ChatCompletionMessage.user(content: ChatCompletionUserMessageContent.string(userMessage)),
-      ];
-
-      final response = await _client!.createChatCompletion(
-        request: CreateChatCompletionRequest(
-          model: ChatCompletionModel.modelId(openRouterModel),
-          messages: messages,
-          maxTokens: 500,
-          temperature: 0.7,
-          topP: 1.0,
-        ),
+      final response = await http.post(
+        Uri.parse('$mediguideApiBaseUrl/api/v2/chat/ask'),
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${PocketBaseService.to.accessToken}',
+        },
+        body: jsonEncode({
+          'question': _buildQuestion(
+            userMessage: userMessage,
+            customInstructions: customInstructions,
+          ),
+          'language': _resolveLanguage(),
+          'country': _resolveCountry(),
+          'program_area': '',
+          if (_sessionId != null && _sessionId!.isNotEmpty)
+            'session_id': _sessionId,
+        }),
       );
 
-      final content = response.choices.first.message.content;
-      if (content == null || content.isEmpty) {
-        throw Exception('Empty response from AI service');
+      final decoded = response.body.isEmpty
+          ? const <String, dynamic>{}
+          : jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+
+      if (response.statusCode >= 400 || decoded['success'] == false) {
+        throw Exception(
+          Common.parseApiError(decoded['error'] ?? response.body),
+        );
       }
 
-      return content;
+      final data = decoded['data'] as Map<String, dynamic>? ?? decoded;
+      final answer = data['answer']?.toString().trim() ?? '';
+      _sessionId = data['session_id']?.toString();
+
+      if (answer.isEmpty) {
+        throw Exception('Empty response from chat service');
+      }
+
+      return answer;
     } catch (e) {
       Common.quickToast(
         title: 'AI Response Error',
@@ -89,12 +83,44 @@ State clearly when more clinical judgment or urgent in-person care is needed.
     }
   }
 
+  String _buildQuestion({
+    required String userMessage,
+    String? customInstructions,
+  }) {
+    final trimmedMessage = userMessage.trim();
+    final trimmedInstructions = customInstructions?.trim() ?? '';
 
-  /// Get fallback response when AI service fails
+    if (trimmedInstructions.isEmpty) {
+      return trimmedMessage;
+    }
+
+    return '''
+Use this in-app reference context when it is relevant:
+$trimmedInstructions
+
+User question:
+$trimmedMessage
+'''
+        .trim();
+  }
+
+  String _resolveLanguage() {
+    final language = PreferenceUtils.getString(
+      SharedPreferencesKeys.language,
+      'en',
+    );
+    return language.isEmpty ? 'en' : language;
+  }
+
+  String _resolveCountry() {
+    final userCountry = AuthService.to.currentUser.value?.country.trim() ?? '';
+    return userCountry.isEmpty ? 'UG' : userCountry;
+  }
+
   String _getFallbackResponse(String userMessage) {
     final lowerMessage = userMessage.toLowerCase();
     final notConfigured = !isConfigured;
-    
+
     if (lowerMessage.contains('emergency') || lowerMessage.contains('urgent')) {
       return '''
 🚨 **MEDICAL EMERGENCY**
@@ -104,7 +130,7 @@ If this is a life-threatening emergency, please:
 2. Seek immediate medical attention
 3. Contact the nearest healthcare facility
 
-MediGuide AI is currently ${notConfigured ? 'not configured for this build' : 'unavailable'}, but you can:
+MediGuide AI is currently ${notConfigured ? 'not available because you are not signed in' : 'unavailable'}, but you can:
 • Browse our Guidelines section for clinical protocols
 • Check the Drug Index for medication information
 • Use our medical calculators in Tools section
@@ -113,12 +139,12 @@ MediGuide AI is currently ${notConfigured ? 'not configured for this build' : 'u
 **Disclaimer**: This is not a substitute for emergency medical care.
 ''';
     }
-    
+
     if (lowerMessage.contains('drug') || lowerMessage.contains('medicine')) {
       return '''
 💊 **Drug Information**
 
-MediGuide AI is temporarily ${notConfigured ? 'not configured in this environment' : 'unavailable'}. For medication information:
+MediGuide AI is temporarily ${notConfigured ? 'not available because you are not signed in' : 'unavailable'}. For medication information:
 
 • **Drug Index**: Browse our comprehensive drug database
 • **Interactions**: Check drug interactions and contraindications
@@ -128,12 +154,13 @@ MediGuide AI is temporarily ${notConfigured ? 'not configured in this environmen
 Navigate to the Drug Index section or consult with our medical experts.
 ''';
     }
-    
-    if (lowerMessage.contains('guideline') || lowerMessage.contains('protocol')) {
+
+    if (lowerMessage.contains('guideline') ||
+        lowerMessage.contains('protocol')) {
       return '''
 📋 **Clinical Guidelines**
 
-MediGuide AI is temporarily ${notConfigured ? 'not configured in this environment' : 'unavailable'}. For clinical guidance:
+MediGuide AI is temporarily ${notConfigured ? 'not available because you are not signed in' : 'unavailable'}. For clinical guidance:
 
 • **Guidelines Section**: Access evidence-based treatment protocols
 • **Clinical Pathways**: Follow standardized care procedures
@@ -143,16 +170,16 @@ MediGuide AI is temporarily ${notConfigured ? 'not configured in this environmen
 Navigate to the Guidelines section for comprehensive protocols.
 ''';
     }
-    
-      return '''
-🤖 **MediGuide AI ${notConfigured ? 'Not Configured' : 'Temporarily Unavailable'}**
 
-${notConfigured ? 'This build does not include an OpenRouter API key, so the AI assistant is disabled.' : 'The AI assistant is currently experiencing difficulties.'}
+    return '''
+🤖 **MediGuide AI ${notConfigured ? 'Unavailable' : 'Temporarily Unavailable'}**
+
+${notConfigured ? 'Sign in to use the backend chat assistant.' : 'The AI assistant is currently experiencing difficulties.'}
 
 **Available Resources:**
 • **Drug Index**: Comprehensive medication information
 • **Guidelines**: Clinical treatment protocols
-• **Tools**: Medical calculators and decision aids  
+• **Tools**: Medical calculators and decision aids
 • **Consultants**: Connect with medical experts
 
 **For urgent medical questions**: Please consult with healthcare professionals or use our Consultants feature.
@@ -161,10 +188,9 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
 ''';
   }
 
-  /// Get contextual suggestions based on user query
   List<String> getContextualSuggestions(String userMessage) {
     final lowerMessage = userMessage.toLowerCase();
-    
+
     if (lowerMessage.contains('drug') || lowerMessage.contains('medicine')) {
       return [
         'Check drug interactions',
@@ -173,8 +199,9 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Calculate pediatric doses',
       ];
     }
-    
-    if (lowerMessage.contains('guideline') || lowerMessage.contains('protocol')) {
+
+    if (lowerMessage.contains('guideline') ||
+        lowerMessage.contains('protocol')) {
       return [
         'Search treatment guidelines',
         'View emergency protocols',
@@ -182,7 +209,7 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Check latest updates',
       ];
     }
-    
+
     if (lowerMessage.contains('calculator') || lowerMessage.contains('tool')) {
       return [
         'BMI calculator',
@@ -191,7 +218,7 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
         'Clinical checklists',
       ];
     }
-    
+
     return [
       'Search medical guidelines',
       'Check drug information',
@@ -199,5 +226,4 @@ ${notConfigured ? 'This build does not include an OpenRouter API key, so the AI 
       'Consult with experts',
     ];
   }
-
 }

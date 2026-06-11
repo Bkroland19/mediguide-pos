@@ -56,6 +56,8 @@ func New(cfg config.Config) (*App, error) {
 	r.GET("/swagger/all/*any", ginSwagger.WrapHandler(swaggerFiles.NewHandler(), ginSwagger.InstanceName("all"), ginSwagger.URL("/swagger/all/doc.json")))
 	r.GET("/swagger/v1/*any", ginSwagger.WrapHandler(swaggerFiles.NewHandler(), ginSwagger.InstanceName("v1"), ginSwagger.URL("/swagger/v1/doc.json")))
 	r.GET("/swagger/v2/*any", ginSwagger.WrapHandler(swaggerFiles.NewHandler(), ginSwagger.InstanceName("v2"), ginSwagger.URL("/swagger/v2/doc.json")))
+	r.Static("/samples", cfg.StaticSamplesDir)
+	r.Static("/dashboard/samples", cfg.StaticSamplesDir)
 
 	r.GET("/api/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName}) })
 

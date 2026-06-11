@@ -29,12 +29,14 @@ class AiAssistantController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    OpenAiService.to.resetSession();
     _loadContextFromArguments();
     _initializeChatComponents();
   }
 
   @override
   void onClose() {
+    OpenAiService.to.resetSession();
     chatController.dispose();
     super.onClose();
   }
@@ -59,12 +61,12 @@ class AiAssistantController extends GetxController {
     if (currentContext.value != null) {
       try {
         // Generate contextual welcome message
-        contextualWelcomeMessage.value = 
-            AiContextService.to.generateWelcomeMessage(currentContext.value!);
-        
+        contextualWelcomeMessage.value = AiContextService.to
+            .generateWelcomeMessage(currentContext.value!);
+
         // Generate contextual example questions
         contextualExampleQuestions.assignAll(
-          AiContextService.to.generateExampleQuestions(currentContext.value!)
+          AiContextService.to.generateExampleQuestions(currentContext.value!),
         );
       } catch (e) {
         // Fall back to default content if service fails
@@ -133,23 +135,23 @@ class AiAssistantController extends GetxController {
   /// Handle AI response
   Future<void> _handleAiResponse(String userMessage) async {
     try {
-      // Build contextual instructions if page context is available
-      String? customInstructions;
+      var requestMessage = userMessage;
       if (currentContext.value != null) {
         try {
-          customInstructions = AiContextService.to.buildContextInstructions(currentContext.value!);
+          requestMessage = AiContextService.to.buildContextQuestion(
+            currentContext.value!,
+            userMessage,
+          );
         } catch (e) {
-          // Fall back to the default assistant instructions if context building fails
-          customInstructions = null;
+          requestMessage = userMessage;
         }
       }
 
       final aiResponse = await OpenAiService.to.createChatCompletion(
-        userMessage: userMessage,
+        userMessage: requestMessage,
         conversationHistory: conversationHistory.length > 10
             ? conversationHistory.sublist(conversationHistory.length - 10)
             : conversationHistory.toList(),
-        customInstructions: customInstructions,
       );
 
       // Create AI message
@@ -243,10 +245,9 @@ class AiAssistantController extends GetxController {
   ];
 
   /// Get example questions to show in UI (with contextual intelligence)
-  List<String> get exampleQuestions => 
-      contextualExampleQuestions.isNotEmpty 
-          ? contextualExampleQuestions.toList()
-          : defaultExampleQuestions;
+  List<String> get exampleQuestions => contextualExampleQuestions.isNotEmpty
+      ? contextualExampleQuestions.toList()
+      : defaultExampleQuestions;
 
   /// Load contextual questions (call this after initialization)
   Future<void> loadContextualQuestions() async {

@@ -12,7 +12,8 @@ class AiContextService extends GetxService {
 
   /// Build contextual instructions for the assistant request
   String buildContextInstructions(AiContext context) {
-    final instructions = '''
+    final instructions =
+        '''
 Use the following reference material when it is relevant to the user's question.
 
 Context type: ${context.sourceType.contextInstructions}
@@ -31,6 +32,20 @@ Response requirements:
     return instructions.trim();
   }
 
+  /// Build a compact question payload for the backend chat API.
+  String buildContextQuestion(AiContext context, String userQuestion) {
+    return '''
+Context type: ${context.sourceType.contextInstructions}
+Title: ${context.title}
+Reference content:
+${_formatContextContent(context)}
+
+User question:
+${userQuestion.trim()}
+'''
+        .trim();
+  }
+
   /// Format context content for assistant consumption
   String _formatContextContent(AiContext context) {
     // Clean and truncate content for AI consumption
@@ -41,7 +56,8 @@ Response requirements:
 
     // Truncate if too long (keep within reasonable token limits)
     if (cleanContent.length > 3000) {
-      cleanContent = '${cleanContent.substring(0, 3000)}... [Content truncated]';
+      cleanContent =
+          '${cleanContent.substring(0, 3000)}... [Content truncated]';
     }
 
     return cleanContent;
@@ -51,7 +67,7 @@ Response requirements:
   String generateWelcomeMessage(AiContext context) {
     final contextIcon = context.sourceType.icon;
     final contextLabel = context.sourceType.label;
-    
+
     return '''
 $contextIcon **${context.title}**
 
@@ -76,7 +92,7 @@ ${_getContextualHelpOptions(context)}
 • Understanding contraindications and warnings
 • Interpreting clinical decision points
 • Related diagnostic criteria''';
-        
+
       case AiContextType.drug:
         return '''
 • Drug mechanisms and pharmacology
@@ -84,7 +100,7 @@ ${_getContextualHelpOptions(context)}
 • Drug interactions and contraindications
 • Side effects and monitoring
 • Alternative medications''';
-        
+
       case AiContextType.calculator:
         return '''
 • How to use this calculator
@@ -92,7 +108,7 @@ ${_getContextualHelpOptions(context)}
 • Clinical significance of values
 • When to use this tool
 • Related assessments''';
-        
+
       case AiContextType.tool:
         return '''
 • Step-by-step tool usage
@@ -100,7 +116,7 @@ ${_getContextualHelpOptions(context)}
 • Clinical applications
 • Best practices and tips
 • Related diagnostic tools''';
-        
+
       case AiContextType.consultant:
         return '''
 • When to seek consultation
@@ -108,7 +124,7 @@ ${_getContextualHelpOptions(context)}
 • Understanding specialties
 • Referral guidelines
 • Follow-up recommendations''';
-        
+
       case AiContextType.facility:
         return '''
 • Available services and departments
@@ -116,7 +132,7 @@ ${_getContextualHelpOptions(context)}
 • What to expect during visits
 • Preparation requirements
 • Alternative facilities''';
-        
+
       case AiContextType.faq:
         return '''
 • More detailed explanations
@@ -124,7 +140,7 @@ ${_getContextualHelpOptions(context)}
 • Practical implementation
 • Additional resources
 • Follow-up considerations''';
-        
+
       case AiContextType.genericPage:
       case AiContextType.unknown:
         return '''
@@ -146,7 +162,7 @@ ${_getContextualHelpOptions(context)}
           'What are the contraindications to be aware of?',
           'How do I monitor treatment progress?',
         ];
-        
+
       case AiContextType.drug:
         return [
           'What are the main side effects to watch for?',
@@ -154,7 +170,7 @@ ${_getContextualHelpOptions(context)}
           'How should this medication be administered?',
           'What monitoring is required?',
         ];
-        
+
       case AiContextType.calculator:
         return [
           'How do I interpret these results?',
@@ -162,7 +178,7 @@ ${_getContextualHelpOptions(context)}
           'When should I use this calculator?',
           'What are the limitations?',
         ];
-        
+
       case AiContextType.tool:
         return [
           'How do I properly use this tool?',
@@ -170,7 +186,7 @@ ${_getContextualHelpOptions(context)}
           'When is this assessment most useful?',
           'What are the next steps?',
         ];
-        
+
       case AiContextType.consultant:
         return [
           'When should I refer to this specialist?',
@@ -178,7 +194,7 @@ ${_getContextualHelpOptions(context)}
           'What information should I provide?',
           'What are typical wait times?',
         ];
-        
+
       case AiContextType.facility:
         return [
           'What services are available here?',
@@ -186,7 +202,7 @@ ${_getContextualHelpOptions(context)}
           'What should patients bring?',
           'Are there any special requirements?',
         ];
-        
+
       case AiContextType.faq:
         return [
           'Can you explain this in more detail?',
@@ -194,7 +210,7 @@ ${_getContextualHelpOptions(context)}
           'What are the practical implications?',
           'Where can I find more information?',
         ];
-        
+
       case AiContextType.genericPage:
       case AiContextType.unknown:
         return [
@@ -208,7 +224,7 @@ ${_getContextualHelpOptions(context)}
 
   /// Extract context from different page types
   /// This can be used by pages to easily create context objects
-  
+
   /// Extract context from guideline data
   AiContext extractGuidelineContext({
     required String conditionName,
@@ -216,7 +232,7 @@ ${_getContextualHelpOptions(context)}
     String? guidelineId,
   }) {
     final content = _buildGuidelineContent(guidelineData);
-    
+
     return AiContext.guideline(
       title: conditionName,
       content: content,
@@ -229,17 +245,17 @@ ${_getContextualHelpOptions(context)}
     );
   }
 
-  /// Extract context from generic page data  
+  /// Extract context from generic page data
   AiContext extractGenericPageContext({
     required String title,
     required String content,
     String? description,
     String? pageId,
   }) {
-    final fullContent = description != null 
+    final fullContent = description != null
         ? '$description\n\n$content'
         : content;
-        
+
     return AiContext.genericPage(
       title: title,
       content: fullContent,
@@ -254,7 +270,7 @@ ${_getContextualHelpOptions(context)}
   /// Build content string from guideline data structure
   String _buildGuidelineContent(Map<String, dynamic> data) {
     final buffer = StringBuffer();
-    
+
     // Add each section content
     data.forEach((key, value) {
       if (value is String && value.isNotEmpty) {
@@ -269,7 +285,7 @@ ${_getContextualHelpOptions(context)}
         buffer.writeln();
       }
     });
-    
+
     return buffer.toString().trim();
   }
 
