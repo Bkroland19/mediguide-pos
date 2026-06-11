@@ -1,6 +1,6 @@
 import { RowAction, BulkAction } from "@/types/data-table"
 import { MedicalGuidelinesWithExpanded } from "@/types/expanded"
-import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, Mail, CheckCircle, XCircle, FolderTree } from "lucide-react"
+import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, Mail, CheckCircle, XCircle, FolderTree, Plus, ShieldCheck, Upload } from "lucide-react"
 import { getPB } from "@/lib/pocketbase"
 import { showToast } from "@/lib/toast"
 
@@ -10,6 +10,13 @@ interface GuidelineRowActionsOptions {
   navigate: (path: string) => void
   onAssignIndex?: (guideline: MedicalGuidelinesWithExpanded) => void
   onMutationSuccess?: () => MaybeAsync
+  onNewVersion?: (guideline: MedicalGuidelinesWithExpanded) => void
+  onUploadPDF?: (guideline: MedicalGuidelinesWithExpanded) => void
+  onPublishVersion?: (guideline: MedicalGuidelinesWithExpanded) => void | Promise<void>
+  hasVersionDocument?: (guideline: MedicalGuidelinesWithExpanded) => boolean
+  hasVersionRecord?: (guideline: MedicalGuidelinesWithExpanded) => boolean
+  canPublishVersion?: (guideline: MedicalGuidelinesWithExpanded) => boolean
+  versionActionsLoading?: boolean
 }
 
 /**
@@ -19,7 +26,18 @@ interface GuidelineRowActionsOptions {
 export const createGuidelineRowActions = (
   options: GuidelineRowActionsOptions
 ): RowAction<MedicalGuidelinesWithExpanded>[] => {
-  const { navigate, onAssignIndex, onMutationSuccess } = options
+  const {
+    navigate,
+    onAssignIndex,
+    onMutationSuccess,
+    onNewVersion,
+    onUploadPDF,
+    onPublishVersion,
+    hasVersionDocument,
+    hasVersionRecord,
+    canPublishVersion,
+    versionActionsLoading,
+  } = options
   return [
     {
       id: "view",
@@ -56,6 +74,46 @@ export const createGuidelineRowActions = (
       onClick: async (guideline) => {
         navigate(`/guidelines/create?duplicate=${guideline.id}`)
       },
+      separator: true,
+    },
+    {
+      id: "new-version",
+      label: "New Version",
+      icon: Plus,
+      onClick: async (guideline) => {
+        if (onNewVersion) {
+          onNewVersion(guideline)
+          return
+        }
+        showToast.warning("Version unavailable", "No linked guideline document was found for this row.")
+      },
+      disabled: (guideline) => versionActionsLoading || !hasVersionDocument?.(guideline),
+    },
+    {
+      id: "upload-pdf",
+      label: "Upload PDF",
+      icon: Upload,
+      onClick: async (guideline) => {
+        if (onUploadPDF) {
+          onUploadPDF(guideline)
+          return
+        }
+        showToast.warning("Upload unavailable", "Create a version first, then upload the PDF.")
+      },
+      disabled: (guideline) => versionActionsLoading || !hasVersionRecord?.(guideline),
+    },
+    {
+      id: "publish-version",
+      label: "Publish Version",
+      icon: ShieldCheck,
+      onClick: async (guideline) => {
+        if (onPublishVersion) {
+          await onPublishVersion(guideline)
+          return
+        }
+        showToast.warning("Publish unavailable", "No publishable guideline version is linked to this row.")
+      },
+      disabled: (guideline) => versionActionsLoading || !canPublishVersion?.(guideline),
       separator: true,
     },
     {

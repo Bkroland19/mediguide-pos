@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"mediguide/internal/config"
@@ -116,6 +117,10 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 			return nil, nil, err
 		}
 	}
+	permissionByCode := make(map[string]models.Permission, len(permissions))
+	for _, permission := range permissions {
+		permissionByCode[permission.Code] = permission
+	}
 
 	adminRoleKey := "admin"
 	adminRole, err := ensureRole(database, adminRoleKey, models.Role{
@@ -148,6 +153,9 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		permissions[6],
 	}
 	if err := database.Model(&clinicianRole).Association("Permissions").Replace(&clinicianPerms); err != nil {
+		return nil, nil, err
+	}
+	if err := syncImportedRolePermissions(database, permissionByCode); err != nil {
 		return nil, nil, err
 	}
 
@@ -220,6 +228,124 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 	}
 
 	return &admin, &clinician, nil
+}
+
+func syncImportedRolePermissions(database *gorm.DB, permissionByCode map[string]models.Permission) error {
+	var roles []models.Role
+	if err := database.Find(&roles).Error; err != nil {
+		return err
+	}
+
+	for _, role := range roles {
+		roleKey := ""
+		if role.RoleKey != nil {
+			roleKey = strings.TrimSpace(*role.RoleKey)
+		}
+
+		codes := deriveBackendPermissions(roleKey, string(role.PermissionsJSON))
+		if len(codes) == 0 {
+			continue
+		}
+
+		mapped := make([]models.Permission, 0, len(codes))
+		for _, code := range codes {
+			permission, ok := permissionByCode[code]
+			if !ok {
+				continue
+			}
+			mapped = append(mapped, permission)
+		}
+		if len(mapped) == 0 {
+			continue
+		}
+
+		if err := database.Model(&role).Association("Permissions").Replace(&mapped); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
+	switch roleKey {
+	case "super_admin", "admin":
+		return []string{
+			"admin.all",
+			"chat.ask",
+			"guideline.publish",
+			"guideline.read",
+			"guideline.write",
+			"protocol.read",
+			"protocol.write",
+			"sync.read",
+		}
+	case "content_manager", "reviewer":
+		return []string{
+			"chat.ask",
+			"guideline.publish",
+			"guideline.read",
+			"guideline.write",
+			"protocol.read",
+			"protocol.write",
+			"sync.read",
+		}
+	case "healthcare_provider":
+		return []string{
+			"chat.ask",
+			"guideline.read",
+			"protocol.read",
+			"sync.read",
+		}
+	case "observer":
+		return []string{
+			"guideline.read",
+			"protocol.read",
+			"sync.read",
+		}
+	}
+
+	var payload map[string]map[string][]string
+	if err := json.Unmarshal([]byte(permissionsJSON), &payload); err != nil {
+		return nil
+	}
+
+	perms := map[string]bool{}
+	for resource, actions := range payload {
+		_, hasReadAny := actions["read:any"]
+		_, hasReadOwn := actions["read:own"]
+		_, hasCreateAny := actions["create:any"]
+		_, hasUpdateAny := actions["update:any"]
+		_, hasDeleteAny := actions["delete:any"]
+
+		switch resource {
+		case "content":
+			if hasReadAny || hasReadOwn {
+				perms["guideline.read"] = true
+				perms["protocol.read"] = true
+			}
+			if hasCreateAny || hasUpdateAny || hasDeleteAny {
+				perms["guideline.write"] = true
+				perms["guideline.publish"] = true
+				perms["protocol.write"] = true
+			}
+		case "reports":
+			if hasReadAny || hasReadOwn {
+				perms["sync.read"] = true
+			}
+		}
+	}
+
+	if len(perms) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(perms))
+	for code := range perms {
+		result = append(result, code)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func ensureRole(database *gorm.DB, roleKey string, desired models.Role) (models.Role, error) {

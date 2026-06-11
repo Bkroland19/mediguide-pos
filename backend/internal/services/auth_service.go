@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -227,11 +229,19 @@ func (s AuthService) generateAccessToken(u *models.User, sessionID uuid.UUID) (s
 		for _, p := range r.Permissions {
 			permsMap[p.Code] = true
 		}
+		roleKey := ""
+		if r.RoleKey != nil {
+			roleKey = strings.TrimSpace(*r.RoleKey)
+		}
+		for _, code := range deriveRolePermissions(roleKey, string(r.PermissionsJSON)) {
+			permsMap[code] = true
+		}
 	}
 	perms := []string{}
 	for p := range permsMap {
 		perms = append(perms, p)
 	}
+	sort.Strings(perms)
 
 	tok, err := security.GenerateJWT(s.Cfg.JWTSecret, s.Cfg.JWTIssuer, s.Cfg.JWTTTLMinutes, u.ID, sessionID, u.Email, roles, perms)
 	if err != nil {
@@ -267,4 +277,85 @@ func optionalString(v string) *string {
 		return nil
 	}
 	return &trimmed
+}
+
+func deriveRolePermissions(roleKey, permissionsJSON string) []string {
+	switch roleKey {
+	case "super_admin", "admin":
+		return []string{
+			"admin.all",
+			"chat.ask",
+			"guideline.publish",
+			"guideline.read",
+			"guideline.write",
+			"protocol.read",
+			"protocol.write",
+			"sync.read",
+		}
+	case "content_manager", "reviewer":
+		return []string{
+			"chat.ask",
+			"guideline.publish",
+			"guideline.read",
+			"guideline.write",
+			"protocol.read",
+			"protocol.write",
+			"sync.read",
+		}
+	case "healthcare_provider":
+		return []string{
+			"chat.ask",
+			"guideline.read",
+			"protocol.read",
+			"sync.read",
+		}
+	case "observer":
+		return []string{
+			"guideline.read",
+			"protocol.read",
+			"sync.read",
+		}
+	}
+
+	var payload map[string]map[string][]string
+	if err := json.Unmarshal([]byte(permissionsJSON), &payload); err != nil {
+		return nil
+	}
+
+	perms := map[string]bool{}
+	for resource, actions := range payload {
+		_, hasReadAny := actions["read:any"]
+		_, hasReadOwn := actions["read:own"]
+		_, hasCreateAny := actions["create:any"]
+		_, hasUpdateAny := actions["update:any"]
+		_, hasDeleteAny := actions["delete:any"]
+
+		switch resource {
+		case "content":
+			if hasReadAny || hasReadOwn {
+				perms["guideline.read"] = true
+				perms["protocol.read"] = true
+			}
+			if hasCreateAny || hasUpdateAny || hasDeleteAny {
+				perms["guideline.write"] = true
+				perms["guideline.publish"] = true
+				perms["protocol.write"] = true
+			}
+		case "reports":
+			if hasReadAny || hasReadOwn {
+				perms["sync.read"] = true
+			}
+		}
+	}
+
+	if len(perms) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(perms))
+	for code := range perms {
+		result = append(result, code)
+	}
+	sort.Strings(result)
+	return result
 }

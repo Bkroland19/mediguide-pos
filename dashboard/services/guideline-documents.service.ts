@@ -58,6 +58,37 @@ export interface IngestionJobRecord {
   updated_at: string
 }
 
+export function normalizeGuidelineDocumentKey(value?: string | null) {
+  return (value || "")
+    .toLowerCase()
+    .replace(/&amp;/g, "&")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+}
+
+export function buildGuidelineDocumentLookup(documents: GuidelineDocumentRecord[]) {
+  const lookup = new Map<string, GuidelineDocumentRecord>()
+  for (const document of documents) {
+    const key = normalizeGuidelineDocumentKey(document.title)
+    if (key && !lookup.has(key)) {
+      lookup.set(key, document)
+    }
+  }
+  return lookup
+}
+
+export function getDocumentCurrentVersion(document?: GuidelineDocumentRecord | null) {
+  if (!document) return null
+
+  if (document.current_version_id) {
+    const current = document.versions.find((version) => version.id === document.current_version_id)
+    if (current) return current
+  }
+
+  return document.versions[0] || null
+}
+
 function sortVersions(versions: GuidelineVersionRecord[]) {
   return [...versions].sort((left, right) => {
     const leftDate = new Date(left.publication_date || left.created_at).getTime()
