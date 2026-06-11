@@ -420,18 +420,21 @@ class _SettingsSection extends StatelessWidget {
               color: cs.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
-          child: Column(
-            children: [
-              for (int i = 0; i < children.length; i++) ...[
-                children[i],
-                if (i != children.length - 1)
-                  Divider(
-                    height: 1,
-                    indent: 64,
-                    color: cs.outlineVariant.withValues(alpha: 0.35),
-                  ),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  children[i],
+                  if (i != children.length - 1)
+                    Divider(
+                      height: 1,
+                      indent: 64,
+                      color: cs.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],

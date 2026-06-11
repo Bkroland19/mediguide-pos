@@ -307,12 +307,16 @@ class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
   }
 
   void _submitSearch(String value) {
+    widget.controller.submitSearchQuery(value);
+  }
+
+  void _changeSearch(String value) {
     widget.controller.setSearchQuery(value);
   }
 
   void _clearSearch() {
     _textController.clear();
-    widget.controller.setSearchQuery('');
+    widget.controller.submitSearchQuery('');
   }
 
   @override
@@ -332,6 +336,7 @@ class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
       return TextField(
         controller: _textController,
         textInputAction: TextInputAction.search,
+        onChanged: _changeSearch,
         onSubmitted: _submitSearch,
         decoration: InputDecoration(
           hintText: 'Search guidelines, conditions, ICD codes...',

@@ -11,8 +11,6 @@ class AllActionsPage extends GetWidget<AllActionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
@@ -281,18 +279,21 @@ class _ActionsSection extends StatelessWidget {
               color: cs.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
-          child: Column(
-            children: [
-              for (int i = 0; i < children.length; i++) ...[
-                children[i],
-                if (i != children.length - 1)
-                  Divider(
-                    height: 1,
-                    indent: 72,
-                    color: cs.outlineVariant.withValues(alpha: 0.35),
-                  ),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  children[i],
+                  if (i != children.length - 1)
+                    Divider(
+                      height: 1,
+                      indent: 72,
+                      color: cs.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],

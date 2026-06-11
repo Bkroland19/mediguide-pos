@@ -115,20 +115,23 @@ class SectionGroup extends StatelessWidget {
                 ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Column(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  items[i],
-                  if (i < items.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: AppSpacing.md + 40 + AppSpacing.md,
-                      color: cs.outlineVariant.withValues(alpha: 0.3),
-                    ),
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Column(
+                children: [
+                  for (int i = 0; i < items.length; i++) ...[
+                    items[i],
+                    if (i < items.length - 1)
+                      Divider(
+                        height: 1,
+                        indent: AppSpacing.md + 40 + AppSpacing.md,
+                        color: cs.outlineVariant.withValues(alpha: 0.3),
+                      ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

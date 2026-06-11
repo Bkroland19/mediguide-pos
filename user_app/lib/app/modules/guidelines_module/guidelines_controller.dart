@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -13,7 +15,10 @@ enum GuidelineRouteFilterType { all, category, categoryTree, indexItem, tag }
 
 class GuidelinesController extends GetxController {
   // ==================== CONSTANTS ====================
-  static const String emergencyCategoryId = 'p4vdq6cqnb2mnin';
+  static const Set<String> emergencyCategoryNames = {
+    'emergencies and trauma',
+    'common medical emergencies',
+  };
 
   // ==================== PAGINATION ====================
   late final PagingController<int, Guideline> pagingController;
@@ -50,6 +55,7 @@ class GuidelinesController extends GetxController {
       <GuidelineCategory>[].obs;
   final RxList<GuidelineTag> availableTags = <GuidelineTag>[].obs;
   final RxBool isLoadingFilters = false.obs;
+  Timer? _searchDebounce;
 
   // ==================== INIT ====================
   @override
@@ -69,6 +75,7 @@ class GuidelinesController extends GetxController {
 
   @override
   void onClose() {
+    _searchDebounce?.cancel();
     pagingController.dispose();
     super.onClose();
   }
@@ -87,8 +94,7 @@ class GuidelinesController extends GetxController {
   }
 
   bool get isEmergencyRoute {
-    return isInCategoryMode.value &&
-        routeCategoryId.value == emergencyCategoryId;
+    return isInCategoryMode.value && pageTitle.value == 'Emergency Guidelines';
   }
 
   bool get _hasFilters {
@@ -358,8 +364,48 @@ class GuidelinesController extends GetxController {
     }
   }
 
+  Future<void> _loadChildCategoryIdsForParents(
+    List<String> parentCategoryIds,
+  ) async {
+    final allIds = <String>{...parentCategoryIds};
+
+    for (final parentCategoryId in parentCategoryIds) {
+      try {
+        final result = await PocketBaseService.to.getRecordList(
+          collectionName: GuidelineCategory.collection,
+          perPage: 100,
+          filter:
+              'status="active" && parent_category="${_escapeFilterValue(parentCategoryId)}"',
+          sort: 'sort_order,name',
+        );
+
+        final childIds = result.items
+            .map((record) => GuidelineCategory.fromRecord(record).id)
+            .where((id) => id.isNotEmpty)
+            .toList();
+
+        allIds.addAll(childIds);
+      } catch (_) {
+        allIds.add(parentCategoryId);
+      }
+    }
+
+    routeCategoryIds.assignAll(allIds.toList());
+    pagingController.refresh();
+  }
+
   // ==================== QUICK FILTER ACTIONS ====================
   void setSearchQuery(String value) {
+    searchQuery.value = value.trim();
+    _updateFilterState();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      pagingController.refresh();
+    });
+  }
+
+  void submitSearchQuery(String value) {
+    _searchDebounce?.cancel();
     searchQuery.value = value.trim();
     _updateFilterState();
     pagingController.refresh();
@@ -386,10 +432,25 @@ class GuidelinesController extends GetxController {
   }
 
   void openEmergencyGuidelines() {
+    if (availableCategories.isEmpty) {
+      unawaited(
+        _loadFilterOptions().then((_) {
+          openEmergencyGuidelines();
+        }),
+      );
+      return;
+    }
+
+    final emergencyIds = _resolveEmergencyCategoryIds();
+    if (emergencyIds.isEmpty) {
+      Common.quickToast(title: 'Emergency guidelines category not found');
+      return;
+    }
+
     routeFilterType.value = GuidelineRouteFilterType.categoryTree;
 
-    routeCategoryId.value = emergencyCategoryId;
-    routeCategoryIds.assignAll([emergencyCategoryId]);
+    routeCategoryId.value = emergencyIds.first;
+    routeCategoryIds.assignAll(emergencyIds);
     isInCategoryMode.value = true;
 
     selectedIndex.value = null;
@@ -401,7 +462,7 @@ class GuidelinesController extends GetxController {
     selectedCategoryId.value = '';
     pageTitle.value = 'Emergency Guidelines';
 
-    _loadChildCategoryIds(emergencyCategoryId);
+    unawaited(_loadChildCategoryIdsForParents(emergencyIds));
 
     _updateFilterState();
     pagingController.refresh();
@@ -597,13 +658,55 @@ class GuidelinesController extends GetxController {
 
   // ==================== FILTER MODAL ====================
   Future<void> showFilterModal(BuildContext context) async {
+    if (availableCategories.isEmpty || availableTags.isEmpty) {
+      await _loadFilterOptions();
+    }
+
     final fields = <FilterField>[
-      FilterField.text('search', 'search'.tr),
+      FilterField.text(
+        'search',
+        'search'.tr,
+        hint: 'Condition, ICD code, definition...',
+      ),
+      FilterField.dropdown(
+        'category',
+        'Category',
+        availableCategories.map((category) => category.displayName).toList(),
+      ),
+      FilterField.multiSelect(
+        'tags',
+        'Tags',
+        availableTags.map((tag) => tag.displayName).toList(),
+      ),
+      FilterField.dropdown('priority', 'Priority', const [
+        'critical',
+        'high',
+        'medium',
+        'low',
+      ]),
+      FilterField.text(
+        'healthcareLevel',
+        'Healthcare Level',
+        hint: 'HC2, HC3, HC4, Hospital...',
+      ),
+      FilterField.text(
+        'targetPopulation',
+        'Target Population',
+        hint: 'Adults, Children, Pregnant Mothers...',
+      ),
       FilterField.boolean('showHighPriorityOnly', 'High Priority Only'),
     ];
 
     final values = <String, dynamic>{
       if (searchQuery.value.isNotEmpty) 'search': searchQuery.value,
+      if (selectedCategoryId.value.isNotEmpty)
+        'category': _categoryNameForId(selectedCategoryId.value),
+      if (selectedTagIds.isNotEmpty) 'tags': _tagNamesForIds(selectedTagIds),
+      if (selectedPriority.value.isNotEmpty) 'priority': selectedPriority.value,
+      if (selectedHealthcareLevel.value.isNotEmpty)
+        'healthcareLevel': selectedHealthcareLevel.value,
+      if (selectedTargetPopulation.value.isNotEmpty)
+        'targetPopulation': selectedTargetPopulation.value,
       if (showHighPriorityOnly.value) 'showHighPriorityOnly': true,
     };
 
@@ -623,11 +726,43 @@ class GuidelinesController extends GetxController {
 
   void _applyFilters(FilterResult result) {
     searchQuery.value = '';
+    selectedCategoryId.value = '';
+    selectedTagIds.clear();
+    selectedPriority.value = '';
+    selectedHealthcareLevel.value = '';
+    selectedTargetPopulation.value = '';
     showHighPriorityOnly.value = false;
 
     final search = result.getValue<String>('search');
     if (search != null && search.trim().isNotEmpty) {
       searchQuery.value = search.trim();
+    }
+
+    final categoryName = result.getValue<String>('category');
+    if (categoryName != null && categoryName.trim().isNotEmpty) {
+      final category = availableCategories.firstWhereOrNull(
+        (item) => item.displayName == categoryName.trim(),
+      );
+      if (category != null) {
+        selectedCategoryId.value = category.id;
+      }
+    }
+
+    selectedTagIds.assignAll(_tagIdsFromFilterResult(result));
+
+    final priority = result.getValue<String>('priority');
+    if (priority != null && priority.trim().isNotEmpty) {
+      selectedPriority.value = priority.trim();
+    }
+
+    final healthcareLevel = result.getValue<String>('healthcareLevel');
+    if (healthcareLevel != null && healthcareLevel.trim().isNotEmpty) {
+      selectedHealthcareLevel.value = healthcareLevel.trim();
+    }
+
+    final targetPopulation = result.getValue<String>('targetPopulation');
+    if (targetPopulation != null && targetPopulation.trim().isNotEmpty) {
+      selectedTargetPopulation.value = targetPopulation.trim();
     }
 
     final high = result.getValue<bool>('showHighPriorityOnly');
@@ -673,5 +808,45 @@ class GuidelinesController extends GetxController {
     );
 
     return result.items.map((e) => GuidelineTag.fromRecord(e)).toList();
+  }
+
+  String? _categoryNameForId(String id) {
+    final category = availableCategories.firstWhereOrNull(
+      (item) => item.id == id,
+    );
+    return category?.displayName;
+  }
+
+  List<String> _tagNamesForIds(List<String> ids) {
+    final selected = ids.toSet();
+    return availableTags
+        .where((item) => selected.contains(item.id))
+        .map((item) => item.displayName)
+        .toList();
+  }
+
+  List<String> _tagIdsFromFilterResult(FilterResult result) {
+    final selectedNames = (result.getValue<List>('tags') ?? []).cast<String>();
+    if (selectedNames.isEmpty) {
+      return const <String>[];
+    }
+
+    final selected = selectedNames.toSet();
+    return availableTags
+        .where((item) => selected.contains(item.displayName))
+        .map((item) => item.id)
+        .toList();
+  }
+
+  List<String> _resolveEmergencyCategoryIds() {
+    return availableCategories
+        .where(
+          (category) => emergencyCategoryNames.contains(
+            category.displayName.trim().toLowerCase(),
+          ),
+        )
+        .map((category) => category.id)
+        .where((id) => id.isNotEmpty)
+        .toList();
   }
 }
