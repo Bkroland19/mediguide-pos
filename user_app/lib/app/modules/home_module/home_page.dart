@@ -53,12 +53,19 @@ class HomePage extends GetWidget<HomeController> {
         ),
         actions: [
           IconButton(
+            onPressed: () => _showQuickActionsMenu(context),
+            tooltip: AppTranslationKey.quickActions,
+            icon: const Icon(LucideIcons.layoutGrid),
+          ),
+          IconButton(
             onPressed: () =>
                 showSearch(context: context, delegate: GlobalSearchDelegate()),
+            tooltip: 'Search',
             icon: const Icon(LucideIcons.search),
           ),
           IconButton(
             onPressed: () => Get.toNamed(AppRoutes.notifications),
+            tooltip: AppTranslationKey.notifications,
             icon: const Icon(LucideIcons.bell),
           ),
         ],
@@ -120,115 +127,35 @@ class HomePage extends GetWidget<HomeController> {
               // =====================================================
               // PINNED GUIDELINES
               // =====================================================
-              if (controller.pinnedGuidelines.isNotEmpty) ...[
-                SectionHeader(
-                  title: 'Pinned Guidelines',
-                  subtitle: 'Frequently used references',
-                  icon: LucideIcons.pin,
-                ),
+              // if (controller.pinnedGuidelines.isNotEmpty) ...[
+              //   SectionHeader(
+              //     title: 'Pinned Guidelines',
+              //     subtitle: 'Frequently used references',
+              //     icon: LucideIcons.pin,
+              //   ),
 
-                AppSpacing.md.gap,
+              //   AppSpacing.md.gap,
 
-                SizedBox(
-                  height: 140,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: controller.pinnedGuidelines.length,
-                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
-                    itemBuilder: (context, index) {
-                      final guideline = controller.pinnedGuidelines[index];
+              //   SizedBox(
+              //     height: 140,
+              //     child: ListView.separated(
+              //       scrollDirection: Axis.horizontal,
+              //       itemCount: controller.pinnedGuidelines.length,
+              //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
+              //       itemBuilder: (context, index) {
+              //         final guideline = controller.pinnedGuidelines[index];
 
-                      return _PinnedGuidelineCard(
-                        title: guideline.displayName,
-                        category: guideline.categories.firstOrNull?.name ?? '',
-                        onTap: () => controller.openGuideline(guideline),
-                      );
-                    },
-                  ),
-                ),
+              //         return _PinnedGuidelineCard(
+              //           title: guideline.displayName,
+              //           category: guideline.categories.firstOrNull?.name ?? '',
+              //           onTap: () => controller.openGuideline(guideline),
+              //         );
+              //       },
+              //     ),
+              //   ),
 
-                AppSpacing.lg.gap,
-              ],
-
-              // =====================================================
-              // QUICK ACTIONS
-              // =====================================================
-              SectionHeader(
-                title: AppTranslationKey.quickActions,
-                subtitle: AppTranslationKey.accessEssentialFeatures,
-                icon: LucideIcons.layoutGrid,
-              ),
-
-              AppSpacing.md.gap,
-
-              GridView.count(
-                crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: AppSpacing.md,
-                crossAxisSpacing: AppSpacing.md,
-                childAspectRatio: 1.2,
-                children: [
-                  _QuickActionGridCard(
-                    icon: LucideIcons.pill,
-                    title: AppTranslationKey.drugIndex,
-                    subtitle: 'Drug references',
-                    color: Colors.blue,
-                    onTap: () => Get.toNamed(AppRoutes.drugIndex),
-                  ),
-                  _QuickActionGridCard(
-                    icon: LucideIcons.calculator,
-                    title: 'Clinical Tools',
-                    subtitle: 'Decision support',
-                    color: Colors.purple,
-                    onTap: () => Get.toNamed(AppRoutes.tools),
-                  ),
-                  _QuickActionGridCard(
-                    icon: LucideIcons.messageCircle,
-                    title: AppTranslationKey.chatWithConsultant,
-                    subtitle: 'Talk to experts',
-                    color: Colors.teal,
-                    onTap: () async {
-                      final result = await TreeSelectorPage.show(
-                        config: TreeSelectorConfig(
-                          title: AppTranslationKey.chatWithConsultant,
-                          endpointPath: '/api/consultants/tree',
-                        ),
-                      );
-
-                      if (result != null) {
-                        Get.toNamed(
-                          AppRoutes.consultants,
-                          arguments: {'treeFilters': result.filters},
-                        );
-                      }
-                    },
-                  ),
-                  _QuickActionGridCard(
-                    icon: LucideIcons.mapPin,
-                    title: AppTranslationKey.healthInfrastructure,
-                    subtitle: 'Find facilities',
-                    color: Colors.orange,
-                    onTap: () async {
-                      final result = await TreeSelectorPage.show(
-                        config: TreeSelectorConfig(
-                          title: AppTranslationKey.healthInfrastructure,
-                          endpointPath: '/api/health-facilities/tree',
-                        ),
-                      );
-
-                      if (result != null) {
-                        Get.toNamed(
-                          AppRoutes.healthInfrastructure,
-                          arguments: {'treeFilters': result.filters},
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-
-              AppSpacing.lg.gap,
+              //   AppSpacing.lg.gap,
+              // ],
 
               // =====================================================
               // CONTINUE READING
@@ -266,42 +193,212 @@ class HomePage extends GetWidget<HomeController> {
               // =====================================================
               // FEATURED TOOLS
               // =====================================================
-              if (controller.featuredCalculators.isNotEmpty && !loading) ...[
-                SectionHeader(
-                  title: AppTranslationKey.featuredTools,
-                  subtitle: AppTranslationKey.essentialCalculatorsAndTools,
-                  icon: LucideIcons.calculator,
-                  onSeeAll: () => Get.toNamed(AppRoutes.tools),
-                ),
+              // if (controller.featuredCalculators.isNotEmpty && !loading) ...[
+              //   SectionHeader(
+              //     title: AppTranslationKey.featuredTools,
+              //     subtitle: AppTranslationKey.essentialCalculatorsAndTools,
+              //     icon: LucideIcons.calculator,
+              //     onSeeAll: () => Get.toNamed(AppRoutes.tools),
+              //   ),
 
-                AppSpacing.md.gap,
+              //   AppSpacing.md.gap,
 
-                SizedBox(
-                  height: 140,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: controller.featuredCalculators.length,
-                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
-                    itemBuilder: (context, index) {
-                      final calculator = controller.featuredCalculators[index];
+              //   SizedBox(
+              //     height: 140,
+              //     child: ListView.separated(
+              //       scrollDirection: Axis.horizontal,
+              //       itemCount: controller.featuredCalculators.length,
+              //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
+              //       itemBuilder: (context, index) {
+              //         final calculator = controller.featuredCalculators[index];
 
-                      return FeaturedCalculatorChip(
-                        calculator: calculator,
-                        onTap: () => Get.toNamed(
-                          AppRoutes.useCalculator,
-                          arguments: calculator,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-
+              //         return FeaturedCalculatorChip(
+              //           calculator: calculator,
+              //           onTap: () => Get.toNamed(
+              //             AppRoutes.useCalculator,
+              //             arguments: calculator,
+              //           ),
+              //         );
+              //       },
+              //     ),
+              //   ),
+              // ],
               AppSpacing.xxxl.gap,
             ],
           ),
         );
       }),
+    );
+  }
+
+  Future<void> _showQuickActionsMenu(BuildContext context) async {
+    final actions = [
+      _HomeQuickAction(
+        icon: LucideIcons.pill,
+        title: AppTranslationKey.drugIndex,
+        subtitle: 'Drug references',
+        color: Colors.blue,
+        onTap: () async {
+          Get.toNamed(AppRoutes.drugIndex);
+        },
+      ),
+      _HomeQuickAction(
+        icon: LucideIcons.calculator,
+        title: 'Clinical Tools',
+        subtitle: 'Decision support',
+        color: Colors.purple,
+        onTap: () async {
+          Get.toNamed(AppRoutes.tools);
+        },
+      ),
+      _HomeQuickAction(
+        icon: LucideIcons.messageCircle,
+        title: AppTranslationKey.chatWithConsultant,
+        subtitle: 'Talk to experts',
+        color: Colors.teal,
+        onTap: () async {
+          final result = await TreeSelectorPage.show(
+            config: TreeSelectorConfig(
+              title: AppTranslationKey.chatWithConsultant,
+              endpointPath: '/api/consultants/tree',
+            ),
+          );
+
+          if (result != null) {
+            Get.toNamed(
+              AppRoutes.consultants,
+              arguments: {'treeFilters': result.filters},
+            );
+          }
+        },
+      ),
+      _HomeQuickAction(
+        icon: LucideIcons.mapPin,
+        title: AppTranslationKey.healthInfrastructure,
+        subtitle: 'Find facilities',
+        color: Colors.orange,
+        onTap: () async {
+          final result = await TreeSelectorPage.show(
+            config: TreeSelectorConfig(
+              title: AppTranslationKey.healthInfrastructure,
+              endpointPath: '/api/health-facilities/tree',
+            ),
+          );
+
+          if (result != null) {
+            Get.toNamed(
+              AppRoutes.healthInfrastructure,
+              arguments: {'treeFilters': result.filters},
+            );
+          }
+        },
+      ),
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (context) => _QuickActionsSheet(actions: actions),
+    );
+  }
+}
+
+class _HomeQuickAction {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final Future<void> Function() onTap;
+
+  const _HomeQuickAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _QuickActionsSheet extends StatelessWidget {
+  final List<_HomeQuickAction> actions;
+
+  const _QuickActionsSheet({required this.actions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.responsiveHorizontalPadding,
+            0,
+            context.responsiveHorizontalPadding,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppTranslationKey.quickActions,
+                style: context.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              AppSpacing.sm.gap,
+              ...actions.map((action) => _QuickActionMenuTile(action: action)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionMenuTile extends StatelessWidget {
+  final _HomeQuickAction action;
+
+  const _QuickActionMenuTile({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: action.color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(action.icon, color: action.color, size: 20),
+        ),
+        title: Text(
+          action.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          action.subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Icon(LucideIcons.chevronRight, color: cs.onSurfaceVariant),
+        onTap: () async {
+          Navigator.of(context).pop();
+          await action.onTap();
+        },
+      ),
     );
   }
 }
@@ -624,71 +721,6 @@ class _PinnedGuidelineCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionGridCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionGridCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            color: cs.surfaceContainerLowest,
-            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: color),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ],
           ),
         ),
       ),

@@ -119,7 +119,7 @@ class HomeController extends GetxController {
     try {
       final result = await _pbService.getRecordList(
         collectionName: Guideline.collection,
-        perPage: 3,
+        perPage: 5,
         filter: 'is_published=true && status="published" && pinned=true',
         sort: '-updated',
         expand: 'categories,tags,index_item',
@@ -140,7 +140,7 @@ class HomeController extends GetxController {
     try {
       final result = await _pbService.getRecordList(
         collectionName: Guideline.collection,
-        perPage: 3,
+        perPage: 5,
         filter: 'is_published=true && status="published"',
         sort: '-updated',
         expand: 'categories,tags,index_item',
