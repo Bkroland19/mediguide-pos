@@ -40,6 +40,11 @@ type PublishResult struct {
 	Published bool `json:"published" example:"true"`
 }
 
+type MarkdownUpdateResult struct {
+	Updated bool `json:"updated" example:"true"`
+	Size    int  `json:"size" example:"1024"`
+}
+
 type LogoutResult struct {
 	LoggedOut bool `json:"logged_out" example:"true"`
 }
@@ -106,6 +111,11 @@ type IngestionJobEnvelope struct {
 type PublishEnvelope struct {
 	Success bool          `json:"success" example:"true"`
 	Data    PublishResult `json:"data"`
+}
+
+type MarkdownUpdateEnvelope struct {
+	Success bool                 `json:"success" example:"true"`
+	Data    MarkdownUpdateResult `json:"data"`
 }
 
 type PaginatedGuidelineSections struct {

@@ -19,7 +19,9 @@ class SearchRepository:
             "gc.review_status = 'approved'",
             "gc.embedding IS NOT NULL",
             "gv.deleted_at IS NULL",
+            "gv.status = 'published'",
             "gd.deleted_at IS NULL",
+            "gd.current_version_id = gv.id",
         ]
         select_params: list[Any] = []
         filter_params: list[Any] = []
@@ -73,7 +75,9 @@ class SearchRepository:
             "gc.deleted_at IS NULL",
             "gc.review_status = 'approved'",
             "gv.deleted_at IS NULL",
+            "gv.status = 'published'",
             "gd.deleted_at IS NULL",
+            "gd.current_version_id = gv.id",
             "gc.search_vector @@ plainto_tsquery('simple', %s)",
         ]
         select_params: list[Any] = []

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
 import { LoadingState } from "@/components/ui/loading-state"
+import { RichContent } from "@/components/ui/rich-content"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -217,7 +218,7 @@ export default function ViewDocumentationPage({ params }: ViewDocumentationPageP
             </CardHeader>
             
             <CardContent>
-              <div dangerouslySetInnerHTML={{ __html: documentationData.content }} />
+              <RichContent html={documentationData.content} />
             </CardContent>
           </Card>
         </div>

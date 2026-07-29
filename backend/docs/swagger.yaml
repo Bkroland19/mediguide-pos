@@ -16,16 +16,6 @@ definitions:
         example: true
         type: boolean
     type: object
-  handlers.ClinicalProtocolsEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.ClinicalProtocol'
-        type: array
-      success:
-        example: true
-        type: boolean
-    type: object
   handlers.DownloadURLEnvelope:
     properties:
       data:
@@ -49,40 +39,10 @@ definitions:
         example: false
         type: boolean
     type: object
-  handlers.GuidelineChunksEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.GuidelineChunk'
-        type: array
-      success:
-        example: true
-        type: boolean
-    type: object
   handlers.GuidelineDocumentEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.GuidelineDocument'
-      success:
-        example: true
-        type: boolean
-    type: object
-  handlers.GuidelineDocumentsEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.GuidelineDocument'
-        type: array
-      success:
-        example: true
-        type: boolean
-    type: object
-  handlers.GuidelineSectionsEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.GuidelineSection'
-        type: array
       success:
         example: true
         type: boolean
@@ -110,16 +70,6 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.Language'
-      success:
-        example: true
-        type: boolean
-    type: object
-  handlers.LanguagesEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.Language'
-        type: array
       success:
         example: true
         type: boolean
@@ -281,6 +231,185 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.MarkdownUpdateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.MarkdownUpdateResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.MarkdownUpdateResult:
+    properties:
+      size:
+        example: 1024
+        type: integer
+      updated:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedClinicalProtocols:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.ClinicalProtocol'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedClinicalProtocolsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedClinicalProtocols'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineChunks:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineChunk'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 100
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineChunksEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineChunks'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineDocuments:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineDocument'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineDocumentsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineDocuments'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineSections:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineSection'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 100
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineSectionsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineSections'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedLanguages:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Language'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedLanguagesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedLanguages'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedSettings:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Setting'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedSettingsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedSettings'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.ProtocolRunEnvelope:
     properties:
       data:
@@ -391,16 +520,6 @@ definitions:
         example: true
         type: boolean
     type: object
-  handlers.SettingsEnvelope:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.Setting'
-        type: array
-      success:
-        example: true
-        type: boolean
-    type: object
   handlers.SyncPackageEnvelope:
     properties:
       data:
@@ -408,6 +527,13 @@ definitions:
       success:
         example: true
         type: boolean
+    type: object
+  handlers.UpdateMarkdownInput:
+    properties:
+      content:
+        type: string
+    required:
+    - content
     type: object
   handlers.UserEnvelope:
     properties:
@@ -1486,16 +1612,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.LegacyTreeResult'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: Get consultants tree
       tags:
       - legacy-v1
@@ -1525,16 +1645,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.LegacyTreeResult'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: Get health facilities tree
       tags:
       - legacy-v1
@@ -1564,16 +1678,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.LegacyTreeResult'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: Get ministry directory tree
       tags:
       - legacy-v1
@@ -1774,6 +1882,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 500
+        minimum: 1
+        name: per_page
+        type: integer
       - description: Maximum results
         in: query
         maximum: 500
@@ -1791,7 +1910,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.GuidelineChunksEnvelope'
+            $ref: '#/definitions/handlers.PaginatedGuidelineChunksEnvelope'
         "400":
           description: Bad Request
           schema:
@@ -1811,6 +1930,110 @@ paths:
       security:
       - BearerAuth: []
       summary: List chunks for a guideline version
+      tags:
+      - guidelines
+  /api/v2/guideline-versions/{id}/extracted/{format}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Asset format: md, markdown, or html'
+        in: path
+        name: format
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download an extracted guideline file
+      tags:
+      - guidelines
+  /api/v2/guideline-versions/{id}/extracted/markdown:
+    put:
+      consumes:
+      - application/json
+      - text/markdown
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Markdown content (JSON); raw text/markdown is also accepted
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateMarkdownInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownUpdateEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace extracted guideline Markdown
       tags:
       - guidelines
   /api/v2/guideline-versions/{id}/publish:
@@ -1859,6 +2082,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 500
+        minimum: 1
+        name: per_page
+        type: integer
       - description: Maximum results
         in: query
         maximum: 500
@@ -1876,7 +2110,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.GuidelineSectionsEnvelope'
+            $ref: '#/definitions/handlers.PaginatedGuidelineSectionsEnvelope'
         "400":
           description: Bad Request
           schema:
@@ -1949,13 +2183,24 @@ paths:
         in: query
         name: program_area
         type: string
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.GuidelineDocumentsEnvelope'
+            $ref: '#/definitions/handlers.PaginatedGuidelineDocumentsEnvelope'
         "401":
           description: Unauthorized
           schema:
@@ -2088,13 +2333,24 @@ paths:
         in: query
         name: is_active
         type: boolean
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.LanguagesEnvelope'
+            $ref: '#/definitions/handlers.PaginatedLanguagesEnvelope'
         "400":
           description: Bad Request
           schema:
@@ -2167,13 +2423,25 @@ paths:
       - auth
   /api/v2/protocols:
     get:
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.ClinicalProtocolsEnvelope'
+            $ref: '#/definitions/handlers.PaginatedClinicalProtocolsEnvelope'
         "401":
           description: Unauthorized
           schema:
@@ -2351,13 +2619,24 @@ paths:
         in: query
         name: is_public
         type: boolean
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.SettingsEnvelope'
+            $ref: '#/definitions/handlers.PaginatedSettingsEnvelope'
         "400":
           description: Bad Request
           schema:

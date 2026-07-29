@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoading } from "@/components/ui/loading-state"
+import { RichContent } from "@/components/ui/rich-content"
 import { GenericPageInfoDialog } from "@/components/dialogs/generic-page-info-dialog"
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog"
 import { GenericPagesService } from "@/services/generic-pages.service"
@@ -287,10 +288,7 @@ export default function LabTestMenuPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="overflow-x-auto">
-                        <div
-                          className="prose max-w-none"
-                          dangerouslySetInnerHTML={{ __html: content.content }}
-                        />
+                        <RichContent className="prose max-w-none" html={content.content} />
                       </div>
                     </CardContent>
                   </Card>

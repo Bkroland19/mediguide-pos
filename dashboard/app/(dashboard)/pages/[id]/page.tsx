@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "@/components/ui/loading-state";
+import { RichContent } from "@/components/ui/rich-content";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { GenericPagesService } from "@/services/generic-pages.service";
 import { showToast } from "@/lib/toast";
@@ -224,9 +225,7 @@ export default function PageDetailsPage({
             {contentStructure === "simple" ? (
               // HTML Content Type - render directly
               <div className="prose max-w-none overflow-x-auto">
-                <div
-                  dangerouslySetInnerHTML={{ __html: page.content as string }}
-                />
+                <RichContent html={page.content as string} />
               </div>
             ) : // Key-Value Type - render with scrollable tabs
             contentKeys.length > 0 ? (
@@ -299,11 +298,7 @@ export default function PageDetailsPage({
                         </CardHeader>
                         <CardContent>
                           <div className="prose max-w-none overflow-x-auto">
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: content.content || "",
-                              }}
-                            />
+                            <RichContent html={content.content} />
                           </div>
                         </CardContent>
                       </Card>

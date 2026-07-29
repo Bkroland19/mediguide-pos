@@ -1,10 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"path/filepath"
 	"regexp"
@@ -39,9 +41,18 @@ type CreateVersionInput struct {
 	ReviewDate      string `json:"review_date"`
 }
 
+type ExtractedAsset struct {
+	Reader      io.ReadCloser
+	Filename    string
+	ContentType string
+}
+
 var (
 	ErrGuidelineIngestionIncomplete = errors.New("guideline ingestion is not complete")
 	ErrGuidelineIngestionFailed     = errors.New("guideline ingestion failed")
+	ErrGuidelineAssetMissing        = errors.New("extracted guideline asset is missing")
+	ErrUnsupportedGuidelineAsset    = errors.New("unsupported extracted guideline asset format")
+	ErrPublishedMarkdownImmutable   = errors.New("published guideline markdown cannot be edited")
 )
 
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
@@ -149,6 +160,80 @@ func (s GuidelineService) Chunks(versionID uuid.UUID, page PageInput) (*PageResu
 		return nil, err
 	}
 	return NewPageResult(rows, normalized, total), nil
+}
+
+func (s GuidelineService) ExtractedAsset(ctx context.Context, versionID uuid.UUID, format string) (*ExtractedAsset, error) {
+	var version models.GuidelineVersion
+	if err := s.DB.First(&version, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+
+	key, extension, contentType, err := guidelineAssetDetails(&version, format)
+	if err != nil {
+		return nil, err
+	}
+
+	reader, err := s.Store.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return &ExtractedAsset{
+		Reader:      reader,
+		Filename:    fmt.Sprintf("guideline-%s.%s", versionID, extension),
+		ContentType: contentType,
+	}, nil
+}
+
+func guidelineAssetDetails(version *models.GuidelineVersion, format string) (key, extension, contentType string, err error) {
+	switch strings.ToLower(strings.TrimPrefix(strings.TrimSpace(format), ".")) {
+	case "md", "markdown":
+		key = version.MarkdownFileKey
+		extension = "md"
+		contentType = "text/markdown; charset=utf-8"
+	case "html":
+		key = version.HTMLFileKey
+		extension = "html"
+		contentType = "text/html; charset=utf-8"
+	default:
+		return "", "", "", ErrUnsupportedGuidelineAsset
+	}
+	if strings.TrimSpace(key) == "" {
+		return "", "", "", ErrGuidelineAssetMissing
+	}
+	return key, extension, contentType, nil
+}
+
+func (s GuidelineService) UpdateMarkdown(ctx context.Context, versionID uuid.UUID, content []byte) error {
+	var version models.GuidelineVersion
+	if err := s.DB.First(&version, "id = ?", versionID).Error; err != nil {
+		return err
+	}
+	if err := validateMarkdownUpdate(&version, content); err != nil {
+		return err
+	}
+	if err := s.Store.Put(
+		ctx,
+		version.MarkdownFileKey,
+		bytes.NewReader(content),
+		int64(len(content)),
+		"text/markdown; charset=utf-8",
+	); err != nil {
+		return err
+	}
+	return s.DB.Model(&version).Update("updated_at", time.Now()).Error
+}
+
+func validateMarkdownUpdate(version *models.GuidelineVersion, content []byte) error {
+	if len(bytes.TrimSpace(content)) == 0 {
+		return errors.New("markdown content is required")
+	}
+	if strings.EqualFold(strings.TrimSpace(version.Status), "published") {
+		return ErrPublishedMarkdownImmutable
+	}
+	if strings.TrimSpace(version.MarkdownFileKey) == "" {
+		return ErrGuidelineAssetMissing
+	}
+	return nil
 }
 
 func (s GuidelineService) loadVersionDocument(tx *gorm.DB, versionID uuid.UUID) (*models.GuidelineVersion, *models.GuidelineDocument, error) {

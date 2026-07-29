@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingState } from "@/components/ui/loading-state"
+import { RichContent } from "@/components/ui/rich-content"
 import { TicketReplyDialog } from "@/components/dialogs/ticket-reply-dialog"
 import { TicketStatusUpdateDialog } from "@/components/dialogs/ticket-status-update-dialog"
 import { TicketAssignDialog } from "@/components/dialogs/ticket-assign-dialog"
@@ -203,10 +204,7 @@ export default function TicketViewPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div 
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: ticket.description }}
-              />
+              <RichContent className="prose prose-sm max-w-none" html={ticket.description} />
             </CardContent>
           </Card>
 
@@ -253,9 +251,9 @@ export default function TicketViewPage() {
                               </Badge>
                             )}
                           </div>
-                          <div 
+                          <RichContent
                             className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg"
-                            dangerouslySetInnerHTML={{ __html: reply.message }}
+                            html={reply.message}
                           />
                         </div>
                       </div>

@@ -169,6 +169,9 @@ export default function GuidelinesPage() {
     () =>
       createGuidelineRowActions({
         navigate: (path) => router.push(path),
+        canCreate: hasPermission("content", "create:any"),
+        canUpdate: hasPermission("content", "update:any"),
+        canDelete: hasPermission("content", "delete:any"),
         onAssignIndex: handleAssignIndex,
         onMutationSuccess: handleMutationSuccess,
         onNewVersion: handleOpenNewVersion,
@@ -198,12 +201,16 @@ export default function GuidelinesPage() {
       getDocumentForGuideline,
       getVersionForGuideline,
       guidelineDocumentsQuery.isLoading,
+      hasPermission,
     ]
   )
 
   const guidelineBulkActions = React.useMemo(
-    () => createGuidelineBulkActions({ onMutationSuccess: handleMutationSuccess }),
-    [handleMutationSuccess]
+    () => createGuidelineBulkActions({
+      onMutationSuccess: handleMutationSuccess,
+      canUpdate: hasPermission("content", "update:any"),
+    }),
+    [handleMutationSuccess, hasPermission]
   )
 
   return (

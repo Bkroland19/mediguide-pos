@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"errors"
+	"io"
+	"mime"
 	"net/http"
+	"strings"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
@@ -11,11 +14,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type GuidelineHandler struct {
 	Service     services.GuidelineService
 	MaxUploadMB int64
+}
+
+type UpdateMarkdownInput struct {
+	Content string `json:"content" binding:"required"`
 }
 
 // Create godoc
@@ -265,4 +273,109 @@ func (h GuidelineHandler) Chunks(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, rows)
+}
+
+// ExtractedAsset godoc
+// @Summary Download an extracted guideline file
+// @Tags guidelines
+// @Produce application/octet-stream
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param format path string true "Asset format: md, markdown, or html"
+// @Success 200 {file} binary
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/extracted/{format} [get]
+func (h GuidelineHandler) ExtractedAsset(c *gin.Context) {
+	versionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	asset, err := h.Service.ExtractedAsset(c.Request.Context(), versionID, c.Param("format"))
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrUnsupportedGuidelineAsset):
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+		case errors.Is(err, services.ErrGuidelineAssetMissing), errors.Is(err, gorm.ErrRecordNotFound):
+			httpx.Error(c, http.StatusNotFound, err.Error())
+		default:
+			httpx.Error(c, http.StatusInternalServerError, "failed to load extracted guideline asset")
+		}
+		return
+	}
+	defer asset.Reader.Close()
+
+	c.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": asset.Filename}))
+	c.Header("Content-Type", asset.ContentType)
+	c.Status(http.StatusOK)
+	if _, err := io.Copy(c.Writer, asset.Reader); err != nil {
+		c.Error(err)
+	}
+}
+
+// UpdateMarkdown godoc
+// @Summary Replace extracted guideline Markdown
+// @Tags guidelines
+// @Accept json,text/markdown
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param payload body handlers.UpdateMarkdownInput true "Markdown content (JSON); raw text/markdown is also accepted"
+// @Success 200 {object} handlers.MarkdownUpdateEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 409 {object} handlers.ErrorResponse
+// @Failure 413 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/extracted/markdown [put]
+func (h GuidelineHandler) UpdateMarkdown(c *gin.Context) {
+	versionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	maxBytes := h.MaxUploadMB << 20
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+	var content []byte
+	if strings.HasPrefix(strings.ToLower(c.GetHeader("Content-Type")), "application/json") {
+		var input UpdateMarkdownInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		content = []byte(input.Content)
+	} else {
+		content, err = io.ReadAll(c.Request.Body)
+		if err != nil {
+			var maxBytesError *http.MaxBytesError
+			if errors.As(err, &maxBytesError) {
+				httpx.Error(c, http.StatusRequestEntityTooLarge, "markdown exceeds maximum allowed size")
+				return
+			}
+			httpx.Error(c, http.StatusBadRequest, "failed to read markdown content")
+			return
+		}
+	}
+
+	if err := h.Service.UpdateMarkdown(c.Request.Context(), versionID, content); err != nil {
+		switch {
+		case errors.Is(err, services.ErrGuidelineAssetMissing), errors.Is(err, gorm.ErrRecordNotFound):
+			httpx.Error(c, http.StatusNotFound, err.Error())
+		case errors.Is(err, services.ErrPublishedMarkdownImmutable):
+			httpx.Error(c, http.StatusConflict, err.Error())
+		case strings.Contains(err.Error(), "content is required"):
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+		default:
+			httpx.Error(c, http.StatusInternalServerError, "failed to update guideline markdown")
+		}
+		return
+	}
+	httpx.OK(c, MarkdownUpdateResult{Updated: true, Size: len(content)})
 }

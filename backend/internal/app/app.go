@@ -132,6 +132,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), guidelineH.Publish)
 		protected.GET("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.read"), guidelineH.Sections)
 		protected.GET("/guideline-versions/:id/chunks", middleware.RequirePermission("guideline.read"), guidelineH.Chunks)
+		protected.GET("/guideline-versions/:id/extracted/:format", middleware.RequirePermission("guideline.read"), guidelineH.ExtractedAsset)
+		protected.PUT("/guideline-versions/:id/extracted/markdown", middleware.RequirePermission("guideline.write"), guidelineH.UpdateMarkdown)
 
 		protected.GET("/search", middleware.RequirePermission("guideline.read"), searchH.Search)
 		protected.POST("/chat/ask", middleware.RequirePermission("chat.ask"), ragH.Ask)

@@ -8,6 +8,9 @@ type MaybeAsync = void | Promise<void>
 
 interface GuidelineRowActionsOptions {
   navigate: (path: string) => void
+  canCreate?: boolean
+  canUpdate?: boolean
+  canDelete?: boolean
   onAssignIndex?: (guideline: MedicalGuidelinesWithExpanded) => void
   onMutationSuccess?: () => MaybeAsync
   onNewVersion?: (guideline: MedicalGuidelinesWithExpanded) => void
@@ -28,6 +31,9 @@ export const createGuidelineRowActions = (
 ): RowAction<MedicalGuidelinesWithExpanded>[] => {
   const {
     navigate,
+    canCreate = false,
+    canUpdate = false,
+    canDelete = false,
     onAssignIndex,
     onMutationSuccess,
     onNewVersion,
@@ -38,7 +44,7 @@ export const createGuidelineRowActions = (
     canPublishVersion,
     versionActionsLoading,
   } = options
-  return [
+  const actions: RowAction<MedicalGuidelinesWithExpanded>[] = [
     {
       id: "view",
       label: "View Details",
@@ -208,10 +214,30 @@ export const createGuidelineRowActions = (
       disabled: (guideline) => guideline.is_published,
     },
   ]
+
+  const createActions = new Set(["duplicate"])
+  const updateActions = new Set([
+    "edit",
+    "assign-index",
+    "new-version",
+    "upload-pdf",
+    "publish-version",
+    "toggle-publish",
+    "archive",
+    "unarchive",
+  ])
+
+  return actions.filter((action) => {
+    if (createActions.has(action.id)) return canCreate
+    if (updateActions.has(action.id)) return canUpdate
+    if (action.id === "delete") return canDelete
+    return true
+  })
 }
 
 interface GuidelineBulkActionsOptions {
   onMutationSuccess?: () => MaybeAsync
+  canUpdate?: boolean
 }
 
 interface BulkResult {
@@ -265,9 +291,9 @@ function reportBulk(
 export const createGuidelineBulkActions = (
   options: GuidelineBulkActionsOptions = {}
 ): BulkAction<MedicalGuidelinesWithExpanded>[] => {
-  const { onMutationSuccess } = options
+  const { onMutationSuccess, canUpdate = false } = options
   const pb = () => getPB()
-  return [
+  const actions: BulkAction<MedicalGuidelinesWithExpanded>[] = [
     {
       id: "bulk-publish",
       label: "Publish Selected",
@@ -414,4 +440,7 @@ export const createGuidelineBulkActions = (
       description: "Send update notifications for published guidelines",
     },
   ]
+
+  const updateActions = new Set(["bulk-publish", "bulk-unpublish", "bulk-archive"])
+  return actions.filter((action) => !updateActions.has(action.id) || canUpdate)
 }

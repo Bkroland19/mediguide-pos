@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { LoadingState } from "@/components/ui/loading-state"
+import { RichContent } from "@/components/ui/rich-content"
 import { format, formatDistanceToNow } from "date-fns"
 import { Edit, Star, Tag, User, Clock, Eye, Calendar } from "lucide-react"
 import { FaqService } from "@/services/faq.service"
@@ -173,10 +174,7 @@ export default function ViewFAQPage({ params }: ViewFAQPageProps) {
             <CardContent className="space-y-6">
               {/* Answer Content */}
               <div className="prose prose-sm max-w-none">
-                <div 
-                  className="text-base leading-7"
-                  dangerouslySetInnerHTML={{ __html: faq.answer || "" }}
-                />
+                <RichContent className="text-base leading-7" html={faq.answer} />
               </div>
 
               {/* Keywords */}

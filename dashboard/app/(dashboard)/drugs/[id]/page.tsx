@@ -14,6 +14,7 @@ import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Pill, AlertTriangle, Calendar, FileText, Activity } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePermissionContext } from "@/lib/permission-context"
+import { RichContent } from "@/components/ui/rich-content"
 
 interface DrugViewPageProps {
   params: Promise<{ id: string }>
@@ -278,10 +279,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardTitle>Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.description }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.description} />
               </CardContent>
             </Card>
           )}
@@ -294,10 +292,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardTitle>Mechanism of Action</CardTitle>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.mechanism_of_action }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.mechanism_of_action} />
               </CardContent>
             </Card>
           )}
@@ -309,10 +304,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>Conditions this drug is used to treat</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.indications }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.indications} />
               </CardContent>
             </Card>
           )}
@@ -324,10 +316,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>When this drug should NOT be used</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.contraindications }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.contraindications} />
               </CardContent>
             </Card>
           )}
@@ -339,10 +328,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>Potential adverse reactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.side_effects }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.side_effects} />
               </CardContent>
             </Card>
           )}
@@ -354,10 +340,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>Important safety information</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.warnings }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.warnings} />
               </CardContent>
             </Card>
           )}
@@ -510,10 +493,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold text-destructive">Warnings & Precautions</Label>
                     <div className="bg-destructive/5 border border-destructive/20 p-4 rounded-md">
-                      <div 
-                        className="prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: drug.warnings }}
-                      />
+                      <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.warnings} />
                     </div>
                   </div>
                 )}
@@ -522,10 +502,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold text-orange-700 dark:text-orange-300">Adverse Effects</Label>
                     <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 p-4 rounded-md">
-                      <div 
-                        className="prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: drug.side_effects }}
-                      />
+                      <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.side_effects} />
                     </div>
                   </div>
                 )}
@@ -594,10 +571,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>Additional clinical information and observations</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.clinical_notes }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.clinical_notes} />
               </CardContent>
             </Card>
           )}
@@ -609,10 +583,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
                 <CardDescription>Medical literature and citations</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: drug.references }}
-                />
+                <RichContent className="prose prose-sm max-w-none dark:prose-invert" html={drug.references} />
               </CardContent>
             </Card>
           )}

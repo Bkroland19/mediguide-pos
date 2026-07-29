@@ -124,6 +124,12 @@ class GuidelineRepository:
         markdown_key: str,
         status: str = "extracted",
     ) -> None:
+        if len(chunks) != len(embeddings):
+            raise ValueError(
+                "Embedding count does not match chunk count "
+                f"({len(embeddings)} embeddings for {len(chunks)} chunks)"
+            )
+
         review_status = self._chunk_review_status(version.get("status"))
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
