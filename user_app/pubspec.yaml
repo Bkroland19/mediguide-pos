@@ -43,9 +43,9 @@ dependencies:
   form_builder_phone_field: ^3.0.0
   gap: ^3.0.1
   universal_image: ^1.0.11
-  local_auth: 3.0.0
+  local_auth: ^3.0.2
   responsive_framework: ^1.5.1
-  pocketbase: ^0.23.0
+  pocketbase: ^0.24.0+1
   event_bus: ^2.0.1
   toastification: ^3.0.3
   url_launcher: ^6.3.2
@@ -53,7 +53,7 @@ dependencies:
   flutter_html: ^3.0.0
   infinite_scroll_pagination: ^5.1.1
   animated_tree_view: ^2.3.0
-  in_app_update: ^4.2.5
+  in_app_update: ^5.0.0
   in_app_review: ^2.0.11
   file_picker: ^10.3.10
   connectivity_plus: ^7.0.0
@@ -62,7 +62,7 @@ dependencies:
   flutter_gen_ai_chat_ui: ^2.5.0
   expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
-  openai_dart: ^0.6.2
+  openai_dart: ^7.0.1
   pocketbase_drift: ^0.4.1
 
 dev_dependencies:
