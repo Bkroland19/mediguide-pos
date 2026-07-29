@@ -129,3 +129,12 @@ ai-worker: ai-deps
 run-cfdp-ios-simulator:
 	cd user_app && \
 	flutter run --dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug
+
+ANDROID_DEVICE ?= emulator-5554
+
+.PHONY: run-cfdp-android
+run-cfdp-android:
+	cd user_app && \
+	flutter run \
+		-d $(ANDROID_DEVICE) \
+		--dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug

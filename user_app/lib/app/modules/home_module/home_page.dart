@@ -17,7 +17,6 @@ import '../../widgets/section_header.dart';
 
 import './home_controller.dart';
 import './widgets/continue_reading_card.dart';
-import './widgets/featured_calculator_card.dart';
 
 import '../tree_selector_module/models/tree_selector_models.dart';
 import '../tree_selector_module/tree_selector_page.dart';
