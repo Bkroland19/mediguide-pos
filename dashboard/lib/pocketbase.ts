@@ -7,6 +7,16 @@ const AUTH_COOKIE_NAME = "mediguide_auth"
 const LIST_PAGE_SIZE = 100
 
 type JsonRecord = Record<string, any>
+
+export class BackendRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message)
+    this.name = "BackendRequestError"
+  }
+}
 type ListResult<T> = {
   page: number
   perPage: number
@@ -394,7 +404,7 @@ class BackendPocketBase {
 
     if (!response.ok) {
       const errorMessage = await extractError(response)
-      throw new Error(errorMessage)
+      throw new BackendRequestError(errorMessage, response.status)
     }
 
     if (options.responseType === "blob") {

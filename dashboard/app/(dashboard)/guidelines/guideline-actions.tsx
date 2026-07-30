@@ -1,6 +1,6 @@
 import { RowAction, BulkAction } from "@/types/data-table"
 import { MedicalGuidelinesWithExpanded } from "@/types/expanded"
-import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, Mail, CheckCircle, XCircle, FolderTree, Plus, ShieldCheck, Upload } from "lucide-react"
+import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, Mail, CheckCircle, XCircle, FolderTree, Plus, ShieldCheck, Upload, FileText } from "lucide-react"
 import { getPB } from "@/lib/pocketbase"
 import { showToast } from "@/lib/toast"
 
@@ -16,6 +16,7 @@ interface GuidelineRowActionsOptions {
   onNewVersion?: (guideline: MedicalGuidelinesWithExpanded) => void
   onUploadPDF?: (guideline: MedicalGuidelinesWithExpanded) => void
   onPublishVersion?: (guideline: MedicalGuidelinesWithExpanded) => void | Promise<void>
+  onOpenMarkdown?: (guideline: MedicalGuidelinesWithExpanded) => void
   hasVersionDocument?: (guideline: MedicalGuidelinesWithExpanded) => boolean
   hasVersionRecord?: (guideline: MedicalGuidelinesWithExpanded) => boolean
   canPublishVersion?: (guideline: MedicalGuidelinesWithExpanded) => boolean
@@ -39,6 +40,7 @@ export const createGuidelineRowActions = (
     onNewVersion,
     onUploadPDF,
     onPublishVersion,
+    onOpenMarkdown,
     hasVersionDocument,
     hasVersionRecord,
     canPublishVersion,
@@ -105,6 +107,19 @@ export const createGuidelineRowActions = (
           return
         }
         showToast.warning("Upload unavailable", "Create a version first, then upload the PDF.")
+      },
+      disabled: (guideline) => versionActionsLoading || !hasVersionRecord?.(guideline),
+    },
+    {
+      id: "markdown",
+      label: canUpdate ? "Edit Markdown" : "Preview Markdown",
+      icon: FileText,
+      onClick: async (guideline) => {
+        if (onOpenMarkdown) {
+          onOpenMarkdown(guideline)
+          return
+        }
+        showToast.warning("Markdown unavailable", "No extracted Markdown is linked to this row.")
       },
       disabled: (guideline) => versionActionsLoading || !hasVersionRecord?.(guideline),
     },
