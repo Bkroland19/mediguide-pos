@@ -1,0 +1,10 @@
+**
+!guidelines-platform/
+!guidelines-platform/**
+guidelines-platform/.env
+guidelines-platform/.env.*
+guidelines-platform/node_modules
+guidelines-platform/dist
+guidelines-platform/coverage
+guidelines-platform/.git
+guidelines-platform/*.log

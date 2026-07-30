@@ -1,7 +1,11 @@
 BACKEND_DIR := backend
 AI_WORKER_DIR := ai-worker
 COMPOSE_FILE := infra/docker-compose.yml
-DOCKER_COMPOSE := docker compose -f $(COMPOSE_FILE)
+DEV_COMPOSE_FILE := infra/docker-compose.dev.yml
+DEV_ENV_FILE := infra/development.env
+PRODUCTION_ENV_FILE ?= infra/production.env
+DOCKER_COMPOSE := docker compose --env-file $(DEV_ENV_FILE) -f $(COMPOSE_FILE) -f $(DEV_COMPOSE_FILE)
+PRODUCTION_COMPOSE := docker compose --env-file $(PRODUCTION_ENV_FILE) -f $(COMPOSE_FILE)
 PYTHON ?= python3
 AI_REQUIREMENTS_FILE := $(AI_WORKER_DIR)/requirements.txt
 AI_REQUIREMENTS_STAMP := $(AI_WORKER_DIR)/.requirements.sha256
@@ -12,12 +16,21 @@ AI_REQUIREMENTS_STAMP := $(AI_WORKER_DIR)/.requirements.sha256
 help:
 	@printf "%s\n" \
 		"Available targets:" \
-		"  up               Start the shared local stack from infra/docker-compose.yml" \
-		"  down             Stop the shared local stack" \
-		"  build            Build the shared local stack" \
-		"  ps               Show shared local stack status" \
-		"  logs             Tail shared local stack logs" \
-		"  config           Render shared local compose config" \
+		"  up               Build and start the full development stack" \
+		"  down             Stop the development stack and preserve data" \
+		"  reset            Stop development and remove its volumes" \
+		"  build            Build the development stack" \
+		"  ps               Show development stack status" \
+		"  logs             Tail development stack logs" \
+		"  guidelines-logs  Tail the integrated guidelines service" \
+		"  config           Render the merged development configuration" \
+		"  prod-up          Build and start the full production stack" \
+		"  prod-down        Stop the production stack and preserve data" \
+		"  prod-build       Build production images" \
+		"  prod-pull        Pull production images" \
+		"  prod-ps          Show production stack status" \
+		"  prod-logs        Tail production stack logs" \
+		"  prod-config      Render the production configuration" \
 		"  test             Run backend and ai-worker tests" \
 		"  backend-test     Run backend Go tests" \
 		"  backend-build    Build backend binaries" \
@@ -39,7 +52,11 @@ up:
 
 .PHONY: down
 down:
-	$(DOCKER_COMPOSE) down -v --remove-orphans
+	$(DOCKER_COMPOSE) down --remove-orphans
+
+.PHONY: reset
+reset:
+	$(DOCKER_COMPOSE) down --volumes --remove-orphans
 
 .PHONY: build
 build:
@@ -56,6 +73,46 @@ logs:
 .PHONY: config
 config:
 	$(DOCKER_COMPOSE) config
+
+.PHONY: guidelines-logs
+guidelines-logs:
+	$(DOCKER_COMPOSE) logs -f guidelines
+
+.PHONY: prod-up
+prod-up: production-env-check
+	$(PRODUCTION_COMPOSE) up --build -d
+
+.PHONY: prod-down
+prod-down: production-env-check
+	$(PRODUCTION_COMPOSE) down --remove-orphans
+
+.PHONY: prod-build
+prod-build: production-env-check
+	$(PRODUCTION_COMPOSE) build
+
+.PHONY: prod-pull
+prod-pull: production-env-check
+	$(PRODUCTION_COMPOSE) pull
+
+.PHONY: prod-ps
+prod-ps: production-env-check
+	$(PRODUCTION_COMPOSE) ps
+
+.PHONY: prod-logs
+prod-logs: production-env-check
+	$(PRODUCTION_COMPOSE) logs -f
+
+.PHONY: prod-config
+prod-config: production-env-check
+	$(PRODUCTION_COMPOSE) config
+
+.PHONY: production-env-check
+production-env-check:
+	@test -f "$(PRODUCTION_ENV_FILE)" || \
+		(printf "%s\n" \
+			"Missing $(PRODUCTION_ENV_FILE)." \
+			"Copy infra/production.env.example and replace every placeholder." && \
+		 exit 1)
 
 .PHONY: test
 test: backend-test ai-test

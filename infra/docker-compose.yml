@@ -4,11 +4,10 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: mediguide
-      POSTGRES_USER: mediguide
-      POSTGRES_PASSWORD: mediguide
-    ports:
-      - "${POSTGRES_PUBLIC_PORT:-5433}:5432"
+      POSTGRES_DB: "${POSTGRES_DB:-mediguide}"
+      POSTGRES_USER: "${POSTGRES_USER:-mediguide}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-mediguide}"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mediguide -d mediguide"]
       interval: 5s
@@ -21,11 +20,9 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: mediguide
-      MINIO_ROOT_PASSWORD: mediguide123
-    ports:
-      - "${MINIO_PUBLIC_PORT:-9000}:9000"
-      - "9001:9001"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-mediguide}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-mediguide123}"
+    restart: unless-stopped
     volumes:
       - minio_data:/data
     healthcheck:
@@ -36,6 +33,7 @@ services:
 
   redis:
     image: redis:7
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -48,25 +46,25 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_NAME: mediguide-backend
-      APP_ENV: development
+      APP_ENV: "${APP_ENV:-production}"
       HTTP_PORT: 8080
       AUTO_SEED: "false"
       STATIC_SAMPLES_DIR: /app/dashboard/samples
-      DATABASE_URL: postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable
-      JWT_SECRET: change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u
-      JWT_ACCESS_TTL_MINUTES: 60
+      DATABASE_URL: "${DATABASE_URL:-postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable}"
+      JWT_SECRET: "${JWT_SECRET:-development-only-change-this-secret-before-production}"
+      JWT_ACCESS_TTL_MINUTES: "${JWT_ACCESS_TTL_MINUTES:-60}"
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: minio:9000
-      S3_ACCESS_KEY: mediguide
-      S3_SECRET_KEY: mediguide123
-      S3_BUCKET: mediguide
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-mediguide}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-mediguide123}"
+      S3_BUCKET: "${S3_BUCKET:-mediguide}"
       S3_USE_SSL: "false"
       AI_RAG_PROVIDER: worker
       AI_WORKER_URL: http://ai-worker:8090
       AI_WORKER_GRPC_ADDR: ai-worker:50051
       AI_WORKER_TIMEOUT_SECONDS: ${AI_WORKER_TIMEOUT_SECONDS:-120}
-      DEFAULT_ADMIN_EMAIL: admin@mediguide.local
-      DEFAULT_ADMIN_PASSWORD: Admin123!
+      DEFAULT_ADMIN_EMAIL: "${DEFAULT_ADMIN_EMAIL:-admin@mediguide.local}"
+      DEFAULT_ADMIN_PASSWORD: "${DEFAULT_ADMIN_PASSWORD:-Admin123!}"
     ports:
       - "${API_PUBLIC_PORT:-8080}:8080"
     volumes:
@@ -78,6 +76,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
 
   ai-worker:
     build:
@@ -85,15 +84,15 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_NAME: mediguide-ai-worker
-      APP_ENV: development
+      APP_ENV: "${APP_ENV:-production}"
       HTTP_PORT: 8090
       WORKER_GRPC_PORT: 50051
-      DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
+      DATABASE_URL: "${AI_DATABASE_URL:-postgresql://mediguide:mediguide@postgres:5432/mediguide}"
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: minio:9000
-      S3_ACCESS_KEY: mediguide
-      S3_SECRET_KEY: mediguide123
-      S3_BUCKET: mediguide
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-mediguide}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-mediguide123}"
+      S3_BUCKET: "${S3_BUCKET:-mediguide}"
       S3_USE_SSL: "false"
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_DIM: 1024
@@ -116,6 +115,7 @@ services:
         condition: service_healthy
       ollama-pull-models:
         condition: service_completed_successfully
+    restart: unless-stopped
 
   ai-worker-loop:
     build:
@@ -124,14 +124,14 @@ services:
     command: ["python", "-m", "app.worker"]
     environment:
       APP_NAME: mediguide-ai-worker
-      APP_ENV: development
+      APP_ENV: "${APP_ENV:-production}"
       WORKER_GRPC_PORT: 50051
-      DATABASE_URL: postgresql://mediguide:mediguide@postgres:5432/mediguide
+      DATABASE_URL: "${AI_DATABASE_URL:-postgresql://mediguide:mediguide@postgres:5432/mediguide}"
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: minio:9000
-      S3_ACCESS_KEY: mediguide
-      S3_SECRET_KEY: mediguide123
-      S3_BUCKET: mediguide
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-mediguide}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-mediguide123}"
+      S3_BUCKET: "${S3_BUCKET:-mediguide}"
       S3_USE_SSL: "false"
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_DIM: 1024
@@ -154,21 +154,52 @@ services:
         condition: service_healthy
       ollama-pull-models:
         condition: service_completed_successfully
+    restart: unless-stopped
 
   dashboard:
     build:
       context: ../dashboard
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:${API_PUBLIC_PORT:-8080}
+        NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:8080}"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:${API_PUBLIC_PORT:-8080}
+      NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:8080}"
       NODE_ENV: production
     ports:
       - "${DASHBOARD_PUBLIC_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_started
+    restart: unless-stopped
+
+  guidelines:
+    image: "${GUIDELINES_IMAGE:-mediguide-guidelines:production}"
+    build:
+      context: ..
+      dockerfile: guidelines-platform/Dockerfile.prod
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-development}"
+        BUILD_REVISION: "${BUILD_REVISION:-unknown}"
+    environment:
+      MEDIGUIDE_POS_URL: "${DASHBOARD_PUBLIC_URL:-http://localhost:3000}"
+    ports:
+      - "${GUIDELINES_PUBLIC_PORT:-8081}:8080"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
   ollama:
     image: ollama/ollama:latest
@@ -176,6 +207,7 @@ services:
       OLLAMA_KEEP_ALIVE: 24h
     volumes:
       - ollama_data:/root/.ollama
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
