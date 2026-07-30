@@ -164,6 +164,19 @@ export default function GuidelinesPage() {
     }
   }, [getVersionForGuideline, refreshGuidelineDocuments])
 
+  const handleOpenMarkdown = React.useCallback((guideline: MedicalGuidelinesWithExpanded) => {
+    const document = getDocumentForGuideline(guideline)
+    const version = getVersionForGuideline(guideline)
+    if (!document || !version?.markdown_file_key) {
+      showToast.warning(
+        "Markdown unavailable",
+        "Upload and process a PDF for this guideline version before opening Markdown.",
+      )
+      return
+    }
+    router.push(`/guidelines/${document.id}/versions/${version.id}/markdown`)
+  }, [getDocumentForGuideline, getVersionForGuideline, router])
+
   // Create row actions with navigation and modal handlers
   const guidelineRowActions = React.useMemo(
     () =>
@@ -177,6 +190,7 @@ export default function GuidelinesPage() {
         onNewVersion: handleOpenNewVersion,
         onUploadPDF: handleOpenUploadPdf,
         onPublishVersion: handlePublishVersion,
+        onOpenMarkdown: handleOpenMarkdown,
         hasVersionDocument: (guideline) => Boolean(getDocumentForGuideline(guideline)),
         hasVersionRecord: (guideline) => Boolean(getVersionForGuideline(guideline)),
         canPublishVersion: (guideline) => {
@@ -198,6 +212,7 @@ export default function GuidelinesPage() {
       handleOpenNewVersion,
       handleOpenUploadPdf,
       handlePublishVersion,
+      handleOpenMarkdown,
       getDocumentForGuideline,
       getVersionForGuideline,
       guidelineDocumentsQuery.isLoading,

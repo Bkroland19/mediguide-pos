@@ -133,6 +133,14 @@ export class GuidelineDocumentsService {
     })
   }
 
+  static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
+    const pb = getPB()
+    const document = await pb.send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
+      method: "GET",
+    })
+    return normalizeDocument(document)
+  }
+
   static async uploadVersionPdf(
     versionId: string,
     file: File
