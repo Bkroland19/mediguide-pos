@@ -50,7 +50,7 @@ function EditorSkeleton() {
 }
 
 export default function GuidelineMarkdownPage() {
-  const params = useParams<{ guidelineId: string; versionId: string }>()
+  const params = useParams<{ id: string; versionId: string }>()
   const router = useRouter()
   const { hasPermission, loading: permissionsLoading } = usePermissionContext()
   const [data, setData] = React.useState<EditorData | null>(null)
@@ -69,7 +69,7 @@ export default function GuidelineMarkdownPage() {
     setError(null)
 
     try {
-      const document = await GuidelineDocumentsService.getDocument(params.guidelineId)
+      const document = await GuidelineDocumentsService.getDocument(params.id)
       const version = document.versions.find((item) => item.id === params.versionId)
       if (!version) {
         throw new GuidelineMarkdownError(
@@ -95,7 +95,7 @@ export default function GuidelineMarkdownPage() {
     } finally {
       if (currentRequest === requestId.current) setLoading(false)
     }
-  }, [params.guidelineId, params.versionId])
+  }, [params.id, params.versionId])
 
   React.useEffect(() => {
     if (permissionsLoading || !canRead) {
