@@ -11,6 +11,7 @@ import { getPB } from "@/lib/pocketbase"
 import { showToast } from "@/lib/toast"
 import { DecisionToolWithRelations } from "../../types"
 import { usePermissionContext } from "@/lib/permission-context"
+import { getAppFileLabel, getBundledAppFileUrl } from "../../app-file"
 
 interface DecisionToolTestPageProps {
   params: Promise<{ id: string }>
@@ -89,14 +90,7 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
   }, [id, router])
 
   const fileUrl = React.useMemo(() => {
-    if (!tool?.appFile) {
-      return null
-    }
-
-    return getPB().files.getUrl(
-      tool as unknown as Record<string, string>,
-      tool.appFile
-    )
+    return getBundledAppFileUrl(tool?.appFile) || null
   }, [tool])
 
   React.useEffect(() => {
@@ -155,6 +149,8 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
     return null
   }
 
+  const appFileLabel = getAppFileLabel(tool.appFile)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -203,7 +199,9 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
                   <Play className="mr-2 h-4 w-4" />
                   Launch Tool
                 </Button>
-                <span className="text-sm text-muted-foreground">{tool.appFile}</span>
+                <span className="text-sm text-muted-foreground">
+                  {appFileLabel}
+                </span>
               </div>
 
               <div className="overflow-hidden rounded-lg border bg-background">
