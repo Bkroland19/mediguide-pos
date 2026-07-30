@@ -26,9 +26,15 @@ The main routes are:
 
 ```text
 /                                                   Public guideline library
+/guidelines/:id                                     Current backend publication
 /publications/:publication                          Publication entry redirect
 /publications/:publication/read/:document            Lazy-loaded reader route
 ```
+
+The first two routes are primary in production. Cards come from
+`GET /api/public/guidelines`; opening one fetches public metadata and then its
+Markdown. Dashboard edits use the same object and become visible after a new
+version is published, without rebuilding this frontend.
 
 Chapter `index.md` files contain aggregate copies of entire chapters. The
 smaller documents under each chapter directory are the canonical reader
@@ -39,6 +45,20 @@ The front matter and split documents are indexed in
 The manifest contains navigation and search metadata only. Vite creates a
 separate lazy chunk for each Markdown body, so opening the landing page does not
 download the clinical publications.
+
+Bundled publications are temporary migration content. Set
+`STATIC_GUIDELINE_FALLBACK_ENABLED=true` to show them only when the live list
+cannot be reached; the UI always displays a stale-content warning. A successful
+empty list or a valid `404` never silently falls back. Production defaults this
+off. To migrate, compare `src/content/publications.ts` with the public list,
+upload any missing documents, save Markdown, and publish their versions before
+removing bundled content.
+
+With the backend running, generate that comparison directly:
+
+```bash
+MEDIGUIDE_API_URL=http://localhost:8080 npm run migration:report
+```
 
 ## Requirements
 
@@ -88,13 +108,15 @@ port. The container includes:
 - read-only root filesystem;
 - dropped Linux capabilities;
 - runtime dashboard URL validation;
+- runtime public API URL validation;
 - SPA deep-link fallback;
 - immutable asset caching and compression;
 - browser security headers;
 - `/healthz` container health check.
 
-Configure `DASHBOARD_PUBLIC_URL`, `GUIDELINES_PUBLIC_PORT`, image metadata, and
-production credentials in `infra/production.env`.
+Configure `DASHBOARD_PUBLIC_URL`, `PUBLIC_API_BASE_URL`, `ALLOWED_ORIGINS`,
+`GUIDELINES_PUBLIC_PORT`, image metadata, and production credentials in
+`infra/production.env`.
 
 Inspect or stop production:
 
@@ -113,6 +135,8 @@ docker build \
 
 docker run --rm -p 8081:8080 \
   -e MEDIGUIDE_POS_URL=https://app.example.org \
+  -e MEDIGUIDE_API_URL=https://api.example.org \
+  -e STATIC_GUIDELINE_FALLBACK_ENABLED=false \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   mediguide-guidelines:production
@@ -219,3 +243,13 @@ configuration is written to a temporary filesystem, allowing the application
 container to keep its root filesystem read-only. The final image contains only
 Nginx and compiled static assets; Node.js, source files, and development
 dependencies are excluded.
+
+`VITE_MEDIGUIDE_API_URL` configures local Vite builds.
+`MEDIGUIDE_API_URL` configures the production container at startup; neither
+value is a secret. The reader keeps a bounded in-memory Markdown cache and
+revalidates it with ETags.
+
+Raw embedded HTML is disabled. Unsafe URL protocols are rejected and external
+links use `noopener noreferrer`. Because this is a client-rendered Vite SPA,
+document titles and descriptions are updated after loading; server-rendered
+social metadata would require a separate SSR or prerendering architecture.

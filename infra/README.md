@@ -23,6 +23,28 @@ Both environments use the same Compose project and `guidelines` service. The
 Guidelines application is started, stopped, inspected, and networked as part of
 the complete MediGuide stack.
 
+## Public guideline API
+
+The public site reads published content through the backend policy boundary:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/public/guidelines` | Paginated public metadata with search and filters |
+| `GET /api/public/guidelines/:id` | Metadata for the current published version |
+| `GET /api/public/guidelines/:id/markdown` | Current Markdown with cache validators |
+
+The list supports `search`, `program_area`, `country`, `language`,
+`updated_from`, `page`, and `per_page`. Public routes never accept an
+administrative token or expose storage keys. Content is visible only when
+`current_version_id` points to a version whose status is `published` and which
+has Markdown. Draft, archived, invalid, and missing publications return the
+same `404`. Publishing updates version status and the document pointer in one
+transaction.
+
+Markdown is returned inline with `ETag` and `Last-Modified`. A matching
+`If-None-Match` receives `304 Not Modified`. The ETag is calculated from the
+stored bytes, so changed published content receives a different validator.
+
 ## Development
 
 From the repository root:
@@ -48,6 +70,10 @@ Default local endpoints:
 `make down` preserves named data volumes. Use `make reset` only when the local
 PostgreSQL, MinIO, Ollama, and frontend dependency volumes should be deleted.
 
+`PUBLIC_API_BASE_URL` is the browser-visible API address and
+`ALLOWED_ORIGINS` is its explicit comma-separated CORS allow-list. The
+Guidelines service waits for API readiness before starting.
+
 ## Production
 
 Create the ignored environment file and replace all placeholder credentials and
@@ -63,6 +89,12 @@ make prod-ps
 The production stack does not publish PostgreSQL or MinIO directly to the host.
 The API, dashboard, and guidelines ports remain configurable for connection to
 the deployment's reverse proxy.
+
+Set `PUBLIC_API_BASE_URL` to the browser-reachable production API and include
+the public Guidelines hostname in `ALLOWED_ORIGINS`. The Guidelines startup
+script injects `MEDIGUIDE_API_URL` at runtime, so an immutable image can move
+between environments without a rebuild. No token or secret belongs in public
+frontend configuration.
 
 `make prod-up` pulls the configured first-party images from GHCR before
 starting the stack with builds disabled. To pull without starting:

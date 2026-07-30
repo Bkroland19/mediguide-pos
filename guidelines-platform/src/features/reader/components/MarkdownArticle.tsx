@@ -1,13 +1,8 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeRaw from "rehype-raw";
-import rehypeSlug from "rehype-slug";
-import remarkGfm from "remark-gfm";
-
 import { resolveMarkdownAsset } from "../../../content/content-loader";
 import type { MarkdownDocument } from "../../../types/content";
+import { SecureMarkdown } from "./SecureMarkdown";
 
 export function MarkdownArticle({
   document: markdownDocument,
@@ -48,39 +43,10 @@ export function MarkdownArticle({
           <span>Uganda Clinical Guidelines</span>
         )}
       </div>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[
-          rehypeRaw,
-          rehypeSlug,
-          [rehypeAutolinkHeadings, { behavior: "wrap" }],
-        ]}
-        components={{
-          a: ({ href, children, ...properties }) => {
-            const external = /^https?:\/\//.test(href ?? "");
-            return (
-              <a
-                href={href}
-                {...properties}
-                target={external ? "_blank" : undefined}
-                rel={external ? "noreferrer noopener" : undefined}
-              >
-                {children}
-              </a>
-            );
-          },
-          img: ({ src, alt, ...properties }) => (
-            <img
-              src={resolveMarkdownAsset(markdownDocument, src)}
-              alt={alt ?? ""}
-              loading="lazy"
-              {...properties}
-            />
-          ),
-        }}
-      >
-        {markdownDocument.content}
-      </ReactMarkdown>
+      <SecureMarkdown
+        content={markdownDocument.content}
+        resolveImage={(source) => resolveMarkdownAsset(markdownDocument, source)}
+      />
     </article>
   );
 }

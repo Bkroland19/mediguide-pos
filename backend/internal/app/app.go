@@ -3,6 +3,7 @@ package app
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -45,9 +46,10 @@ func New(cfg config.Config) (*App, error) {
 		}
 	}
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: allowedOrigins,
-		AllowHeaders: []string{"Authorization", "Content-Type"},
-		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowOrigins:  allowedOrigins,
+		AllowHeaders:  []string{"Accept", "Authorization", "Content-Type", "If-None-Match"},
+		ExposeHeaders: []string{"ETag", "Last-Modified"},
+		AllowMethods:  []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 	}))
 
 	r.GET("/swagger", func(c *gin.Context) {
@@ -73,6 +75,7 @@ func New(cfg config.Config) (*App, error) {
 
 	authSvc := services.AuthService{DB: database, Cfg: cfg}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store}
+	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store}
 	searchSvc := services.SearchService{DB: database}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
@@ -83,6 +86,7 @@ func New(cfg config.Config) (*App, error) {
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
+	publicGuidelineH := handlers.PublicGuidelineHandler{Service: publicGuidelineSvc}
 	searchH := handlers.SearchHandler{Service: searchSvc}
 	ragH := handlers.RAGHandler{Service: ragSvc}
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
@@ -113,6 +117,14 @@ func New(cfg config.Config) (*App, error) {
 	legacyCompat := r.Group("/api")
 	legacyCompat.Use(middleware.AuthRequired(cfg, database))
 	legacyCompat.GET("/overview", legacyAPIH.Overview)
+
+	public := r.Group("/api/public")
+	public.Use(middleware.PublicRateLimit(120, time.Minute))
+	{
+		public.GET("/guidelines", publicGuidelineH.List)
+		public.GET("/guidelines/:id", publicGuidelineH.Get)
+		public.GET("/guidelines/:id/markdown", publicGuidelineH.Markdown)
+	}
 
 	v2 := r.Group("/api/v2")
 	{
