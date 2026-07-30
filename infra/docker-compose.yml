@@ -41,6 +41,7 @@ services:
       retries: 10
 
   api:
+    image: "${API_IMAGE:-mediguide-api:production}"
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -79,6 +80,7 @@ services:
     restart: unless-stopped
 
   ai-worker:
+    image: "${AI_WORKER_IMAGE:-mediguide-ai-worker:production}"
     build:
       context: ../ai-worker
       dockerfile: Dockerfile
@@ -118,6 +120,7 @@ services:
     restart: unless-stopped
 
   ai-worker-loop:
+    image: "${AI_WORKER_IMAGE:-mediguide-ai-worker:production}"
     build:
       context: ../ai-worker
       dockerfile: Dockerfile
@@ -157,6 +160,7 @@ services:
     restart: unless-stopped
 
   dashboard:
+    image: "${DASHBOARD_IMAGE:-mediguide-dashboard:production}"
     build:
       context: ../dashboard
       dockerfile: Dockerfile

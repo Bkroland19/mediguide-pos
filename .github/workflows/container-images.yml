@@ -1,0 +1,123 @@
+name: Build and publish container images
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: container-images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: API
+            package: mediguide-pos-api
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+          - name: AI worker
+            package: mediguide-pos-ai-worker
+            context: ./ai-worker
+            dockerfile: ./ai-worker/Dockerfile
+          - name: Dashboard
+            package: mediguide-pos-dashboard
+            context: ./dashboard
+            dockerfile: ./dashboard/Dockerfile
+          - name: Guidelines
+            package: mediguide-pos-guidelines
+            context: .
+            dockerfile: ./guidelines-platform/Dockerfile.prod
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Resolve image name
+        id: image
+        env:
+          GHCR_OWNER: ${{ github.repository_owner }}
+          PACKAGE_NAME: ${{ matrix.package }}
+        run: |
+          owner="$(printf '%s' "${GHCR_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          echo "name=ghcr.io/${owner}/${PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare build arguments
+        id: build-args
+        env:
+          IMAGE_NAME: ${{ matrix.package }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: |
+          {
+            echo "value<<EOF"
+            case "${IMAGE_NAME}" in
+              mediguide-pos-dashboard)
+                echo "NEXT_PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL:-http://localhost:8080}"
+                ;;
+              mediguide-pos-guidelines)
+                echo "BUILD_VERSION=${GITHUB_REF_NAME}"
+                echo "BUILD_REVISION=${GITHUB_SHA}"
+                ;;
+            esac
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=MediGuide ${{ matrix.name }}
+            org.opencontainers.image.description=${{ matrix.name }} image for MediGuide POS
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ steps.build-args.outputs.value }}
+          platforms: linux/amd64
+          pull: true
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.package }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+          provenance: mode=max
+          sbom: true

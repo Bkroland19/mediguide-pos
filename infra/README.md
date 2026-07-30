@@ -64,12 +64,42 @@ The production stack does not publish PostgreSQL or MinIO directly to the host.
 The API, dashboard, and guidelines ports remain configurable for connection to
 the deployment's reverse proxy.
 
-To use prebuilt images:
+`make prod-up` pulls the configured first-party images from GHCR before
+starting the stack with builds disabled. To pull without starting:
 
 ```bash
 make prod-pull
-docker compose --env-file infra/production.env \
-  -f infra/docker-compose.yml up -d --no-build
+```
+
+## Container image publishing
+
+The `container-images.yml` GitHub Actions workflow builds these first-party
+packages:
+
+| Service | GHCR package |
+|---|---|
+| API | `ghcr.io/<owner>/mediguide-pos-api` |
+| AI API and worker loop | `ghcr.io/<owner>/mediguide-pos-ai-worker` |
+| Dashboard | `ghcr.io/<owner>/mediguide-pos-dashboard` |
+| Guidelines Platform | `ghcr.io/<owner>/mediguide-pos-guidelines` |
+
+Pull requests build all four images without publishing them. Pushes to `main`
+publish `main`, `sha-<commit>`, and `latest` tags. Tags matching `v*` publish
+semantic-version tags such as `1.2.3`, `1.2`, and `1`.
+
+Publishing uses the workflow's `GITHUB_TOKEN`; no registry password is needed.
+Set the repository Actions variable `PUBLIC_API_BASE_URL` to the production API
+URL embedded in dashboard builds. After the first publish, configure package
+visibility in GitHub and place the desired immutable version or SHA tags in
+`infra/production.env`.
+
+Public GHCR packages can be pulled anonymously. Before deploying private
+packages, authenticate the production host with a token that has
+`read:packages` access:
+
+```bash
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
+  --username <github-user> --password-stdin
 ```
 
 ## Guidelines health check
