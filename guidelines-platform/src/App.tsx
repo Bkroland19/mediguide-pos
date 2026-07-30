@@ -18,6 +18,12 @@ const ReaderPage = lazy(() =>
   })),
 );
 
+const PublicGuidelineReaderPage = lazy(() =>
+  import("./features/reader/PublicGuidelineReaderPage").then((module) => ({
+    default: module.PublicGuidelineReaderPage,
+  })),
+);
+
 function PublicationRedirect() {
   const { publicationSlug } = useParams();
   const publication = getPublication(publicationSlug);
@@ -44,6 +50,10 @@ export default function App() {
         <Route
           path="/publications/:publicationSlug/read/*"
           element={<ReaderPage />}
+        />
+        <Route
+          path="/guidelines/:guidelineId"
+          element={<PublicGuidelineReaderPage />}
         />
       </Routes>
     </Suspense>

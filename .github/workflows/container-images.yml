@@ -20,8 +20,50 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  quality:
+    name: Public guideline quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Test and analyze backend
+        working-directory: backend
+        run: |
+          go test ./...
+          go vet ./...
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: guidelines-platform/package-lock.json
+
+      - name: Verify Guidelines Platform
+        working-directory: guidelines-platform
+        run: |
+          npm ci
+          npm run lint
+          npm run test
+          npm run build
+
+      - name: Validate development Compose
+        run: docker compose --env-file infra/development.env -f infra/docker-compose.yml -f infra/docker-compose.dev.yml config --quiet
+
+      - name: Validate production Compose
+        run: docker compose --env-file infra/production.env.example -f infra/docker-compose.yml config --quiet
+
   build:
     name: Build ${{ matrix.name }}
+    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
