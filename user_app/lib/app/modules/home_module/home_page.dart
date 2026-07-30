@@ -674,6 +674,8 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
   }
 }
 
+// Retained for the pinned-guidelines section that is currently feature-gated.
+// ignore: unused_element
 class _PinnedGuidelineCard extends StatelessWidget {
   final String title;
   final String category;
