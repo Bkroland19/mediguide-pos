@@ -81,8 +81,12 @@ func New(cfg config.Config) (*App, error) {
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}
+	calculatorSvc := services.CalculatorService{DB: database, StaticSamplesDir: cfg.StaticSamplesDir}
+	drugSvc := services.DrugService{DB: database}
+	drugReferenceSvc := services.DrugReferenceService{DB: database}
+	userSvc := services.UserService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
-	legacyCollectionSvc := services.LegacyCollectionService{DB: database}
+	resourceSvc := services.ResourceService{DB: database}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -92,27 +96,21 @@ func New(cfg config.Config) (*App, error) {
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
 	syncH := handlers.SyncHandler{Service: syncSvc}
 	referenceH := handlers.ReferenceHandler{Service: referenceSvc}
+	calculatorH := handlers.CalculatorHandler{Service: calculatorSvc}
+	drugH := handlers.DrugHandler{Service: drugSvc}
+	drugReferenceH := handlers.DrugReferenceHandler{Service: drugReferenceSvc}
+	userH := handlers.UserHandler{Service: userSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
-	legacyCollectionH := handlers.LegacyCollectionHandler{Service: legacyCollectionSvc, Cfg: cfg}
+	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
 
 	legacyV1 := r.Group("/api/v1")
-	legacyV1.POST("/collections/users/register", authH.Register)
-	legacyV1.POST("/collections/users/auth-with-password", authH.Login)
-	legacyV1.POST("/collections/users/auth-refresh", authH.Refresh)
 	legacyV1.GET("/stats", legacyAPIH.Stats)
 	legacyV1.GET("/consultants/tree", legacyAPIH.ConsultantsTree)
 	legacyV1.GET("/health-facilities/tree", legacyAPIH.HealthFacilitiesTree)
 	legacyV1.GET("/ministry-directory/tree", legacyAPIH.MinistryDirectoryTree)
 	legacyProtected := legacyV1.Group("")
 	legacyProtected.Use(middleware.AuthRequired(cfg, database))
-	legacyProtected.POST("/collections/users/logout", authH.Logout)
-	legacyProtected.GET("/collections/users/me", authH.Me)
 	legacyProtected.GET("/overview", legacyAPIH.Overview)
-	legacyProtected.POST("/collections/:collection/records", legacyCollectionH.Create)
-	legacyProtected.PATCH("/collections/:collection/records/:id", legacyCollectionH.Update)
-	legacyProtected.DELETE("/collections/:collection/records/:id", legacyCollectionH.Delete)
-	legacyV1.GET("/collections/:collection/records/:id", legacyCollectionH.Get)
-	legacyV1.GET("/collections/:collection/records", legacyCollectionH.List)
 
 	legacyCompat := r.Group("/api")
 	legacyCompat.Use(middleware.AuthRequired(cfg, database))
@@ -131,10 +129,67 @@ func New(cfg config.Config) (*App, error) {
 		v2.POST("/auth/register", authH.Register)
 		v2.POST("/auth/login", authH.Login)
 		v2.POST("/auth/refresh", authH.Refresh)
+		v2.POST("/auth/password-reset/request", authH.RequestPasswordReset)
+		v2.POST("/auth/password-reset/confirm", authH.ConfirmPasswordReset)
 		protected := v2.Group("")
 		protected.Use(middleware.AuthRequired(cfg, database))
 		protected.POST("/auth/logout", authH.Logout)
 		protected.GET("/me", authH.Me)
+
+		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
+		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)
+		protected.POST("/calculators", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Create)
+		protected.PATCH("/calculators/:id", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Update)
+		protected.DELETE("/calculators/:id", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Delete)
+		protected.GET("/calculators/:id/content", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Content)
+		protected.POST("/calculators/:id/usage", calculatorH.StartUsage)
+		protected.PATCH("/calculator-usage/:usageId", calculatorH.FinishUsage)
+
+		protected.GET("/drugs", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugH.List)
+		protected.GET("/drugs/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugH.Get)
+		protected.POST("/drugs", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugH.Create)
+		protected.PATCH("/drugs/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugH.Update)
+		protected.DELETE("/drugs/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugH.Delete)
+		protected.POST("/drugs/:id/usage", drugH.RecordUsage)
+
+		protected.GET("/users", middleware.RequirePermission("admin.all"), userH.List)
+		protected.GET("/users/:id", userH.Get)
+		protected.POST("/users", middleware.RequirePermission("admin.all"), userH.Create)
+		protected.PATCH("/users/:id", userH.Update)
+		protected.DELETE("/users/:id", middleware.RequirePermission("admin.all"), userH.Delete)
+		protected.POST("/users/:id/verification", middleware.RequirePermission("admin.all"), userH.Verify)
+		protected.GET("/roles", middleware.RequirePermission("admin.all"), userH.ListRoles)
+		protected.GET("/roles/:id", middleware.RequirePermission("admin.all"), userH.GetRole)
+		protected.POST("/roles", middleware.RequirePermission("admin.all"), userH.CreateRole)
+		protected.PATCH("/roles/:id", middleware.RequirePermission("admin.all"), userH.UpdateRole)
+		protected.DELETE("/roles/:id", middleware.RequirePermission("admin.all"), userH.DeleteRole)
+		protected.GET("/permissions", middleware.RequirePermission("admin.all"), userH.ListPermissions)
+		protected.GET("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.GetRolePermissions)
+		protected.PUT("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.SetRolePermissions)
+
+		protected.GET("/drug-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListCategories)
+		protected.GET("/drug-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetCategory)
+		protected.POST("/drug-categories", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.CreateCategory)
+		protected.PATCH("/drug-categories/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.UpdateCategory)
+		protected.DELETE("/drug-categories/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.DeleteCategory)
+
+		protected.GET("/drug-tags", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListTags)
+		protected.GET("/drug-tags/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetTag)
+		protected.POST("/drug-tags", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.CreateTag)
+		protected.PATCH("/drug-tags/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.UpdateTag)
+		protected.DELETE("/drug-tags/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.DeleteTag)
+
+		protected.GET("/drug-classes", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListClasses)
+		protected.GET("/drug-classes/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetClass)
+		protected.POST("/drug-classes", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.CreateClass)
+		protected.PATCH("/drug-classes/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.UpdateClass)
+		protected.DELETE("/drug-classes/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.DeleteClass)
+
+		protected.GET("/therapeutic-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListTherapeuticCategories)
+		protected.GET("/therapeutic-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetTherapeuticCategory)
+		protected.POST("/therapeutic-categories", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.CreateTherapeuticCategory)
+		protected.PATCH("/therapeutic-categories/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.UpdateTherapeuticCategory)
+		protected.DELETE("/therapeutic-categories/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.DeleteTherapeuticCategory)
 
 		protected.POST("/guidelines", middleware.RequirePermission("guideline.write"), guidelineH.Create)
 		protected.GET("/guidelines", middleware.RequirePermission("guideline.read"), guidelineH.List)
@@ -163,8 +218,67 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/sync/manifest", middleware.RequirePermission("sync.read"), syncH.Manifest)
 		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), syncH.CreatePackage)
 		protected.GET("/sync/packages/:id/download", middleware.RequirePermission("sync.read"), syncH.Download)
+
+		registerResourceRoutes(protected, resourceH)
 	}
 	return &App{Router: r, DB: database}, nil
+}
+
+func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHandler) {
+	resourcePaths := map[string]string{
+		"medical_guidelines":      "/medical-guidelines",
+		"abbreviations":           "/abbreviations",
+		"emergency_protocols":     "/emergency-protocols",
+		"faqs":                    "/faqs",
+		"faq_tags":                "/faq-tags",
+		"documentation":           "/documentation",
+		"generic_pages":           "/pages",
+		"guideline_categories":    "/guideline-categories",
+		"guideline_tags":          "/guideline-tags",
+		"guideline_index":         "/guideline-index",
+		"consultants":             "/consultants",
+		"health_sub_regions":      "/health-sub-regions",
+		"health_facilities":       "/facilities",
+		"regions":                 "/regions",
+		"districts":               "/districts",
+		"health_sub_districts":    "/health-sub-districts",
+		"counties":                "/counties",
+		"subcounties":             "/subcounties",
+		"parishes":                "/parishes",
+		"facility_levels":         "/facility-levels",
+		"ownership_types":         "/ownership-types",
+		"authorities":             "/authorities",
+		"ministry_directory":      "/ministry-directory",
+		"languages":               "/reference-languages",
+		"notifications":           "/notifications",
+		"notification_templates":  "/notification-templates",
+		"notification_campaigns":  "/notification-campaigns",
+		"support_tickets":         "/support-tickets",
+		"support_ticket_replies":  "/support-ticket-replies",
+		"conversations":           "/conversations",
+		"messages":                "/messages",
+		"reading_progress":        "/reading-progress",
+		"guideline_usage_logs":    "/guideline-usage",
+		"abbreviation_usage_logs": "/abbreviation-usage",
+		"consultant_usage_logs":   "/consultant-usage",
+		"facility_usage_logs":     "/facility-usage",
+		"ai_usage_logs":           "/ai-usage",
+	}
+
+	for resource, path := range resourcePaths {
+		resourceName := resource
+		setResource := func(next gin.HandlerFunc) gin.HandlerFunc {
+			return func(c *gin.Context) {
+				c.Set("resource", resourceName)
+				next(c)
+			}
+		}
+		group.GET(path, setResource(handler.List))
+		group.GET(path+"/:id", setResource(handler.Get))
+		group.POST(path, setResource(handler.Create))
+		group.PATCH(path+"/:id", setResource(handler.Update))
+		group.DELETE(path+"/:id", setResource(handler.Delete))
+	}
 }
 
 const swaggerChooserHTML = `<!doctype html>

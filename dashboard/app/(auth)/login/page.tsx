@@ -23,11 +23,9 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { getPB } = await import('@/lib/pocketbase')
-      const pb = getPB()
-      
-      // Authenticate with PocketBase directly
-      await pb.collection('users').authWithPassword(email, password)
+      const { getBackendClient } = await import('@/lib/backend-client')
+      const backend = getBackendClient()
+      await backend.login({ email, password })
       
       // Redirect to dashboard on successful login
       router.push("/")

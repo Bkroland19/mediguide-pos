@@ -26,7 +26,7 @@ import { Save } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
 import { useGuidelineTags } from "@/hooks/use-guideline-tags"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 
 // Form Schema
@@ -214,9 +214,9 @@ export default function CreateGuidelinePage() {
 
     const loadSource = async () => {
       try {
-        const pb = getPB()
-        const result = await pb
-          .collection("medical_guidelines")
+        const backend = getBackendClient()
+        const result = await backend
+          .resource("medical_guidelines")
           .getOne(duplicateFromId, { expand: "categories,tags,index_item" })
 
         if (cancelled) return
@@ -280,15 +280,15 @@ export default function CreateGuidelinePage() {
   const onSubmit = async (data: MedicalGuidelineForm) => {
     setIsSubmitting(true)
     try {
-      const pb = getPB()
+      const backend = getBackendClient()
       
-      // Create the medical guideline record in PocketBase
-      const result = await pb.collection('medical_guidelines').create(data)
+      // Create the medical guideline record in legacy collection API
+      const result = await backend.resource('medical_guidelines').create(data)
 
       console.log("Medical guideline created:", result)
       // Invalidate the guidelines list cache so the new record is visible
       // immediately on return to /guidelines (global staleTime is 60s otherwise).
-      await queryClient.invalidateQueries({ queryKey: ["pb", "medical_guidelines"] })
+      await queryClient.invalidateQueries({ queryKey: ["backend", "medical_guidelines"] })
       showToast.success("Success", "Medical guideline created successfully")
       router.push("/guidelines")
     } catch (error: unknown) {

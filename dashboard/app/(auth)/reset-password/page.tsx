@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Lock, KeyRound, ArrowLeft } from 'lucide-react'
 import { showToast } from "@/lib/toast"
+import { usersService } from "@/services/user-management.service"
 
 function ResetPasswordForm() {
   const [formData, setFormData] = useState({
@@ -38,7 +39,7 @@ function ResetPasswordForm() {
 
   const validateToken = async (token: string) => {
     try {
-      // For PocketBase, we don't need to validate the token beforehand
+      // For legacy collection API, we don't need to validate the token beforehand
       // The token validation happens during the actual reset process
       // We'll just check if it looks like a valid format
       if (token && token.length > 10) {
@@ -71,11 +72,7 @@ function ResetPasswordForm() {
     }
 
     try {
-      const { getPB } = await import('@/lib/pocketbase')
-      const pb = getPB()
-      
-      // Use PocketBase's built-in password reset confirmation
-      await pb.collection('users').confirmPasswordReset(
+      await usersService.confirmPasswordReset(
         formData.token,
         formData.password,
         formData.confirmPassword
@@ -91,7 +88,7 @@ function ResetPasswordForm() {
       showToast.error('Reset Failed', errorMessage)
       console.error('Password reset confirmation error:', error)
       
-      // Handle specific PocketBase errors
+      // Handle specific legacy collection API errors
       if (error && typeof error === 'object' && 'status' in error && error.status === 400) {
         setError('Invalid or expired reset token')
       } else if (error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'password' in error.data) {

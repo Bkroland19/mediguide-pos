@@ -23,7 +23,6 @@ type AuthHandler struct{ Service services.AuthService }
 // @Param payload body handlers.RegisterRequest true "Registration payload"
 // @Success 201 {object} handlers.UserEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/register [post]
 // @Router /api/v2/auth/register [post]
 func (h AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
@@ -69,7 +68,6 @@ func (h AuthHandler) Register(c *gin.Context) {
 // @Success 200 {object} handlers.LoginEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/auth-with-password [post]
 // @Router /api/v2/auth/login [post]
 func (h AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
@@ -98,7 +96,6 @@ func (h AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} handlers.LoginEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/auth-refresh [post]
 // @Router /api/v2/auth/refresh [post]
 func (h AuthHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
@@ -125,7 +122,6 @@ func (h AuthHandler) Refresh(c *gin.Context) {
 // @Security BearerAuth
 // @Success 200 {object} handlers.LogoutEnvelope
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/logout [post]
 // @Router /api/v2/auth/logout [post]
 func (h AuthHandler) Logout(c *gin.Context) {
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
@@ -149,7 +145,6 @@ func (h AuthHandler) Logout(c *gin.Context) {
 // @Success 200 {object} handlers.UserEnvelope
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/me [get]
 // @Router /api/v2/me [get]
 func (h AuthHandler) Me(c *gin.Context) {
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
@@ -159,4 +154,48 @@ func (h AuthHandler) Me(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, u)
+}
+
+// RequestPasswordReset godoc
+// @Summary Request a password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.PasswordResetRequest true "Reset request"
+// @Success 200 {object} services.AccountActionResult
+// @Router /api/v2/auth/password-reset/request [post]
+func (h AuthHandler) RequestPasswordReset(c *gin.Context) {
+	var req PasswordResetRequest
+	if c.ShouldBindJSON(&req) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.Service.RequestPasswordReset(req.Email)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, "password reset request failed")
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// ConfirmPasswordReset godoc
+// @Summary Confirm a password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.PasswordResetConfirmRequest true "Reset confirmation"
+// @Success 200 {object} handlers.LogoutResult
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/auth/password-reset/confirm [post]
+func (h AuthHandler) ConfirmPasswordReset(c *gin.Context) {
+	var req PasswordResetConfirmRequest
+	if c.ShouldBindJSON(&req) != nil || req.Password != req.PasswordConfirm {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.Service.ConfirmPasswordReset(req.Token, req.Password); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid or expired reset token")
+		return
+	}
+	httpx.OK(c, LogoutResult{LoggedOut: true})
 }

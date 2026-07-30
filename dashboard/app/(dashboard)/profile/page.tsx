@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { showToast } from "@/lib/toast"
-import { getCurrentUser, getPB } from "@/lib/pocketbase"
-import { UsersResponse } from "@/types/pocketbase-types"
+import { getCurrentUser } from "@/lib/backend-client"
+import { UsersResponse } from "@/types/backend-types"
+import { usersService } from "@/services/user-management.service"
 
 export default function MyProfilePage() {
   const router = useRouter()
@@ -30,8 +31,7 @@ export default function MyProfilePage() {
           return
         }
 
-        const pb = getPB()
-        const fresh = await pb.collection("users").getOne(authUser.id)
+        const fresh = await usersService.get<UsersResponse>(String(authUser.id))
         if (!abortController.signal.aborted) {
           setUser(fresh as UsersResponse)
         }

@@ -22,9 +22,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
 
 // Form validation schema
 const tagFormSchema = z.object({
@@ -80,14 +80,14 @@ export function TagEditModal({
     setIsSubmitting(true)
     
     try {
-      const pb = getPB()
+      const backend = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),
         description: values.description?.trim() || "",
       }
 
-      await pb.collection("guideline_tags").update(tag.id, tagData)
+      await backend.resource("guideline_tags").update(tag.id, tagData)
 
       showToast.success("Tag updated", "Guideline tag has been updated successfully")
       

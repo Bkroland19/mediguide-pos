@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Drug tag model based on PocketBase drug_tags collection
+/// Drug tag model based on backend resource API drug_tags collection
 class DrugTag extends BaseModel {
   DrugTag(super.data);
 
-  /// PocketBase collection name
+  /// backend resource API collection name
   static const String collection = 'drug_tags';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class DrugTag extends BaseModel {
     return true;
   })();
 
-  /// Create DrugTag from PocketBase record
-  static DrugTag fromRecord(RecordModel record) => DrugTag(record.data);
+  /// Create DrugTag from backend resource API record
+  static DrugTag fromRecord(ApiRecord record) => DrugTag(record.data);
 
   /// Create JSON for new drug tag record (excludes system fields)
   static Map<String, dynamic> forCreate({

@@ -59,6 +59,75 @@ type RegisterInput struct {
 	Avatar            string            `json:"avatar"`
 }
 
+type AccountActionResult struct {
+	Accepted         bool   `json:"accepted"`
+	DeliveryRequired bool   `json:"delivery_required"`
+	DevelopmentToken string `json:"development_token,omitempty"`
+}
+
+func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, error) {
+	result := &AccountActionResult{Accepted: true, DeliveryRequired: true}
+	var user models.User
+	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
+		return result, nil
+	}
+	raw, err := generateRefreshToken()
+	if err != nil {
+		return nil, err
+	}
+	token := models.AccountActionToken{
+		UserID: user.ID, Purpose: "password_reset", TokenHash: hashRefreshToken(raw),
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	if err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ? AND purpose = ? AND consumed_at IS NULL", user.ID, "password_reset").
+			Delete(&models.AccountActionToken{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&token).Error
+	}); err != nil {
+		return nil, err
+	}
+	if s.Cfg.AppEnv == "development" {
+		result.DevelopmentToken = raw
+		result.DeliveryRequired = false
+	}
+	return result, nil
+}
+
+func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
+	if strings.TrimSpace(rawToken) == "" || len(password) < 8 {
+		return errors.New("invalid or expired reset token")
+	}
+	hash, err := security.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var token models.AccountActionToken
+		if err := tx.Where(
+			"token_hash = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?",
+			hashRefreshToken(rawToken), "password_reset", now,
+		).First(&token).Error; err != nil {
+			return errors.New("invalid or expired reset token")
+		}
+		result := tx.Model(&models.AccountActionToken{}).
+			Where("id = ? AND consumed_at IS NULL", token.ID).
+			Update("consumed_at", now)
+		if result.Error != nil || result.RowsAffected != 1 {
+			return errors.New("invalid or expired reset token")
+		}
+		if err := tx.Model(&models.User{}).Where("id = ?", token.UserID).
+			Updates(map[string]any{"password_hash": hash, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.AuthSession{}).
+			Where("user_id = ? AND revoked_at IS NULL", token.UserID).
+			Update("revoked_at", now).Error
+	})
+}
+
 func (s AuthService) Register(in RegisterInput) (*models.User, error) {
 	hash, err := security.HashPassword(in.Password)
 	if err != nil {
@@ -284,7 +353,11 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 	case "super_admin", "admin":
 		return []string{
 			"admin.all",
+			"calculator.read",
+			"calculator.write",
 			"chat.ask",
+			"drug.read",
+			"drug.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -295,7 +368,11 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 	case "content_manager", "reviewer":
 		return []string{
 			"chat.ask",
+			"calculator.read",
+			"calculator.write",
 			"guideline.publish",
+			"drug.read",
+			"drug.write",
 			"guideline.read",
 			"guideline.write",
 			"protocol.read",
@@ -305,12 +382,16 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 	case "healthcare_provider":
 		return []string{
 			"chat.ask",
+			"calculator.read",
+			"drug.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
 		}
 	case "observer":
 		return []string{
+			"calculator.read",
+			"drug.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -333,10 +414,14 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		switch resource {
 		case "content":
 			if hasReadAny || hasReadOwn {
+				perms["calculator.read"] = true
+				perms["drug.read"] = true
 				perms["guideline.read"] = true
 				perms["protocol.read"] = true
 			}
 			if hasCreateAny || hasUpdateAny || hasDeleteAny {
+				perms["calculator.write"] = true
+				perms["drug.write"] = true
 				perms["guideline.write"] = true
 				perms["guideline.publish"] = true
 				perms["protocol.write"] = true

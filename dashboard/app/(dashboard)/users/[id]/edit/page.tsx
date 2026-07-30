@@ -17,14 +17,15 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { usersService } from "@/services/user-management.service"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { 
   UsersStatusOptions, 
  
   UsersPreferredLanguageOptions,
   UsersResponse 
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import { useRoleOptions, useRoleValidation } from "@/hooks/use-roles-options"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -112,28 +113,28 @@ export default function EditUserPage() {
           return
         }
         
-        const pb = getPB()
-        console.log('PocketBase URL:', pb.baseUrl)
+        const backend = getBackendClient()
+        console.log('legacy collection API URL:', backend.baseUrl)
         
         // Check if authenticated
-        if (!pb.authStore.isValid) {
+        if (!backend.authStore.isValid) {
           console.error('Not authenticated')
           showToast.error("Authentication Error", "Please log in to continue")
           router.push('/login')
           return
         }
         
-        console.log('Auth store valid, user:', pb.authStore.record?.email)
+        console.log('Auth store valid, user:', backend.authStore.record?.email)
         
         // Test connection first
         try {
-          const testConnection = await pb.collection('users').getList(1, 1)
-          console.log('Connection test successful, found users:', testConnection.totalItems)
+          const testConnection = await usersService.list({ page: 1, per_page: 1 })
+          console.log('Connection test successful, found users:', testConnection.total_items)
         } catch (connError) {
           console.error('Connection test failed:', connError)
         }
         
-        const userData = await pb.collection('users').getOne(userId)
+        const userData = await usersService.get<UsersResponse>(userId)
         console.log('Loaded user data:', userData)
         setUser(userData as UsersResponse)
         
@@ -148,7 +149,9 @@ export default function EditUserPage() {
           department: userData.department || '',
           jobTitle: userData.jobTitle || '',
           licenseNumber: userData.licenseNumber || '',
-          specialization: userData.specialization || [],
+          specialization: Array.isArray(userData.specialization)
+            ? userData.specialization.join(", ")
+            : userData.specialization || "",
           country: userData.country || '',
           state: userData.state || '',
           city: userData.city || '',
@@ -227,20 +230,20 @@ export default function EditUserPage() {
     setIsLoading(true)
     
     try {
-      const pb = getPB()
+      const backend = getBackendClient()
       
-      // Update user record in PocketBase
+      // Update user record in legacy collection API
       const userData = {
         ...data,
-        // Ensure specialization is properly formatted for PocketBase
+        // Ensure specialization is properly formatted for legacy collection API
         specialization: data.specialization || [],
         // Always ensure this field remains true
         emailVisibility: true,
       }
       
-      await pb.collection('users').update(userId, userData)
+      await usersService.update(userId, userData)
 
-      await queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('users', userId) })
+      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('users', userId) })
 
       showToast.success(
         "User Updated Successfully",
@@ -253,14 +256,14 @@ export default function EditUserPage() {
     } catch (error: unknown) {
       console.error('Failed to update user:', error)
       
-      // Handle PocketBase validation errors using React Hook Form best practices
+      // Handle legacy collection API validation errors using React Hook Form best practices
       if (error && typeof error === 'object' && 'data' in error) {
         const errorResponse = error as { 
           data: Record<string, { message: string; code: string }>,
           status: number 
         }
         
-        // Process each field error from PocketBase and set using React Hook Form
+        // Process each field error from legacy collection API and set using React Hook Form
         const errorMessages: string[] = []
         Object.entries(errorResponse.data).forEach(([fieldName, fieldError]) => {
           if (fieldError && typeof fieldError === 'object' && 'message' in fieldError) {

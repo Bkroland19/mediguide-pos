@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
 
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/models.dart';
 import '../../utils/constants.dart';
@@ -69,12 +68,8 @@ class UseCalculatorController extends GetxController {
       final metadataFile = File(
         '${directory.path}/calculator_${calculator!.id}.json',
       );
-      const collectionName = 'calculators';
-
-      final downloadUrl = PocketBaseService.to.getFileUrl(
-        collectionName: collectionName,
-        recordId: calculator!.id,
-        filename: calculator!.appFile,
+      final downloadUrl = BackendApiService.to.getCalculatorContentUrl(
+        calculator!.id,
       );
       contentBaseUrl = _deriveContentBaseUrl(downloadUrl);
 
@@ -110,15 +105,9 @@ class UseCalculatorController extends GetxController {
       /// ================================
       /// 2. DOWNLOAD OR UPSERT FILE
       /// ================================
-      final response = await http.get(Uri.parse(downloadUrl));
-
-      debugPrint('📡 HTTP STATUS: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to download file: ${response.statusCode}');
-      }
-
-      final body = response.body;
+      final body = await BackendApiService.to.getCalculatorContent(
+        calculator!.id,
+      );
 
       if (!body.trim().startsWith('<')) {
         throw Exception('Invalid HTML received from server');
@@ -183,7 +172,7 @@ class UseCalculatorController extends GetxController {
 
     await webViewController!.loadData(
       data: htmlContent!,
-      baseUrl: WebUri(contentBaseUrl ?? pocketbaseUrl),
+      baseUrl: WebUri(contentBaseUrl ?? mediguideApiBaseUrl),
     );
 
     debugPrint('🌐 HTML loaded into WebView');
@@ -203,16 +192,14 @@ class UseCalculatorController extends GetxController {
 
       sessionStartTime = DateTime.now();
 
-      final usageLogData = CalculatorUsageLog.forCreate(
-        userId: user.id,
+      final record = await BackendApiService.to.startCalculatorUsage(
         calculatorId: calculator!.id,
-        sessionStart: sessionStartTime!,
-        calculatorType: calculator!.type,
-      );
-
-      final record = await PocketBaseService.to.createRecord(
-        collectionName: CalculatorUsageLog.collection,
-        data: usageLogData,
+        sessionStart: sessionStartTime!.toIso8601String(),
+        calculatorType: switch (calculator!.type) {
+          CalculatorType.calculator => 'calculator',
+          CalculatorType.decisionTool => 'decision_tool',
+          CalculatorType.checklist => 'checklist',
+        },
       );
 
       currentUsageLogId = record.id;
@@ -230,10 +217,9 @@ class UseCalculatorController extends GetxController {
 
       if (duration.inSeconds < 5) return;
 
-      await PocketBaseService.to.updateRecord(
-        collectionName: CalculatorUsageLog.collection,
-        recordId: currentUsageLogId!,
-        data: CalculatorUsageLog.forSessionEnd(sessionEnd: end),
+      await BackendApiService.to.finishCalculatorUsage(
+        usageId: currentUsageLogId!,
+        sessionEnd: end.toIso8601String(),
       );
     } catch (e) {
       debugPrint('⚠️ End tracking failed: $e');

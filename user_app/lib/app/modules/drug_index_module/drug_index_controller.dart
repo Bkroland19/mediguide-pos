@@ -4,7 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
@@ -12,7 +12,7 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/drug_details_bottom_sheet.dart';
 
 class DrugIndexController extends GetxController {
-  final PocketBaseService _pbService = PocketBaseService.to;
+  final BackendApiService _apiService = BackendApiService.to;
 
   late final PagingController<int, Drug> pagingController;
 
@@ -65,13 +65,7 @@ class DrugIndexController extends GetxController {
 
   Future<List<Drug>> _fetchDrugsPage(int pageKey) async {
     try {
-      final drugs = await getDrugs(
-        page: pageKey,
-        perPage: pageSize,
-        filter: _buildFilter(),
-        sort: 'name',
-        expand: 'categories,tags,therapeutic_category',
-      );
+      final drugs = await getDrugs(page: pageKey, perPage: pageSize);
 
       return drugs;
     } catch (e) {
@@ -87,7 +81,7 @@ class DrugIndexController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final categoriesResult = await _pbService.getRecordList(
+      final categoriesResult = await _apiService.getResourceList(
         collectionName: DrugCategory.collection,
         page: 1,
         perPage: 100,
@@ -98,7 +92,7 @@ class DrugIndexController extends GetxController {
           .map((r) => r.data['name'] as String)
           .toList();
 
-      final tagsResult = await _pbService.getRecordList(
+      final tagsResult = await _apiService.getResourceList(
         collectionName: DrugTag.collection,
         page: 1,
         perPage: 100,
@@ -128,47 +122,6 @@ class DrugIndexController extends GetxController {
     } finally {
       isLoadingFilters.value = false;
     }
-  }
-
-  // =========================
-  // FILTER BUILDER
-  // =========================
-  String _buildFilter() {
-    final parts = <String>['status = "active"'];
-
-    if (searchQuery.value.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
-      parts.add('(name ~ "$q" || generic_name ~ "$q" || brand_names ~ "$q")');
-    }
-
-    if (selectedCategories.isNotEmpty) {
-      parts.add(
-        '(${selectedCategories.map((e) => 'categories ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedTags.isNotEmpty) {
-      parts.add(
-        '(${selectedTags.map((e) => 'tags ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedRoutes.isNotEmpty) {
-      parts.add(
-        '(${selectedRoutes.map((e) => 'route_of_administration ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedPregnancyCategories.isNotEmpty) {
-      parts.add(
-        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (whoEmlOnly.value) parts.add('who_eml_status = true');
-    if (antimicrobialOnly.value) parts.add('antimicrobial_status = true');
-
-    return parts.join(' && ');
   }
 
   // =========================
@@ -338,20 +291,18 @@ class DrugIndexController extends GetxController {
   // =========================
   // API
   // =========================
-  Future<List<Drug>> getDrugs({
-    int page = 1,
-    int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
-  }) async {
-    final result = await _pbService.getRecordList(
-      collectionName: Drug.collection,
+  Future<List<Drug>> getDrugs({int page = 1, int perPage = 30}) async {
+    final result = await _apiService.getDrugs(
       page: page,
       perPage: perPage,
-      filter: filter,
-      sort: sort,
-      expand: expand,
+      search: searchQuery.value,
+      status: 'active',
+      route: selectedRoutes.length == 1 ? selectedRoutes.single : null,
+      pregnancyCategory: selectedPregnancyCategories.length == 1
+          ? selectedPregnancyCategories.single
+          : null,
+      whoEml: whoEmlOnly.value ? true : null,
+      antimicrobial: antimicrobialOnly.value ? true : null,
     );
 
     return result.items.map((e) => Drug.fromRecord(e)).toList();

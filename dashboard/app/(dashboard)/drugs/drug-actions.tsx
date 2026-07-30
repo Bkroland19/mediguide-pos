@@ -3,7 +3,7 @@ import { DrugWithRelations } from "./columns"
 import {
   DrugsReviewStatusOptions,
   DrugsStatusOptions,
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import {
   Eye,
   Edit,
@@ -14,11 +14,11 @@ import {
   XCircle,
   Clock,
 } from "lucide-react"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { downloadCsv, downloadJson } from "@/lib/client-download"
 
-const pb = getPB()
+const backend = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}`
@@ -40,7 +40,7 @@ function mapDrugForCsv(drug: DrugWithRelations) {
 }
 
 async function updateDrug(id: string, data: Partial<DrugWithRelations>) {
-  await pb.collection("drugs").update(id, data)
+  await backend.resource("drugs").update(id, data)
 }
 
 async function updateManyDrugs(
@@ -70,13 +70,13 @@ async function updateManyDrugs(
 }
 
 async function deleteDrug(drug: DrugWithRelations) {
-  await pb.collection("drugs").delete(drug.id)
+  await backend.resource("drugs").delete(drug.id)
   showToast.success("Drug Deleted", `"${drug.name}" was deleted`)
 }
 
 async function deleteManyDrugs(drugs: DrugWithRelations[]) {
   const results = await Promise.allSettled(
-    drugs.map((drug) => pb.collection("drugs").delete(drug.id))
+    drugs.map((drug) => backend.resource("drugs").delete(drug.id))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length

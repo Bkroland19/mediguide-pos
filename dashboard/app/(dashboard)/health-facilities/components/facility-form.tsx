@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { 
   FacilityLevelsResponse, 
   AuthoritiesResponse, 
@@ -27,7 +27,7 @@ import {
   ParishesResponse,
   HealthSubDistrictsResponse,
   HealthSubRegionsResponse
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 
 // Form validation schema
 const facilityFormSchema = z.object({
@@ -104,7 +104,7 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
   // Load dropdown options on component mount
   React.useEffect(() => {
     const loadOptions = async () => {
-      const pb = getPB()
+      const backend = getBackendClient()
       try {
         const [
           facilityLevelsData,
@@ -112,10 +112,10 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
           ownershipTypesData,
           regionsData,
         ] = await Promise.all([
-          pb.collection('facility_levels').getFullList({ sort: 'name' }),
-          pb.collection('authorities').getFullList({ sort: 'name' }),
-          pb.collection('ownership_types').getFullList({ sort: 'name' }),
-          pb.collection('regions').getFullList({ sort: 'name' }),
+          backend.resource('facility_levels').getFullList({ sort: 'name' }),
+          backend.resource('authorities').getFullList({ sort: 'name' }),
+          backend.resource('ownership_types').getFullList({ sort: 'name' }),
+          backend.resource('regions').getFullList({ sort: 'name' }),
         ])
 
         setFacilityLevels(facilityLevelsData as FacilityLevelsResponse[])
@@ -140,9 +140,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedRegion) {
       const loadHealthSubRegions = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('health_sub_regions').getFullList({
+          const data = await backend.resource('health_sub_regions').getFullList({
             filter: `region = "${selectedRegion}"`,
             sort: 'name',
           })
@@ -163,9 +163,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedRegion) {
       const loadDistricts = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('districts').getFullList({
+          const data = await backend.resource('districts').getFullList({
             filter: `region = "${selectedRegion}"`,
             sort: 'name',
           })
@@ -187,9 +187,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedDistrict) {
       const loadCounties = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('counties').getFullList({
+          const data = await backend.resource('counties').getFullList({
             filter: `district = "${selectedDistrict}"`,
             sort: 'name',
           })
@@ -200,9 +200,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
       }
 
       const loadHealthSubDistricts = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('health_sub_districts').getFullList({
+          const data = await backend.resource('health_sub_districts').getFullList({
             filter: `district = "${selectedDistrict}"`,
             sort: 'name',
           })
@@ -225,9 +225,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedCounty) {
       const loadSubcounties = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('subcounties').getFullList({
+          const data = await backend.resource('subcounties').getFullList({
             filter: `county = "${selectedCounty}"`,
             sort: 'name',
           })
@@ -248,9 +248,9 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedSubcounty) {
       const loadParishes = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('parishes').getFullList({
+          const data = await backend.resource('parishes').getFullList({
             filter: `subcounty = "${selectedSubcounty}"`,
             sort: 'name',
           })
@@ -304,15 +304,15 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
   const onSubmit = async (data: FacilityFormValues) => {
     setIsLoading(true)
-    const pb = getPB()
+    const backend = getBackendClient()
 
     try {
       if (mode === "create") {
-        await pb.collection('health_facilities').create(data)
+        await backend.resource('health_facilities').create(data)
         showToast.success("Success", "Health facility created successfully")
       } else if (mode === "edit" && facilityId) {
-        await pb.collection('health_facilities').update(facilityId, data)
-        await queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('health_facilities', facilityId) })
+        await backend.resource('health_facilities').update(facilityId, data)
+        await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('health_facilities', facilityId) })
         showToast.success("Success", "Health facility updated successfully")
       }
 

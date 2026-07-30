@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 
 // Form validation schema
@@ -65,14 +65,14 @@ export function TagCreateModal({
     setIsSubmitting(true)
     
     try {
-      const pb = getPB()
+      const backend = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),
         description: values.description?.trim() || "",
       }
 
-      await pb.collection("guideline_tags").create(tagData)
+      await backend.resource("guideline_tags").create(tagData)
 
       showToast.success("Tag created", "New guideline tag has been created successfully")
       

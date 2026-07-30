@@ -3,8 +3,12 @@
 import * as React from "react"
 import { Plus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getPB } from "@/lib/pocketbase"
-import { RecordModel } from "pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
+
+interface SelectOptionRecord {
+  id: string
+  name?: string
+}
 
 interface SelectWithCreateProps {
   value?: string
@@ -27,13 +31,13 @@ export function SelectWithCreate({
   className,
   refreshTrigger
 }: SelectWithCreateProps) {
-  const [options, setOptions] = React.useState<RecordModel[]>([])
+  const [options, setOptions] = React.useState<SelectOptionRecord[]>([])
   const [loading, setLoading] = React.useState(true)
 
   const fetchOptions = React.useCallback(async () => {
     try {
-      const pb = getPB()
-      const records = await pb.collection(collection).getFullList({
+      const backend = getBackendClient()
+      const records = await backend.resource(collection).getFullList({
         filter: "status = 'active'",
         sort: "sort_order,name"
       })
@@ -93,13 +97,13 @@ export function SelectWithCreate({
 
 // Hook to manage the select with create functionality
 export function useSelectWithCreate(collection: string) {
-  const [options, setOptions] = React.useState<RecordModel[]>([])
+  const [options, setOptions] = React.useState<SelectOptionRecord[]>([])
   const [loading, setLoading] = React.useState(true)
 
   const fetchOptions = React.useCallback(async () => {
     try {
-      const pb = getPB()
-      const records = await pb.collection(collection).getFullList({
+      const backend = getBackendClient()
+      const records = await backend.resource(collection).getFullList({
         filter: "status = 'active'",
         sort: "sort_order,name"
       })

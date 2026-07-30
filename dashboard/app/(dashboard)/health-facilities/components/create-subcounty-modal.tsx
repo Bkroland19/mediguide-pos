@@ -18,8 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { CountiesResponse, DistrictsResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { CountiesResponse, DistrictsResponse } from "@/types/backend-types"
 
 const subcountyFormSchema = z.object({
   name: z.string().min(1, "Subcounty name is required"),
@@ -57,14 +57,14 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
   React.useEffect(() => {
     if (open) {
       const loadData = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
           const [countiesData, districtsData] = await Promise.all([
-            pb.collection('counties').getFullList({
+            backend.resource('counties').getFullList({
               sort: 'name',
               expand: 'district',
             }),
-            pb.collection('districts').getFullList({
+            backend.resource('districts').getFullList({
               sort: 'name',
             })
           ])
@@ -81,10 +81,10 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
 
   const onSubmit = async (data: SubcountyFormValues) => {
     setIsLoading(true)
-    const pb = getPB()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('subcounties').create({
+      await backend.resource('subcounties').create({
         name: data.name,
         county: data.county,
         district: data.district,

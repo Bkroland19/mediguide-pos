@@ -1,10 +1,10 @@
 /**
  * Permission Management Hook
- * React hook for managing permissions with AccessControl and PocketBase integration
+ * React hook for managing permissions with AccessControl and backend integration
  */
 
 import * as React from 'react'
-import { getPB, getUserRole } from '@/lib/pocketbase'
+import { getUserRole } from '@/lib/backend-client'
 import { showToast } from '@/lib/toast'
 import { 
   permissionService,
@@ -21,7 +21,8 @@ import type {
   PermissionGrant
 } from '@/types/permissions'
 import { PERMISSION_TEMPLATES } from '@/types/permissions'
-import type { RolesResponse } from '@/types/pocketbase-types'
+import type { RolesResponse } from '@/types/backend-types'
+import { rolesService } from '@/services/user-management.service'
 
 interface UsePermissionsReturn {
   // Permission checking
@@ -67,13 +68,8 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
       setLoading(true)
       setError(null)
       
-      const pb = getPB()
-      
       // Fetch all active roles with their permissions
-      const roles = await pb.collection('roles').getFullList<RolesResponse>({
-        filter: 'isActive = true',
-        sort: 'name'
-      })
+      const roles = await rolesService.all<RolesResponse>({ is_active: true })
       
       // Convert role permissions to the format expected by AccessControl
       const allRolePermissions: Record<string, RolePermissions> = {}
@@ -140,9 +136,7 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
   const loadRolePermissions = React.useCallback(async (roleId: string): Promise<RolePermissions | null> => {
     try {
       setLoading(true)
-      const pb = getPB()
-      
-      const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
+      const role = await rolesService.get<RolesResponse>(roleId)
       const parsedPermissions = parsePermissionsFromDatabase(role.permissions)
       const permissions =
         Object.keys(parsedPermissions).length > 0
@@ -180,15 +174,10 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         }
       }
       
-      const pb = getPB()
-      
       // Serialize permissions for database storage
       const serializedPermissions = serializePermissionsForDatabase(permissions)
       
-      // Update role in database
-      await pb.collection('roles').update(roleId, {
-        permissions: serializedPermissions
-      })
+      await rolesService.updatePermissions(roleId, serializedPermissions)
       
       // Re-initialize permissions to reflect changes
       await initializePermissions()
@@ -226,10 +215,8 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         return { success: false, error: `Template not found: ${templateKey}` }
       }
       
-      const pb = getPB()
-      
       // Get the role to get its key
-      const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
+      const role = await rolesService.get<RolesResponse>(roleId)
       
       // Apply template to permission service
       const grants = permissionService.applyTemplate(role.key, templateKey)

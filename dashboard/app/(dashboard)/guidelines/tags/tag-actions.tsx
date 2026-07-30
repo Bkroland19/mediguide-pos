@@ -2,8 +2,8 @@
 
 import { Eye, Edit, Trash2, Copy, Download } from "lucide-react"
 import type { RowAction, BulkAction } from "@/types/data-table"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
-import { getPB } from "@/lib/pocketbase"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 
 // Row Actions Factory
@@ -80,7 +80,7 @@ export const tagBulkActions: BulkAction<GuidelineTagsResponse>[] = [
 
 // Action implementation functions
 async function duplicateTag(tag: GuidelineTagsResponse): Promise<void> {
-  const pb = getPB()
+  const backend = getBackendClient()
   
   const duplicateData = {
     name: `${tag.name} (Copy)`,
@@ -88,7 +88,7 @@ async function duplicateTag(tag: GuidelineTagsResponse): Promise<void> {
   }
 
   try {
-    await pb.collection("guideline_tags").create(duplicateData)
+    await backend.resource("guideline_tags").create(duplicateData)
     showToast.success("Tag duplicated", "Tag has been duplicated successfully")
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to duplicate tag'
@@ -98,10 +98,10 @@ async function duplicateTag(tag: GuidelineTagsResponse): Promise<void> {
 }
 
 async function deleteTag(tag: GuidelineTagsResponse): Promise<void> {
-  const pb = getPB()
+  const backend = getBackendClient()
   
   try {
-    await pb.collection("guideline_tags").delete(tag.id)
+    await backend.resource("guideline_tags").delete(tag.id)
     
     showToast.success(
       "Tag Deleted",
@@ -145,13 +145,13 @@ async function exportTags(tags: GuidelineTagsResponse[]): Promise<void> {
 }
 
 async function bulkDeleteTags(tags: GuidelineTagsResponse[]): Promise<void> {
-  const pb = getPB()
+  const backend = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
   for (const tag of tags) {
     try {
-      await pb.collection("guideline_tags").delete(tag.id)
+      await backend.resource("guideline_tags").delete(tag.id)
       successCount++
     } catch (error) {
       errorCount++

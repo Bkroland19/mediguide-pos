@@ -23,9 +23,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { LoadingState } from "@/components/ui/loading-state"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
-import { GenericPagesResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
+import { GenericPagesResponse } from "@/types/backend-types"
 
 const editPageSchema = z.object({
   title: z.string().min(1, "Title is required").max(255, "Title is too long"),
@@ -67,8 +67,8 @@ export default function EditPagePage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     const loadPage = async () => {
       try {
-        const pb = getPB()
-        const pageData = await pb.collection('generic_pages').getOne(resolvedParams.id) as GenericPagesResponse
+        const backend = getBackendClient()
+        const pageData = await backend.resource('generic_pages').getOne(resolvedParams.id) as GenericPagesResponse
         
         setPage(pageData)
         form.reset({
@@ -93,14 +93,14 @@ export default function EditPagePage({ params }: { params: Promise<{ id: string 
     
     setLoading(true)
     try {
-      const pb = getPB()
-      await pb.collection('generic_pages').update(page.id, {
+      const backend = getBackendClient()
+      await backend.resource('generic_pages').update(page.id, {
         title: data.title,
         key: data.key,
         description: data.description || "",
       })
 
-      await queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('generic_pages', page.id) })
+      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('generic_pages', page.id) })
 
       showToast.success("Page Updated", `Page "${data.title}" has been updated successfully`)
       router.push(`/pages/${page.id}`)

@@ -18,8 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { DistrictsResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { DistrictsResponse } from "@/types/backend-types"
 
 const countyFormSchema = z.object({
   name: z.string().min(1, "County name is required"),
@@ -54,9 +54,9 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
   React.useEffect(() => {
     if (open) {
       const loadDistricts = async () => {
-        const pb = getPB()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('districts').getFullList({
+          const data = await backend.resource('districts').getFullList({
             sort: 'name',
           })
           setDistricts(data as DistrictsResponse[])
@@ -71,10 +71,10 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
 
   const onSubmit = async (data: CountyFormValues) => {
     setIsLoading(true)
-    const pb = getPB()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('counties').create({
+      await backend.resource('counties').create({
         name: data.name,
         district: data.district,
         nhpi_code: data.nhpi_code,

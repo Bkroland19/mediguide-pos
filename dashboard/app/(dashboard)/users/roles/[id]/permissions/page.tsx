@@ -20,11 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PermissionBuilder } from '@/components/ui/permission-builder'
 import { PermissionPreview } from '@/components/ui/permission-preview'
 import { showToast } from '@/lib/toast'
-import { getPB } from '@/lib/pocketbase'
+import { getBackendClient } from '@/lib/backend-client'
 import { useRolePermissionManagement } from '@/hooks/use-permissions'
 import { usePermissionContext } from '@/lib/permission-context'
 
-import type { RolesResponse } from '@/types/pocketbase-types'
+import type { RolesResponse } from '@/types/backend-types'
+import { rolesService } from '@/services/user-management.service'
 import type { RolePermissions, PermissionValidationResult } from '@/types/permissions'
 
 export default function RolePermissionsPage() {
@@ -71,8 +72,7 @@ export default function RolePermissionsPage() {
         setRoleLoading(true)
         setRoleError(null)
 
-        const pb = getPB()
-        const roleData = await pb.collection('roles').getOne<RolesResponse>(roleId)
+        const roleData = await rolesService.get<RolesResponse>(roleId)
         setRole(roleData)
 
       } catch (error) {

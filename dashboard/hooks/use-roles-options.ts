@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { getPB } from "@/lib/pocketbase"
-import { RolesResponse } from "@/types/pocketbase-types"
+import { RolesResponse } from "@/types/backend-types"
+import { rolesService } from "@/services/user-management.service"
 
 export interface RoleOption {
   label: string
@@ -17,14 +17,12 @@ interface UseRoleOptionsReturn {
 }
 
 /**
- * Hook to fetch active roles from PocketBase for use in dropdowns and forms
+ * Hook to fetch active roles from the backend for use in dropdowns and forms
  */
 export function useRoleOptions(): UseRoleOptionsReturn {
   const [roles, setRoles] = useState<RolesResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-
-  const pb = useMemo(() => getPB(), [])
 
   const fetchRoles = async () => {
     try {
@@ -32,10 +30,7 @@ export function useRoleOptions(): UseRoleOptionsReturn {
       setError(null)
 
       // Fetch only active roles, sorted by name
-      const rolesList = await pb.collection('roles').getFullList<RolesResponse>({
-        filter: 'isActive = true',
-        sort: 'name',
-      })
+      const rolesList = await rolesService.all<RolesResponse>({ is_active: true })
 
       setRoles(rolesList)
     } catch (err) {

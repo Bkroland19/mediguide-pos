@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { GuidelineIndexResponse } from "@/types/pocketbase-types"
-import { getPB } from "@/lib/pocketbase"
+import { GuidelineIndexResponse } from "@/types/backend-types"
+import { getBackendClient } from "@/lib/backend-client"
 
 export type GuidelineIndexItem = GuidelineIndexResponse
 
@@ -33,7 +33,7 @@ export interface UseGuidelineIndexSearchOptions {
   maxResults?: number
   
   /**
-   * Additional PocketBase filter to apply
+   * Additional compatibility-API filter to apply
    */
   additionalFilter?: string
 }
@@ -126,7 +126,7 @@ export function useGuidelineIndexSearch(
     setError(null)
 
     try {
-      const pb = getPB()
+      const backend = getBackendClient()
       
       // Build filter conditions
       const filterConditions: string[] = []
@@ -153,7 +153,7 @@ export function useGuidelineIndexSearch(
       
       const filter = filterConditions.join(" && ")
       
-      const response = await pb.collection('guideline_index').getList(1, stableMaxResults, {
+      const response = await backend.resource('guideline_index').getList(1, stableMaxResults, {
         filter,
         sort: 'level,order,title',
       })

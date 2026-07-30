@@ -1,13 +1,13 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Health sub-district model based on PocketBase health_sub_districts collection
+/// Health sub-district model based on backend resource API health_sub_districts collection
 class HealthSubDistrict extends BaseModel {
   HealthSubDistrict(super.data);
 
-  /// PocketBase collection name
+  /// backend resource API collection name
   static const String collection = 'health_sub_districts';
 
   // Self-registration for dynamic model creation
@@ -16,8 +16,8 @@ class HealthSubDistrict extends BaseModel {
     return true;
   })();
 
-  /// Create HealthSubDistrict from PocketBase record
-  static HealthSubDistrict fromRecord(RecordModel record) =>
+  /// Create HealthSubDistrict from backend resource API record
+  static HealthSubDistrict fromRecord(ApiRecord record) =>
       HealthSubDistrict(record.data);
 
   /// Create JSON for new health sub-district record (excludes system fields)
