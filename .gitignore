@@ -1,5 +1,11 @@
 *.md
+!README.md
+!**/README.md
+!guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local
 .DS_Store
 guidelines-docs
+.idea/
+.vscode/
+infra/production.env
