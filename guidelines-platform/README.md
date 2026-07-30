@@ -158,16 +158,20 @@ Publish the release commit and tag:
 npm run release:push
 ```
 
-Pushing the `vX.Y.Z` tag starts CI. CI verifies that the Git tag matches the version in `package.json`, publishes these GHCR tags, and creates a GitHub Release with generated notes:
+Pushing the `vX.Y.Z` tag starts the repository container workflow. Alongside
+the API, AI worker, and dashboard images, it publishes the Guidelines image
+with these GHCR tags:
 
 ```text
-ghcr.io/<github-owner>/<repository>:X.Y.Z
-ghcr.io/<github-owner>/<repository>:X.Y
-ghcr.io/<github-owner>/<repository>:X
-ghcr.io/<github-owner>/<repository>:sha-<commit>
+ghcr.io/<github-owner>/mediguide-pos-guidelines:X.Y.Z
+ghcr.io/<github-owner>/mediguide-pos-guidelines:X.Y
+ghcr.io/<github-owner>/mediguide-pos-guidelines:X
+ghcr.io/<github-owner>/mediguide-pos-guidelines:sha-<commit>
 ```
 
-Default-branch builds additionally publish `main` and `latest`.
+Default-branch builds additionally publish `main` and `latest`. See
+[`infra/README.md`](../infra/README.md#container-image-publishing) for the
+complete image list and deployment configuration.
 
 ## Local development without Docker
 

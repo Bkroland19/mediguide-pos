@@ -1,0 +1,226 @@
+name: Test and build mobile release
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "user_app/**"
+      - ".github/workflows/mobile-release.yml"
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "user_app/**"
+      - ".github/workflows/mobile-release.yml"
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: API URL embedded in the release builds
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FLUTTER_VERSION: 3.44.8
+  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
+
+jobs:
+  quality:
+    name: Test and analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-coverage-${{ github.run_id }}
+          path: user_app/coverage/lcov.info
+          if-no-files-found: ignore
+          retention-days: 14
+
+  android:
+    name: Build Android artifacts
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: >-
+          flutter build apk --release
+          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+
+      - name: Build release app bundle
+        run: >-
+          flutter build appbundle --release
+          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediguide-android-${{ github.run_id }}
+          path: |
+            user_app/build/app/outputs/flutter-apk/app-release.apk
+            user_app/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  web:
+    name: Build web artifact
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web release
+        run: >-
+          flutter build web --release
+          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediguide-web-${{ github.run_id }}
+          path: user_app/build/web
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+
+  apple:
+    name: Build unsigned Apple artifacts
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    runs-on: macos-latest
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build unsigned iOS app
+        run: >-
+          flutter build ios --release --no-codesign
+          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+
+      - name: Archive unsigned iOS app
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          build/ios/iphoneos/Runner.app
+          build/ios/iphoneos/mediguide-ios-unsigned.zip
+
+      - name: Build macOS release
+        run: >-
+          flutter build macos --release
+          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+
+      - name: Archive macOS app
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          build/macos/Build/Products/Release/MediGuide.app
+          build/macos/Build/Products/Release/mediguide-macos.zip
+
+      - name: Upload Apple artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediguide-apple-unsigned-${{ github.run_id }}
+          path: |
+            user_app/build/ios/iphoneos/mediguide-ios-unsigned.zip
+            user_app/build/macos/Build/Products/Release/mediguide-macos.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0

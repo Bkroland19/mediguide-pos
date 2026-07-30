@@ -24,7 +24,7 @@ help:
 		"  logs             Tail development stack logs" \
 		"  guidelines-logs  Tail the integrated guidelines service" \
 		"  config           Render the merged development configuration" \
-		"  prod-up          Build and start the full production stack" \
+		"  prod-up          Pull and start the published production images" \
 		"  prod-down        Stop the production stack and preserve data" \
 		"  prod-build       Build production images" \
 		"  prod-pull        Pull production images" \
@@ -80,7 +80,8 @@ guidelines-logs:
 
 .PHONY: prod-up
 prod-up: production-env-check
-	$(PRODUCTION_COMPOSE) up --build -d
+	$(PRODUCTION_COMPOSE) pull
+	$(PRODUCTION_COMPOSE) up --no-build -d
 
 .PHONY: prod-down
 prod-down: production-env-check
