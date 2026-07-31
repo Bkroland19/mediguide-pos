@@ -31,7 +31,7 @@ export const usersService = {
   requestPasswordReset(email: string) {
     return client().send<{
       accepted: boolean
-      delivery_required: boolean
+      delivery_accepted: boolean
       development_token?: string
     }>("/api/v2/auth/password-reset/request", {
       method: "POST",
@@ -49,6 +49,22 @@ export const usersService = {
           password_confirm: passwordConfirm,
         }),
       },
+    )
+  },
+  requestEmailVerification(email: string) {
+    return client().send<{
+      accepted: boolean
+      delivery_accepted: boolean
+      development_token?: string
+    }>("/api/v2/auth/email-verification/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    })
+  },
+  confirmEmailVerification(token: string) {
+    return client().send<{ verified: boolean }>(
+      "/api/v2/auth/email-verification/confirm",
+      { method: "POST", body: JSON.stringify({ token }) },
     )
   },
   list<T>(query: UserQuery = {}) {

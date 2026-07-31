@@ -1,16 +1,20 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
 
 	"mediguide/internal/config"
+	"mediguide/internal/mailer"
 	"mediguide/internal/models"
 	"mediguide/internal/security"
 
@@ -19,8 +23,9 @@ import (
 )
 
 type AuthService struct {
-	DB  *gorm.DB
-	Cfg config.Config
+	DB     *gorm.DB
+	Cfg    config.Config
+	Mailer mailer.Sender
 }
 
 type LoginResult struct {
@@ -61,12 +66,14 @@ type RegisterInput struct {
 
 type AccountActionResult struct {
 	Accepted         bool   `json:"accepted"`
-	DeliveryRequired bool   `json:"delivery_required"`
+	DeliveryAccepted bool   `json:"delivery_accepted"`
 	DevelopmentToken string `json:"development_token,omitempty"`
 }
 
 func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, error) {
-	result := &AccountActionResult{Accepted: true, DeliveryRequired: true}
+	// DeliveryAccepted deliberately remains false for this public endpoint. A
+	// provider result would allow callers to enumerate registered addresses.
+	result := &AccountActionResult{Accepted: true, DeliveryAccepted: false}
 	var user models.User
 	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
 		return result, nil
@@ -90,13 +97,89 @@ func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, e
 	}
 	if s.Cfg.AppEnv == "development" {
 		result.DevelopmentToken = raw
-		result.DeliveryRequired = false
 	}
+	s.sendAccountEmail(user.Email, "Reset your MediGuide password", "reset-password", raw)
 	return result, nil
 }
 
+func (s AuthService) RequestEmailVerification(email string) (*AccountActionResult, error) {
+	result := &AccountActionResult{Accepted: true, DeliveryAccepted: false}
+	var user models.User
+	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
+		return result, nil
+	}
+	if user.Verified {
+		return result, nil
+	}
+	raw, err := generateRefreshToken()
+	if err != nil {
+		return nil, err
+	}
+	token := models.AccountActionToken{
+		UserID: user.ID, Purpose: "email_verification", TokenHash: hashRefreshToken(raw),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+	if err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ? AND purpose = ? AND consumed_at IS NULL", user.ID, "email_verification").
+			Delete(&models.AccountActionToken{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&token).Error
+	}); err != nil {
+		return nil, err
+	}
+	if s.Cfg.AppEnv == "development" {
+		result.DevelopmentToken = raw
+	}
+	s.sendAccountEmail(user.Email, "Verify your MediGuide email", "verify-email", raw)
+	return result, nil
+}
+
+func (s AuthService) ConfirmEmailVerification(rawToken string) error {
+	if strings.TrimSpace(rawToken) == "" {
+		return errors.New("invalid or expired verification token")
+	}
+	now := time.Now()
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var token models.AccountActionToken
+		if err := tx.Where(
+			"token_hash = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?",
+			hashRefreshToken(rawToken), "email_verification", now,
+		).First(&token).Error; err != nil {
+			return errors.New("invalid or expired verification token")
+		}
+		result := tx.Model(&models.AccountActionToken{}).
+			Where("id = ? AND consumed_at IS NULL", token.ID).
+			Update("consumed_at", now)
+		if result.Error != nil || result.RowsAffected != 1 {
+			return errors.New("invalid or expired verification token")
+		}
+		if err := tx.Model(&models.User{}).Where("id = ? AND deleted_at IS NULL", token.UserID).
+			Updates(map[string]any{"verified": true, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&models.AuditLog{
+			ActorID: token.UserID.String(), Action: "user.email_verified",
+			EntityType: "user", EntityID: token.UserID.String(), MetadataJSON: "{}",
+		}).Error
+	})
+}
+
+func (s AuthService) sendAccountEmail(to, subject, path, token string) {
+	if s.Mailer == nil {
+		return
+	}
+	base := strings.TrimRight(strings.TrimSpace(s.Cfg.PublicAppURL), "/")
+	link := fmt.Sprintf("%s/%s?token=%s", base, path, url.QueryEscape(token))
+	// The public response intentionally does not expose this provider outcome.
+	_ = s.Mailer.Send(context.Background(), mailer.Message{
+		To: to, Subject: subject,
+		Text: fmt.Sprintf("Open this link to continue: %s\n\nIf you did not request this action, ignore this message.", link),
+	})
+}
+
 func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
-	if strings.TrimSpace(rawToken) == "" || len(password) < 8 {
+	if strings.TrimSpace(rawToken) == "" || !validAccountPassword(password) {
 		return errors.New("invalid or expired reset token")
 	}
 	hash, err := security.HashPassword(password)
@@ -126,6 +209,49 @@ func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
 			Where("user_id = ? AND revoked_at IS NULL", token.UserID).
 			Update("revoked_at", now).Error
 	})
+}
+
+func (s AuthService) ChangePassword(userID uuid.UUID, currentSessionID, currentPassword, newPassword string) error {
+	if !validAccountPassword(newPassword) || currentPassword == newPassword {
+		return errors.New("invalid password change")
+	}
+	var user models.User
+	if err := s.DB.First(&user, "id = ? AND deleted_at IS NULL", userID).Error; err != nil {
+		return errors.New("invalid password change")
+	}
+	if !security.CheckPassword(user.PasswordHash, currentPassword) {
+		return errors.New("invalid password change")
+	}
+	hash, err := security.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.User{}).Where("id = ?", userID).
+			Updates(map[string]any{"password_hash": hash, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.AuthSession{}).
+			Where("user_id = ? AND id <> ? AND revoked_at IS NULL", userID, currentSessionID).
+			Update("revoked_at", now).Error
+	})
+}
+
+func validAccountPassword(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+	var hasLetter, hasNumber bool
+	for _, character := range password {
+		switch {
+		case character >= '0' && character <= '9':
+			hasNumber = true
+		case character >= 'a' && character <= 'z', character >= 'A' && character <= 'Z':
+			hasLetter = true
+		}
+	}
+	return hasLetter && hasNumber
 }
 
 func (s AuthService) Register(in RegisterInput) (*models.User, error) {
@@ -358,6 +484,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"chat.ask",
 			"drug.read",
 			"drug.write",
+			"facility.read",
+			"facility.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -373,6 +501,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.publish",
 			"drug.read",
 			"drug.write",
+			"facility.read",
+			"facility.write",
 			"guideline.read",
 			"guideline.write",
 			"protocol.read",
@@ -384,6 +514,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"chat.ask",
 			"calculator.read",
 			"drug.read",
+			"facility.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -392,6 +523,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		return []string{
 			"calculator.read",
 			"drug.read",
+			"facility.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"mediguide/internal/models"
 	"mediguide/internal/services"
 )
@@ -46,6 +48,20 @@ type PasswordResetConfirmRequest struct {
 	PasswordConfirm string `json:"password_confirm"`
 }
 
+type EmailVerificationRequest struct {
+	Email string `json:"email" example:"user@example.com"`
+}
+
+type EmailVerificationConfirmRequest struct {
+	Token string `json:"token"`
+}
+
+type PasswordChangeRequest struct {
+	CurrentPassword    string `json:"current_password"`
+	NewPassword        string `json:"new_password"`
+	NewPasswordConfirm string `json:"new_password_confirm"`
+}
+
 type PublishResult struct {
 	Published bool `json:"published" example:"true"`
 }
@@ -57,6 +73,15 @@ type MarkdownUpdateResult struct {
 
 type LogoutResult struct {
 	LoggedOut bool `json:"logged_out" example:"true"`
+}
+
+type VerificationResult struct {
+	Verified bool `json:"verified" example:"true"`
+}
+
+type VerificationResultEnvelope struct {
+	Success bool               `json:"success" example:"true"`
+	Data    VerificationResult `json:"data"`
 }
 
 type DownloadURLResult struct {
@@ -78,6 +103,40 @@ type ErrorResponse struct {
 type UserEnvelope struct {
 	Success bool        `json:"success" example:"true"`
 	Data    models.User `json:"data"`
+}
+
+type UserViewEnvelope struct {
+	Success bool              `json:"success" example:"true"`
+	Data    services.UserView `json:"data"`
+}
+
+type PaginatedUsersEnvelope struct {
+	Success bool                                   `json:"success" example:"true"`
+	Data    services.PageResult[services.UserView] `json:"data"`
+}
+
+type RoleViewEnvelope struct {
+	Success bool              `json:"success" example:"true"`
+	Data    services.RoleView `json:"data"`
+}
+
+type PaginatedRolesEnvelope struct {
+	Success bool                                   `json:"success" example:"true"`
+	Data    services.PageResult[services.RoleView] `json:"data"`
+}
+
+type PermissionsEnvelope struct {
+	Success bool                `json:"success" example:"true"`
+	Data    []models.Permission `json:"data"`
+}
+
+type PermissionDocumentEnvelope struct {
+	Success bool            `json:"success" example:"true"`
+	Data    json.RawMessage `json:"data" swaggertype:"object"`
+}
+
+type RolePermissionsRequest struct {
+	Permissions json.RawMessage `json:"permissions" swaggertype:"object"`
 }
 
 type LoginEnvelope struct {
