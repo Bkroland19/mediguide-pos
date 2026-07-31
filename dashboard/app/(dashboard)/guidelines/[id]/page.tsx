@@ -1,548 +1,369 @@
 "use client"
 
 import * as React from "react"
-import { use } from "react"
-import { useRouter } from "next/navigation"
-import { notFound } from "next/navigation"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useParams, useRouter } from "next/navigation"
+import { BookOpen, Download, FileCode2, FilePlus2, Pencil, Send, Upload } from "lucide-react"
 
-// UI Components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { LoadingState } from "@/components/ui/loading-state"
 import { PageHeader } from "@/components/ui/page-header"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Skeleton } from "@/components/ui/skeleton"
 import { RichContent } from "@/components/ui/rich-content"
-
-// Icons
-import { Edit, Share2, Calendar, User, FileText, Pill, AlertTriangle, Shield } from "lucide-react"
-
-// legacy collection API
-import { Collections } from "@/types/backend-types"
-import { useBackendRecord } from "@/hooks/use-backend-record"
-import type { MedicalGuidelinesWithExpanded } from "@/types/expanded"
-
-// Toast
-import { showToast } from "@/lib/toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePermissionContext } from "@/lib/permission-context"
+import { showToast } from "@/lib/toast"
+import {
+  CreateGuidelineVersionInput,
+  guidelineDocumentsQueryKey,
+  GuidelineDocumentsService,
+  GuidelineVersionRecord,
+} from "@/services/guideline-documents.service"
+import {
+  CreateVersionDialog,
+  EditMarkdownDialog,
+  UploadVersionDialog,
+} from "../components/guideline-version-dialogs"
 
-interface GuidelineDetailPageProps {
-  params: Promise<{
-    id: string
-  }>
-}
-
-export default function GuidelineDetailPage({ params }: GuidelineDetailPageProps) {
+export default function GuidelineDetailsPage() {
+  const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { id } = use(params)
-  const { hasPermission, loading: permLoading } = usePermissionContext()
-
-  const { record: guideline, loading, error } = useBackendRecord<MedicalGuidelinesWithExpanded>(
-    Collections.MedicalGuidelines,
-    id,
-    { expand: "categories,tags" }
-  )
-
-  React.useEffect(() => {
-    if (permLoading) return
-    if (!hasPermission("content", "read:any")) {
-      router.replace("/guidelines")
-    }
-  }, [permLoading, hasPermission, router])
+  const queryClient = useQueryClient()
+  const { hasPermission, loading: permissionsLoading } = usePermissionContext()
+  const canUpdate = hasPermission("content", "update:any")
+  const [createVersionOpen, setCreateVersionOpen] = React.useState(false)
+  const [uploadVersion, setUploadVersion] = React.useState<GuidelineVersionRecord | null>(null)
+  const [markdownVersion, setMarkdownVersion] = React.useState<GuidelineVersionRecord | null>(null)
+  const [markdown, setMarkdown] = React.useState("")
+  const [viewVersion, setViewVersion] = React.useState<GuidelineVersionRecord | null>(null)
+  const [loadingMarkdown, setLoadingMarkdown] = React.useState(false)
+  const [submitting, setSubmitting] = React.useState(false)
 
   React.useEffect(() => {
-    if (error) {
-      console.error("Failed to fetch guideline:", error)
-      notFound()
+    if (!permissionsLoading && !hasPermission("content", "read:any")) router.replace("/")
+  }, [hasPermission, permissionsLoading, router])
+
+  const documentQuery = useQuery({
+    queryKey: [...guidelineDocumentsQueryKey, id],
+    queryFn: () => GuidelineDocumentsService.getDocument(id),
+    enabled: Boolean(id),
+  })
+  const sectionsQuery = useQuery({
+    queryKey: [...guidelineDocumentsQueryKey, id, viewVersion?.id, "sections"],
+    queryFn: () => GuidelineDocumentsService.listSections(viewVersion!.id),
+    enabled: Boolean(viewVersion),
+  })
+  const fullMarkdownQuery = useQuery({
+    queryKey: [...guidelineDocumentsQueryKey, id, viewVersion?.id, "markdown"],
+    queryFn: () => GuidelineDocumentsService.getExtractedMarkdown(viewVersion!.id),
+    enabled: Boolean(viewVersion?.markdown_file_key),
+  })
+
+  React.useEffect(() => {
+    if (!viewVersion && documentQuery.data?.versions.length) {
+      const current = documentQuery.data.current_version_id
+        ? documentQuery.data.versions.find((version) => version.id === documentQuery.data?.current_version_id)
+        : null
+      setViewVersion(current || documentQuery.data.versions[0])
     }
-  }, [error])
+  }, [documentQuery.data, viewVersion])
 
-  const handleEdit = () => {
-    router.push(`/guidelines/${id}/edit`)
-  }
+  const refresh = React.useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidelineDocumentsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: [...guidelineDocumentsQueryKey, id] }),
+    ])
+  }, [id, queryClient])
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href)
-    showToast.success("Shared", "Link copied to clipboard")
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-6 w-1/2" />
-        <div className="grid gap-6">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
-      </div>
-    )
-  }
-
-  if (!guideline) {
-    return notFound()
-  }
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { variant: "secondary" as const, label: "Draft" },
-      review: { variant: "outline" as const, label: "Under Review" },
-      published: { variant: "default" as const, label: "Published" },
-      archived: { variant: "destructive" as const, label: "Archived" },
+  async function createVersion(payload: CreateGuidelineVersionInput) {
+    setSubmitting(true)
+    try {
+      await GuidelineDocumentsService.createVersion(id, payload)
+      setCreateVersionOpen(false)
+      await refresh()
+      showToast.success("Version created", "Upload the source PDF to start extraction.")
+    } catch (error) {
+      showToast.error("Create failed", error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSubmitting(false)
     }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      variant: "secondary" as const,
-      label: status || "Unknown"
-    }
-
-    return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      high: { variant: "destructive" as const, label: "High Priority" },
-      medium: { variant: "outline" as const, label: "Medium Priority" },
-      low: { variant: "secondary" as const, label: "Low Priority" },
+  async function uploadPdf(file: File) {
+    if (!uploadVersion) return
+    setSubmitting(true)
+    try {
+      await GuidelineDocumentsService.uploadVersionPdf(uploadVersion.id, file)
+      setUploadVersion(null)
+      await refresh()
+      showToast.success("PDF uploaded", "Extraction has been queued.")
+    } catch (error) {
+      showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSubmitting(false)
     }
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || {
-      variant: "secondary" as const,
-      label: priority || "Not Set"
-    }
-
-    return <Badge variant={config.variant}>{config.label}</Badge>
   }
+
+  async function publish(version: GuidelineVersionRecord) {
+    setSubmitting(true)
+    try {
+      await GuidelineDocumentsService.publishVersion(version.id)
+      await refresh()
+      showToast.success("Version published", `${version.version} is now the current version.`)
+    } catch (error) {
+      showToast.error("Publish failed", error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function openMarkdown(version: GuidelineVersionRecord) {
+    setMarkdownVersion(version)
+    setMarkdown("")
+    setLoadingMarkdown(true)
+    try {
+      setMarkdown(await GuidelineDocumentsService.getExtractedMarkdown(version.id))
+    } catch (error) {
+      setMarkdownVersion(null)
+      showToast.error("Load failed", error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setLoadingMarkdown(false)
+    }
+  }
+
+  async function saveMarkdown() {
+    if (!markdownVersion) return
+    setSubmitting(true)
+    try {
+      await GuidelineDocumentsService.updateExtractedMarkdown(markdownVersion.id, markdown)
+      setMarkdownVersion(null)
+      await refresh()
+      showToast.success("Markdown updated", "The extracted Markdown file has been saved.")
+    } catch (error) {
+      showToast.error("Save failed", error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (permissionsLoading || documentQuery.isLoading) return <LoadingState message="Loading guideline..." />
+  if (!documentQuery.data) return <div className="p-6 text-destructive">Guideline not found.</div>
+  const document = documentQuery.data
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <PageHeader
-        title={guideline.condition_name}
-        description={`ICD-10: ${guideline.icd10_code || "N/A"} | Version ${guideline.version || "1.0"}`}
-        showBackButton={true}
-        onBack={() => router.push("/guidelines")}
-        actions={[
+        title={document.title}
+        description={document.description || "V2 guideline document and extraction versions."}
+        actions={canUpdate ? [
           {
-            label: "Share",
-            onClick: handleShare,
-            icon: <Share2 className="h-4 w-4" />,
-            variant: "outline" as const
+            label: "Edit Metadata",
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => router.push(`/guidelines/${id}/edit`),
+            variant: "outline",
           },
-          ...(hasPermission("content", "update:any") ? [{
-            label: "Edit",
-            onClick: handleEdit,
-            icon: <Edit className="h-4 w-4" />
-          }] : [])
-        ]}
+          {
+            label: "New Version",
+            icon: <FilePlus2 className="h-4 w-4" />,
+            onClick: () => setCreateVersionOpen(true),
+          },
+        ] : []}
       />
 
-      {/* Status and Metadata Row */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          {getStatusBadge(guideline.status || "")}
-        </div>
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          {getPriorityBadge(guideline.priority || "")}
-        </div>
-        {guideline.is_published && (
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <Badge variant="default">Published</Badge>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Created {new Date(guideline.created).toLocaleDateString()}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Updated {new Date(guideline.updated).toLocaleDateString()}
-          </span>
-        </div>
-        {guideline.target_population && (
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              Target: {guideline.target_population}
-            </span>
-          </div>
-        )}
+      <div className="grid gap-4 md:grid-cols-4">
+        {[
+          ["Program area", document.program_area || "—"],
+          ["Country", document.country || "—"],
+          ["Source", document.source_org || "—"],
+          ["Language", (document.language || "en").toUpperCase()],
+        ].map(([label, value]) => (
+          <Card key={label}>
+            <CardContent className="pt-6">
+              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="mt-1 font-medium">{value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Categories and Tags */}
-      {(guideline.expand?.categories || guideline.expand?.tags) && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {guideline.expand?.categories && guideline.expand.categories.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Categories</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {guideline.expand.categories.map((category) => (
-                      <Badge key={category.id} variant="secondary">
-                        {category.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {guideline.expand?.tags && guideline.expand.tags.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Tags</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {guideline.expand.tags.map((tag) => (
-                      <Badge key={tag.id} variant="outline">
-                        {tag.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+      <Card>
+        <CardHeader><CardTitle>Versions</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {document.versions.length === 0 ? (
+            <div className="rounded-md border border-dashed p-8 text-center text-muted-foreground">
+              No versions yet. Create one before uploading a PDF.
             </div>
+          ) : document.versions.map((version) => {
+            const hasMarkdown = Boolean(version.markdown_file_key)
+            const hasHtml = Boolean(version.html_file_key)
+            const publishable = version.status !== "published" && Boolean(
+              version.original_file_key && hasMarkdown && hasHtml
+            )
+            return (
+              <div key={version.id} className="rounded-lg border p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Version {version.version}</span>
+                      <Badge variant={version.status === "published" ? "default" : "secondary"}>
+                        {version.status}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Published: {version.publication_date || "not set"} · Review: {version.review_date || "not set"}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canUpdate && (
+                      <Button variant="outline" size="sm" onClick={() => setUploadVersion(version)}>
+                        <Upload className="h-4 w-4" /> Upload PDF
+                      </Button>
+                    )}
+                    {(hasMarkdown || hasHtml) && (
+                      <Button variant="outline" size="sm" onClick={() => setViewVersion(version)}>
+                        <BookOpen className="h-4 w-4" /> View Content
+                      </Button>
+                    )}
+                    {hasMarkdown && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => GuidelineDocumentsService.downloadExtractedAsset(
+                          version.id, "md", `${document.title}-${version.version}.md`
+                        )}
+                      >
+                        <Download className="h-4 w-4" /> Markdown
+                      </Button>
+                    )}
+                    {hasHtml && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => GuidelineDocumentsService.downloadExtractedAsset(
+                          version.id, "html", `${document.title}-${version.version}.html`
+                        )}
+                      >
+                        <FileCode2 className="h-4 w-4" /> HTML
+                      </Button>
+                    )}
+                    {canUpdate && hasMarkdown && version.status !== "published" && (
+                      <Button variant="outline" size="sm" onClick={() => openMarkdown(version)}>
+                        <Pencil className="h-4 w-4" /> Edit Markdown
+                      </Button>
+                    )}
+                    {canUpdate && publishable && (
+                      <Button size="sm" disabled={submitting} onClick={() => publish(version)}>
+                        <Send className="h-4 w-4" /> Publish
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+
+      {viewVersion && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Version {viewVersion.version} content</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="sections">
+              <TabsList>
+                <TabsTrigger value="sections">Sections</TabsTrigger>
+                <TabsTrigger value="markdown" disabled={!viewVersion.markdown_file_key}>
+                  Entire Markdown
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="sections" className="mt-6">
+                {sectionsQuery.isLoading ? (
+                  <LoadingState size="sm" message="Loading extracted sections..." />
+                ) : sectionsQuery.isError ? (
+                  <div className="rounded-md border border-destructive p-4 text-sm text-destructive">
+                    {sectionsQuery.error instanceof Error
+                      ? sectionsQuery.error.message
+                      : "Failed to load sections"}
+                  </div>
+                ) : sectionsQuery.data?.length ? (
+                  <div className="space-y-4">
+                    {sectionsQuery.data.map((section) => (
+                      <article
+                        key={section.id}
+                        className="rounded-lg border p-5"
+                        style={{ marginLeft: `${Math.max(0, section.level - 1) * 12}px` }}
+                      >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="font-semibold">{section.title || "Untitled section"}</h3>
+                          {(section.page_start || section.page_end) && (
+                            <span className="text-xs text-muted-foreground">
+                              Pages {section.page_start || section.page_end}
+                              {section.page_end && section.page_end !== section.page_start
+                                ? `–${section.page_end}`
+                                : ""}
+                            </span>
+                          )}
+                        </div>
+                        {section.html ? (
+                          <RichContent html={section.html} className="prose max-w-none dark:prose-invert" />
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm">{section.text}</p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed p-8 text-center text-muted-foreground">
+                    No extracted sections are available for this version.
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="markdown" className="mt-6">
+                {fullMarkdownQuery.isLoading ? (
+                  <LoadingState size="sm" message="Loading complete Markdown..." />
+                ) : fullMarkdownQuery.isError ? (
+                  <div className="rounded-md border border-destructive p-4 text-sm text-destructive">
+                    {fullMarkdownQuery.error instanceof Error
+                      ? fullMarkdownQuery.error.message
+                      : "Failed to load Markdown"}
+                  </div>
+                ) : (
+                  <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-5 font-mono text-sm">
+                    {fullMarkdownQuery.data || "No Markdown content is available."}
+                  </pre>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="classification">Classification</TabsTrigger>
-          <TabsTrigger value="treatment">Treatment</TabsTrigger>
-          <TabsTrigger value="safety">Safety & Prevention</TabsTrigger>
-          <TabsTrigger value="metadata">Information</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Definition</CardTitle>
-              <CardDescription>Medical definition and description of the condition</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.definition} fallback="No definition provided" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Causes & Risk Factors</CardTitle>
-              <CardDescription>Etiology and contributing factors</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.causes} fallback="No causes listed" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Clinical Features</CardTitle>
-              <CardDescription>Signs and symptoms presentation</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.clinical_features} fallback="No clinical features documented" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Differential Diagnosis</CardTitle>
-              <CardDescription>Conditions to consider and rule out</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.differential_diagnosis} fallback="No differential diagnosis provided" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Classification Tab */}
-        <TabsContent value="classification" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Disease Classification by Severity</CardTitle>
-              <CardDescription>Clinical criteria for different severity levels</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {guideline.classification_mild && (
-                <div className="border-l-4 border-green-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">Mild Classification</span>
-                  </div>
-                  <RichContent html={guideline.classification_mild} />
-                </div>
-              )}
-              {guideline.classification_moderate && (
-                <div className="border-l-4 border-yellow-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">Moderate Classification</span>
-                  </div>
-                  <RichContent html={guideline.classification_moderate} />
-                </div>
-              )}
-              {guideline.classification_severe && (
-                <div className="border-l-4 border-orange-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-orange-700 dark:text-orange-400">Severe Classification</span>
-                  </div>
-                  <RichContent html={guideline.classification_severe} />
-                </div>
-              )}
-              {guideline.classification_critical && (
-                <div className="border-l-4 border-red-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-red-700 dark:text-red-400">Critical Classification</span>
-                  </div>
-                  <RichContent html={guideline.classification_critical} />
-                </div>
-              )}
-              {!guideline.classification_mild && !guideline.classification_moderate && !guideline.classification_severe && !guideline.classification_critical && (
-                <p className="text-muted-foreground text-center py-8">No classification criteria defined</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Treatment Tab */}
-        <TabsContent value="treatment" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Management</CardTitle>
-              <CardDescription>Overall treatment approach and supportive care</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.general_management} fallback="No management guidelines provided" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Pill className="h-5 w-5 text-blue-600" />
-                Primary Medication
-              </CardTitle>
-              <CardDescription>First-line treatment option</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <span className="text-sm font-medium">Medication</span>
-                <p className="text-lg font-semibold">
-                  {guideline.medication_primary || "Not specified"}
-                </p>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-blue-600">Adult Dosage</span>
-                  <RichContent html={guideline.dosage_adult} fallback="Not specified" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-green-600">Pediatric Dosage</span>
-                  <RichContent html={guideline.dosage_pediatric} fallback="Not specified" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {guideline.medication_secondary && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Pill className="h-5 w-5 text-purple-600" />
-                  Alternative Medication
-                </CardTitle>
-                <CardDescription>Secondary treatment option</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <span className="text-sm font-medium">Medication</span>
-                  <p className="text-lg font-semibold">
-                    {guideline.medication_secondary}
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm font-medium text-blue-600">Adult Dosage</span>
-                    <RichContent html={guideline.dosage_secondary_adult} fallback="Not specified" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-green-600">Pediatric Dosage</span>
-                    <RichContent html={guideline.dosage_secondary_pediatric} fallback="Not specified" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Administration Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <span className="text-sm font-medium">Route of Administration</span>
-                <p className="text-muted-foreground">
-                  {guideline.route_administration || "Not specified"}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm font-medium">Healthcare Level Required</span>
-                <p className="text-muted-foreground">
-                  {guideline.healthcare_level_required || "Any level"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Safety & Prevention Tab */}
-        <TabsContent value="safety" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                Contraindications
-              </CardTitle>
-              <CardDescription>Important contraindications and precautions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.contraindications} fallback="No contraindications specified" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-blue-500" />
-                Monitoring Requirements
-              </CardTitle>
-              <CardDescription>Patient monitoring and safety considerations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.monitoring_requirements} fallback="No monitoring requirements specified" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-500" />
-                Prevention Measures
-              </CardTitle>
-              <CardDescription>Prevention strategies and measures</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.prevention_measures} fallback="No prevention measures specified" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Special Notes</CardTitle>
-              <CardDescription>Additional important considerations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RichContent html={guideline.special_notes} fallback="No special notes provided" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Metadata Tab */}
-        <TabsContent value="metadata" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Guideline Information</CardTitle>
-              <CardDescription>Document metadata and publication details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-6">
-                <div>
-                  <span className="text-sm font-medium">Condition Name</span>
-                  <p className="text-lg font-semibold">
-                    {guideline.condition_name}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">ICD-10 Code</span>
-                  <p className="font-mono">
-                    {guideline.icd10_code || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">Target Population</span>
-                  <p className="text-muted-foreground">
-                    {guideline.target_population || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">Version</span>
-                  <p className="font-semibold">
-                    {guideline.version || "1.0"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-sm font-medium">Status</span>
-                    <div className="mt-1">
-                      {getStatusBadge(guideline.status || "")}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">Priority</span>
-                    <div className="mt-1">
-                      {getPriorityBadge(guideline.priority || "")}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">Published</span>
-                    <div className="mt-1">
-                      <Badge variant={guideline.is_published ? "default" : "secondary"}>
-                        {guideline.is_published ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-sm font-medium">Created Date</span>
-                    <p className="text-muted-foreground">
-                      {new Date(guideline.created).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">Last Updated</span>
-                    <p className="text-muted-foreground">
-                      {new Date(guideline.updated).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <CreateVersionDialog
+        document={document}
+        open={createVersionOpen}
+        submitting={submitting}
+        onOpenChange={setCreateVersionOpen}
+        onSubmit={createVersion}
+      />
+      <UploadVersionDialog
+        version={uploadVersion}
+        open={Boolean(uploadVersion)}
+        submitting={submitting}
+        onOpenChange={(open) => !open && setUploadVersion(null)}
+        onSubmit={uploadPdf}
+      />
+      <EditMarkdownDialog
+        version={markdownVersion}
+        open={Boolean(markdownVersion)}
+        loading={loadingMarkdown}
+        submitting={submitting}
+        content={markdown}
+        onContentChange={setMarkdown}
+        onOpenChange={(open) => !open && setMarkdownVersion(null)}
+        onSubmit={saveMarkdown}
+      />
     </div>
   )
 }

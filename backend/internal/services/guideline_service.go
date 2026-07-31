@@ -35,6 +35,8 @@ type CreateGuidelineInput struct {
 	Description string `json:"description"`
 }
 
+type UpdateGuidelineInput = CreateGuidelineInput
+
 type CreateVersionInput struct {
 	Version         string `json:"version"`
 	PublicationDate string `json:"publication_date"`
@@ -82,6 +84,27 @@ func (s GuidelineService) ListDocuments(programArea string, page PageInput) (*Pa
 func (s GuidelineService) GetDocument(id uuid.UUID) (*models.GuidelineDocument, error) {
 	var d models.GuidelineDocument
 	return &d, s.DB.Preload("Versions").First(&d, "id = ?", id).Error
+}
+func (s GuidelineService) UpdateDocument(id uuid.UUID, in UpdateGuidelineInput) (*models.GuidelineDocument, error) {
+	var document models.GuidelineDocument
+	if err := s.DB.First(&document, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	language := strings.TrimSpace(in.Language)
+	if language == "" {
+		language = "en"
+	}
+	if err := s.DB.Model(&document).Updates(map[string]any{
+		"title":        strings.TrimSpace(in.Title),
+		"country":      strings.TrimSpace(in.Country),
+		"source_org":   strings.TrimSpace(in.SourceOrg),
+		"program_area": strings.TrimSpace(in.ProgramArea),
+		"language":     language,
+		"description":  strings.TrimSpace(in.Description),
+	}).Error; err != nil {
+		return nil, err
+	}
+	return s.GetDocument(id)
 }
 func (s GuidelineService) CreateVersion(docID uuid.UUID, in CreateVersionInput) (*models.GuidelineVersion, error) {
 	v := models.GuidelineVersion{DocumentID: docID, Version: in.Version, PublicationDate: in.PublicationDate, ReviewDate: in.ReviewDate, Status: "draft"}

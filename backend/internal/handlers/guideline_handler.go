@@ -105,6 +105,43 @@ func (h GuidelineHandler) Get(c *gin.Context) {
 	httpx.OK(c, d)
 }
 
+// Update godoc
+// @Summary Update a guideline document
+// @Tags guidelines
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Document ID" format(uuid)
+// @Param payload body services.UpdateGuidelineInput true "Guideline document payload"
+// @Success 200 {object} handlers.GuidelineDocumentEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guidelines/{id} [patch]
+func (h GuidelineHandler) Update(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var input services.UpdateGuidelineInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	document, err := h.Service.UpdateDocument(id, input)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			httpx.Error(c, http.StatusNotFound, "not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, "failed to update guideline")
+		return
+	}
+	httpx.OK(c, document)
+}
+
 // CreateVersion godoc
 // @Summary Create a guideline version
 // @Tags guidelines

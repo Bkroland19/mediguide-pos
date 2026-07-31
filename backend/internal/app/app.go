@@ -194,6 +194,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guidelines", middleware.RequirePermission("guideline.write"), guidelineH.Create)
 		protected.GET("/guidelines", middleware.RequirePermission("guideline.read"), guidelineH.List)
 		protected.GET("/guidelines/:id", middleware.RequirePermission("guideline.read"), guidelineH.Get)
+		protected.PATCH("/guidelines/:id", middleware.RequirePermission("guideline.write"), guidelineH.Update)
 		protected.POST("/guidelines/:id/versions", middleware.RequirePermission("guideline.write"), guidelineH.CreateVersion)
 		protected.POST("/guideline-versions/:id/upload", middleware.RequirePermission("guideline.write"), guidelineH.UploadPDF)
 		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), guidelineH.Publish)

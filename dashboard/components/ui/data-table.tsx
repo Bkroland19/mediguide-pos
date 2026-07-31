@@ -37,6 +37,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchKey?: keyof TData
   searchPlaceholder?: string
+  tableClassName?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -44,6 +45,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Filter...",
+  tableClassName,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -113,7 +115,7 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
       <div className="rounded-md border">
-        <Table>
+        <Table className={tableClassName}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

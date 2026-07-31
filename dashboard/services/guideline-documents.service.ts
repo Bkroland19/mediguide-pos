@@ -1,6 +1,8 @@
 "use client"
 
-import { getBackendClient } from "@/lib/backend-client"
+import { getPB } from "@/lib/pocketbase"
+
+export const guidelineDocumentsQueryKey = ["v2-guideline-documents"] as const
 
 export interface GuidelineVersionRecord {
   id: string
@@ -41,6 +43,15 @@ export interface GuidelineDocumentsPage {
   total_pages: number
 }
 
+export interface GuidelineDocumentInput {
+  title: string
+  country?: string
+  source_org?: string
+  program_area?: string
+  language?: string
+  description?: string
+}
+
 export interface CreateGuidelineVersionInput {
   version: string
   publication_date?: string
@@ -58,35 +69,39 @@ export interface IngestionJobRecord {
   updated_at: string
 }
 
-export function normalizeGuidelineDocumentKey(value?: string | null) {
-  return (value || "")
-    .toLowerCase()
-    .replace(/&amp;/g, "&")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
+export interface GuidelineSectionRecord {
+  id: string
+  version_id: string
+  parent_id?: string | null
+  title: string
+  slug: string
+  level: number
+  html: string
+  text: string
+  page_start?: number | null
+  page_end?: number | null
+  sort_order: number
 }
 
-export function buildGuidelineDocumentLookup(documents: GuidelineDocumentRecord[]) {
-  const lookup = new Map<string, GuidelineDocumentRecord>()
-  for (const document of documents) {
-    const key = normalizeGuidelineDocumentKey(document.title)
-    if (key && !lookup.has(key)) {
-      lookup.set(key, document)
-    }
-  }
-  return lookup
+interface GuidelineSectionsPage {
+  items: GuidelineSectionRecord[]
+  page: number
+  per_page: number
+  total_items: number
+  total_pages: number
 }
 
 export function getDocumentCurrentVersion(document?: GuidelineDocumentRecord | null) {
   if (!document) return null
-
   if (document.current_version_id) {
     const current = document.versions.find((version) => version.id === document.current_version_id)
     if (current) return current
   }
-
   return document.versions[0] || null
+}
+
+export function getDocumentLatestVersion(document?: GuidelineDocumentRecord | null) {
+  return document?.versions[0] || null
 }
 
 function sortVersions(versions: GuidelineVersionRecord[]) {
@@ -98,67 +113,135 @@ function sortVersions(versions: GuidelineVersionRecord[]) {
 }
 
 function normalizeDocument(document: GuidelineDocumentRecord): GuidelineDocumentRecord {
-  return {
-    ...document,
-    versions: sortVersions(document.versions || []),
-  }
+  return { ...document, versions: sortVersions(document.versions || []) }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 export class GuidelineDocumentsService {
   static async listDocuments(programArea?: string): Promise<GuidelineDocumentsPage> {
-    const backend = getBackendClient()
-    const data = await backend.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
+    const pb = getPB()
+    const first = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
       method: "GET",
-      query: {
-        page: 1,
-        per_page: 100,
-        program_area: programArea,
-      },
+      query: { page: 1, per_page: 100, program_area: programArea },
     })
-
-    return {
-      ...data,
-      items: (data.items || []).map(normalizeDocument),
+    const items = [...(first.items || [])]
+    for (let page = 2; page <= first.total_pages; page += 1) {
+      const next = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
+        method: "GET",
+        query: { page, per_page: 100, program_area: programArea },
+      })
+      items.push(...(next.items || []))
     }
+    return { ...first, items: items.map(normalizeDocument), total_items: items.length }
+  }
+
+  static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
+    const document = await getPB().send<GuidelineDocumentRecord>(
+      `/api/v2/guidelines/${documentId}`,
+      { method: "GET" }
+    )
+    return normalizeDocument(document)
+  }
+
+  static async createDocument(payload: GuidelineDocumentInput): Promise<GuidelineDocumentRecord> {
+    return getPB().send<GuidelineDocumentRecord>("/api/v2/guidelines", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  }
+
+  static async updateDocument(
+    documentId: string,
+    payload: GuidelineDocumentInput
+  ): Promise<GuidelineDocumentRecord> {
+    return getPB().send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    })
   }
 
   static async createVersion(
     documentId: string,
     payload: CreateGuidelineVersionInput
   ): Promise<GuidelineVersionRecord> {
-    const backend = getBackendClient()
-    return backend.send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
+    return getPB().send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
       method: "POST",
       body: JSON.stringify(payload),
     })
   }
 
-  static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
-    const backend = getBackendClient()
-    const document = await backend.send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
-      method: "GET",
-    })
-    return normalizeDocument(document)
-  }
-
-  static async uploadVersionPdf(
-    versionId: string,
-    file: File
-  ): Promise<IngestionJobRecord> {
-    const backend = getBackendClient()
+  static async uploadVersionPdf(versionId: string, file: File): Promise<IngestionJobRecord> {
     const formData = new FormData()
     formData.append("file", file)
-
-    return backend.send<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
+    return getPB().send<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
       method: "POST",
       body: formData,
     })
   }
 
   static async publishVersion(versionId: string): Promise<{ published: boolean }> {
-    const backend = getBackendClient()
-    return backend.send<{ published: boolean }>(`/api/v2/guideline-versions/${versionId}/publish`, {
-      method: "POST",
+    return getPB().send<{ published: boolean }>(
+      `/api/v2/guideline-versions/${versionId}/publish`,
+      { method: "POST" }
+    )
+  }
+
+  static async listSections(versionId: string): Promise<GuidelineSectionRecord[]> {
+    const first = await getPB().send<GuidelineSectionsPage>(
+      `/api/v2/guideline-versions/${versionId}/sections`,
+      { method: "GET", query: { page: 1, per_page: 500 } }
+    )
+    const sections = [...(first.items || [])]
+    for (let page = 2; page <= first.total_pages; page += 1) {
+      const next = await getPB().send<GuidelineSectionsPage>(
+        `/api/v2/guideline-versions/${versionId}/sections`,
+        { method: "GET", query: { page, per_page: 500 } }
+      )
+      sections.push(...(next.items || []))
+    }
+    return sections.sort((left, right) => left.sort_order - right.sort_order)
+  }
+
+  static async getExtractedMarkdown(versionId: string): Promise<string> {
+    return getPB().send<string>(`/api/v2/guideline-versions/${versionId}/extracted/markdown`, {
+      method: "GET",
+      responseType: "text",
     })
+  }
+
+  static async updateExtractedMarkdown(
+    versionId: string,
+    content: string
+  ): Promise<{ updated: boolean; size: number }> {
+    return getPB().send<{ updated: boolean; size: number }>(
+      `/api/v2/guideline-versions/${versionId}/extracted/markdown`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "text/markdown; charset=utf-8" },
+        body: content,
+      }
+    )
+  }
+
+  static async downloadExtractedAsset(
+    versionId: string,
+    format: "md" | "html",
+    filename: string
+  ): Promise<void> {
+    const blob = await getPB().send<Blob>(
+      `/api/v2/guideline-versions/${versionId}/extracted/${format}`,
+      { method: "GET", responseType: "blob" }
+    )
+    downloadBlob(blob, filename)
   }
 }
