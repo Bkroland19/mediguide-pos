@@ -84,6 +84,15 @@ type VerificationResultEnvelope struct {
 	Data    VerificationResult `json:"data"`
 }
 
+type TagUsageRecalculationResult struct {
+	Updated bool `json:"updated" example:"true"`
+}
+
+type TagUsageRecalculationEnvelope struct {
+	Success bool                        `json:"success" example:"true"`
+	Data    TagUsageRecalculationResult `json:"data"`
+}
+
 type DownloadURLResult struct {
 	URL string `json:"url" example:"https://storage.example.com/path/to/package.zip"`
 }
@@ -98,6 +107,51 @@ type HealthResult struct {
 type ErrorResponse struct {
 	Success bool   `json:"success" example:"false"`
 	Error   string `json:"error" example:"invalid request"`
+}
+
+type SupportTicketEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    models.SupportTicket `json:"data"`
+}
+
+type SupportReplyEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    models.SupportTicketReply `json:"data"`
+}
+
+type PaginatedSupportTicketsEnvelope struct {
+	Success bool                                      `json:"success"`
+	Data    services.PageResult[models.SupportTicket] `json:"data"`
+}
+
+type PaginatedSupportRepliesEnvelope struct {
+	Success bool                                           `json:"success"`
+	Data    services.PageResult[models.SupportTicketReply] `json:"data"`
+}
+
+type FAQEnvelope struct {
+	Success bool       `json:"success"`
+	Data    models.FAQ `json:"data"`
+}
+type FAQTagEnvelope struct {
+	Success bool          `json:"success"`
+	Data    models.FAQTag `json:"data"`
+}
+type DocumentationEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    models.Documentation `json:"data"`
+}
+type PaginatedFAQsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    services.PageResult[models.FAQ] `json:"data"`
+}
+type PaginatedFAQTagsEnvelope struct {
+	Success bool                               `json:"success"`
+	Data    services.PageResult[models.FAQTag] `json:"data"`
+}
+type PaginatedDocumentationEnvelope struct {
+	Success bool                                      `json:"success"`
+	Data    services.PageResult[models.Documentation] `json:"data"`
 }
 
 type UserEnvelope struct {

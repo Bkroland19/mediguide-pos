@@ -85,10 +85,7 @@ class BackendApiService extends GetxService {
     final data = _unwrapData(response);
     await _persistSession(data);
 
-    final user = _normalizeRecord(
-      collectionName: User.collection,
-      raw: _asMap(data['user']),
-    );
+    final user = _normalizeUserRecord(_asMap(data['user']));
     return ApiRecord(user);
   }
 
@@ -959,14 +956,6 @@ class BackendApiService extends GetxService {
     }
 
     switch (collectionName) {
-      case 'users':
-        final roles = raw['roles'];
-        if (raw['role'] == null && roles is List && roles.isNotEmpty) {
-          final first = _asMap(roles.first);
-          data['role'] =
-              first['role_key']?.toString() ?? first['name']?.toString() ?? '';
-        }
-        break;
       case 'consultants':
         data['user'] = raw['user_id']?.toString() ?? '';
         _injectExpandUser(data, field: 'user', prefix: 'user_expand_');
@@ -1084,6 +1073,37 @@ class BackendApiService extends GetxService {
     return data;
   }
 
+  Map<String, dynamic> _normalizeUserRecord(Map<String, dynamic> raw) {
+    final data = <String, dynamic>{};
+    raw.forEach((key, value) {
+      data[key] = value;
+      if (key.endsWith('_json')) {
+        final alias = key.substring(0, key.length - 5);
+        data[alias] = value;
+        data[_toCamelCase(alias)] = value;
+      }
+      if (key.contains('_')) {
+        data[_toCamelCase(key)] = value;
+      }
+    });
+
+    data['id'] = raw['id']?.toString() ?? '';
+    data['collectionName'] = User.collection;
+    data['collectionId'] = User.collection;
+    data['created'] =
+        raw['created']?.toString() ?? raw['created_at']?.toString() ?? '';
+    data['updated'] =
+        raw['updated']?.toString() ?? raw['updated_at']?.toString() ?? '';
+
+    final roles = raw['roles'];
+    if (raw['role'] == null && roles is List && roles.isNotEmpty) {
+      final first = _asMap(roles.first);
+      data['role'] =
+          first['role_key']?.toString() ?? first['name']?.toString() ?? '';
+    }
+    return data;
+  }
+
   void _injectExpandUser(
     Map<String, dynamic> data, {
     required String field,
@@ -1099,18 +1119,17 @@ class BackendApiService extends GetxService {
       return;
     }
 
-    _injectSimpleExpand(
-      data,
-      field: field,
-      id: resolvedId,
-      collectionName: 'users',
-      extra: {
-        'name': data['${prefix}name'],
-        'email': data['${prefix}email'],
-        'avatar': data['${prefix}avatar'],
-        'verified': data['${prefix}verified'],
-      },
-    );
+    final expand = _asMap(data['expand']);
+    expand[field] = {
+      'id': resolvedId,
+      'collectionName': User.collection,
+      'collectionId': User.collection,
+      'name': data['${prefix}name'],
+      'email': data['${prefix}email'],
+      'avatar': data['${prefix}avatar'],
+      'verified': data['${prefix}verified'],
+    };
+    data['expand'] = expand;
   }
 
   void _injectSimpleExpand(
@@ -1522,9 +1541,6 @@ class BackendApiService extends GetxService {
       'medical_guidelines' => '/api/v2/medical-guidelines',
       'abbreviations' => '/api/v2/abbreviations',
       'emergency_protocols' => '/api/v2/emergency-protocols',
-      'faqs' => '/api/v2/faqs',
-      'faq_tags' => '/api/v2/faq-tags',
-      'documentation' => '/api/v2/documentation',
       'generic_pages' => '/api/v2/pages',
       'guideline_categories' => '/api/v2/guideline-categories',
       'guideline_tags' => '/api/v2/guideline-tags',
@@ -1532,8 +1548,6 @@ class BackendApiService extends GetxService {
       'consultants' => '/api/v2/consultants',
       'ministry_directory' => '/api/v2/ministry-directory',
       'languages' => '/api/v2/reference-languages',
-      'support_tickets' => '/api/v2/support-tickets',
-      'support_ticket_replies' => '/api/v2/support-ticket-replies',
       'conversations' => '/api/v2/conversations',
       'messages' => '/api/v2/messages',
       'guideline_usage_logs' => '/api/v2/guideline-usage',

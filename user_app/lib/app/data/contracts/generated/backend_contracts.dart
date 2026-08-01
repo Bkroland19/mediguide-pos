@@ -12,9 +12,10 @@ Map<String, dynamic> _jsonMap(Object? value) {
 
 final class HandlersAskEnvelope {
   HandlersAskEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersAskEnvelope.fromJson(Map<String, dynamic> json) => HandlersAskEnvelope(json);
+  factory HandlersAskEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersAskEnvelope(json);
 
   static const schemaName = 'handlers.AskEnvelope';
   final Map<String, dynamic> value;
@@ -32,9 +33,10 @@ final class HandlersAskEnvelope {
 
 final class HandlersCalculatorEnvelope {
   HandlersCalculatorEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersCalculatorEnvelope.fromJson(Map<String, dynamic> json) => HandlersCalculatorEnvelope(json);
+  factory HandlersCalculatorEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersCalculatorEnvelope(json);
 
   static const schemaName = 'handlers.CalculatorEnvelope';
   final Map<String, dynamic> value;
@@ -52,9 +54,10 @@ final class HandlersCalculatorEnvelope {
 
 final class HandlersCalculatorUsageEnvelope {
   HandlersCalculatorUsageEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersCalculatorUsageEnvelope.fromJson(Map<String, dynamic> json) => HandlersCalculatorUsageEnvelope(json);
+  factory HandlersCalculatorUsageEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersCalculatorUsageEnvelope(json);
 
   static const schemaName = 'handlers.CalculatorUsageEnvelope';
   final Map<String, dynamic> value;
@@ -72,9 +75,11 @@ final class HandlersCalculatorUsageEnvelope {
 
 final class HandlersClinicalProtocolEnvelope {
   HandlersClinicalProtocolEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersClinicalProtocolEnvelope.fromJson(Map<String, dynamic> json) => HandlersClinicalProtocolEnvelope(json);
+  factory HandlersClinicalProtocolEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersClinicalProtocolEnvelope(json);
 
   static const schemaName = 'handlers.ClinicalProtocolEnvelope';
   final Map<String, dynamic> value;
@@ -90,11 +95,33 @@ final class HandlersClinicalProtocolEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersDocumentationEnvelope {
+  HandlersDocumentationEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersDocumentationEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDocumentationEnvelope(json);
+
+  static const schemaName = 'handlers.DocumentationEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsDocumentation? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsDocumentation.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersDownloadURLEnvelope {
   HandlersDownloadURLEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDownloadURLEnvelope.fromJson(Map<String, dynamic> json) => HandlersDownloadURLEnvelope(json);
+  factory HandlersDownloadURLEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDownloadURLEnvelope(json);
 
   static const schemaName = 'handlers.DownloadURLEnvelope';
   final Map<String, dynamic> value;
@@ -112,9 +139,10 @@ final class HandlersDownloadURLEnvelope {
 
 final class HandlersDownloadURLResult {
   HandlersDownloadURLResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDownloadURLResult.fromJson(Map<String, dynamic> json) => HandlersDownloadURLResult(json);
+  factory HandlersDownloadURLResult.fromJson(Map<String, dynamic> json) =>
+      HandlersDownloadURLResult(json);
 
   static const schemaName = 'handlers.DownloadURLResult';
   final Map<String, dynamic> value;
@@ -126,9 +154,10 @@ final class HandlersDownloadURLResult {
 
 final class HandlersDrugCategoryEnvelope {
   HandlersDrugCategoryEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDrugCategoryEnvelope.fromJson(Map<String, dynamic> json) => HandlersDrugCategoryEnvelope(json);
+  factory HandlersDrugCategoryEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDrugCategoryEnvelope(json);
 
   static const schemaName = 'handlers.DrugCategoryEnvelope';
   final Map<String, dynamic> value;
@@ -146,9 +175,10 @@ final class HandlersDrugCategoryEnvelope {
 
 final class HandlersDrugClassEnvelope {
   HandlersDrugClassEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDrugClassEnvelope.fromJson(Map<String, dynamic> json) => HandlersDrugClassEnvelope(json);
+  factory HandlersDrugClassEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDrugClassEnvelope(json);
 
   static const schemaName = 'handlers.DrugClassEnvelope';
   final Map<String, dynamic> value;
@@ -166,9 +196,10 @@ final class HandlersDrugClassEnvelope {
 
 final class HandlersDrugEnvelope {
   HandlersDrugEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDrugEnvelope.fromJson(Map<String, dynamic> json) => HandlersDrugEnvelope(json);
+  factory HandlersDrugEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDrugEnvelope(json);
 
   static const schemaName = 'handlers.DrugEnvelope';
   final Map<String, dynamic> value;
@@ -186,9 +217,10 @@ final class HandlersDrugEnvelope {
 
 final class HandlersDrugTagEnvelope {
   HandlersDrugTagEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDrugTagEnvelope.fromJson(Map<String, dynamic> json) => HandlersDrugTagEnvelope(json);
+  factory HandlersDrugTagEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDrugTagEnvelope(json);
 
   static const schemaName = 'handlers.DrugTagEnvelope';
   final Map<String, dynamic> value;
@@ -206,9 +238,10 @@ final class HandlersDrugTagEnvelope {
 
 final class HandlersDrugUsageEnvelope {
   HandlersDrugUsageEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersDrugUsageEnvelope.fromJson(Map<String, dynamic> json) => HandlersDrugUsageEnvelope(json);
+  factory HandlersDrugUsageEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDrugUsageEnvelope(json);
 
   static const schemaName = 'handlers.DrugUsageEnvelope';
   final Map<String, dynamic> value;
@@ -226,9 +259,11 @@ final class HandlersDrugUsageEnvelope {
 
 final class HandlersEmailVerificationConfirmRequest {
   HandlersEmailVerificationConfirmRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersEmailVerificationConfirmRequest.fromJson(Map<String, dynamic> json) => HandlersEmailVerificationConfirmRequest(json);
+  factory HandlersEmailVerificationConfirmRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersEmailVerificationConfirmRequest(json);
 
   static const schemaName = 'handlers.EmailVerificationConfirmRequest';
   final Map<String, dynamic> value;
@@ -240,9 +275,11 @@ final class HandlersEmailVerificationConfirmRequest {
 
 final class HandlersEmailVerificationRequest {
   HandlersEmailVerificationRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersEmailVerificationRequest.fromJson(Map<String, dynamic> json) => HandlersEmailVerificationRequest(json);
+  factory HandlersEmailVerificationRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersEmailVerificationRequest(json);
 
   static const schemaName = 'handlers.EmailVerificationRequest';
   final Map<String, dynamic> value;
@@ -254,9 +291,10 @@ final class HandlersEmailVerificationRequest {
 
 final class HandlersErrorResponse {
   HandlersErrorResponse(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersErrorResponse.fromJson(Map<String, dynamic> json) => HandlersErrorResponse(json);
+  factory HandlersErrorResponse.fromJson(Map<String, dynamic> json) =>
+      HandlersErrorResponse(json);
 
   static const schemaName = 'handlers.ErrorResponse';
   final Map<String, dynamic> value;
@@ -268,11 +306,55 @@ final class HandlersErrorResponse {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersFAQEnvelope {
+  HandlersFAQEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFAQEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersFAQEnvelope(json);
+
+  static const schemaName = 'handlers.FAQEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsFAQ? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsFAQ.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFAQTagEnvelope {
+  HandlersFAQTagEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFAQTagEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersFAQTagEnvelope(json);
+
+  static const schemaName = 'handlers.FAQTagEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsFAQTag? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsFAQTag.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersGuidelineDocumentEnvelope {
   HandlersGuidelineDocumentEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersGuidelineDocumentEnvelope.fromJson(Map<String, dynamic> json) => HandlersGuidelineDocumentEnvelope(json);
+  factory HandlersGuidelineDocumentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersGuidelineDocumentEnvelope(json);
 
   static const schemaName = 'handlers.GuidelineDocumentEnvelope';
   final Map<String, dynamic> value;
@@ -290,9 +372,11 @@ final class HandlersGuidelineDocumentEnvelope {
 
 final class HandlersGuidelineVersionEnvelope {
   HandlersGuidelineVersionEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersGuidelineVersionEnvelope.fromJson(Map<String, dynamic> json) => HandlersGuidelineVersionEnvelope(json);
+  factory HandlersGuidelineVersionEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersGuidelineVersionEnvelope(json);
 
   static const schemaName = 'handlers.GuidelineVersionEnvelope';
   final Map<String, dynamic> value;
@@ -310,9 +394,10 @@ final class HandlersGuidelineVersionEnvelope {
 
 final class HandlersIngestionJobEnvelope {
   HandlersIngestionJobEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersIngestionJobEnvelope.fromJson(Map<String, dynamic> json) => HandlersIngestionJobEnvelope(json);
+  factory HandlersIngestionJobEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersIngestionJobEnvelope(json);
 
   static const schemaName = 'handlers.IngestionJobEnvelope';
   final Map<String, dynamic> value;
@@ -330,9 +415,10 @@ final class HandlersIngestionJobEnvelope {
 
 final class HandlersJSONMap {
   HandlersJSONMap(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersJSONMap.fromJson(Map<String, dynamic> json) => HandlersJSONMap(json);
+  factory HandlersJSONMap.fromJson(Map<String, dynamic> json) =>
+      HandlersJSONMap(json);
 
   static const schemaName = 'handlers.JSONMap';
   final Map<String, dynamic> value;
@@ -342,9 +428,10 @@ final class HandlersJSONMap {
 
 final class HandlersLanguageEnvelope {
   HandlersLanguageEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLanguageEnvelope.fromJson(Map<String, dynamic> json) => HandlersLanguageEnvelope(json);
+  factory HandlersLanguageEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersLanguageEnvelope(json);
 
   static const schemaName = 'handlers.LanguageEnvelope';
   final Map<String, dynamic> value;
@@ -362,9 +449,10 @@ final class HandlersLanguageEnvelope {
 
 final class HandlersLegacyOverviewResult {
   HandlersLegacyOverviewResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLegacyOverviewResult.fromJson(Map<String, dynamic> json) => HandlersLegacyOverviewResult(json);
+  factory HandlersLegacyOverviewResult.fromJson(Map<String, dynamic> json) =>
+      HandlersLegacyOverviewResult(json);
 
   static const schemaName = 'handlers.LegacyOverviewResult';
   final Map<String, dynamic> value;
@@ -394,9 +482,10 @@ final class HandlersLegacyOverviewResult {
 
 final class HandlersLegacyStatsResult {
   HandlersLegacyStatsResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLegacyStatsResult.fromJson(Map<String, dynamic> json) => HandlersLegacyStatsResult(json);
+  factory HandlersLegacyStatsResult.fromJson(Map<String, dynamic> json) =>
+      HandlersLegacyStatsResult(json);
 
   static const schemaName = 'handlers.LegacyStatsResult';
   final Map<String, dynamic> value;
@@ -423,18 +512,21 @@ final class HandlersLegacyStatsResult {
 
   int? get totalUsers => (value['total_users'] as num?)?.toInt();
 
-  int? get unreadMessagesCount => (value['unread_messages_count'] as num?)?.toInt();
+  int? get unreadMessagesCount =>
+      (value['unread_messages_count'] as num?)?.toInt();
 
-  int? get userConversationsCount => (value['user_conversations_count'] as num?)?.toInt();
+  int? get userConversationsCount =>
+      (value['user_conversations_count'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
 final class HandlersLegacyTreeResult {
   HandlersLegacyTreeResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLegacyTreeResult.fromJson(Map<String, dynamic> json) => HandlersLegacyTreeResult(json);
+  factory HandlersLegacyTreeResult.fromJson(Map<String, dynamic> json) =>
+      HandlersLegacyTreeResult(json);
 
   static const schemaName = 'handlers.LegacyTreeResult';
   final Map<String, dynamic> value;
@@ -442,7 +534,10 @@ final class HandlersLegacyTreeResult {
   List<ServicesTreeNode> get data {
     final raw = value['data'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesTreeNode.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesTreeNode.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get level => (value['level'] as num?)?.toInt();
@@ -454,9 +549,10 @@ final class HandlersLegacyTreeResult {
 
 final class HandlersLoginEnvelope {
   HandlersLoginEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLoginEnvelope.fromJson(Map<String, dynamic> json) => HandlersLoginEnvelope(json);
+  factory HandlersLoginEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersLoginEnvelope(json);
 
   static const schemaName = 'handlers.LoginEnvelope';
   final Map<String, dynamic> value;
@@ -474,9 +570,10 @@ final class HandlersLoginEnvelope {
 
 final class HandlersLoginRequest {
   HandlersLoginRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLoginRequest.fromJson(Map<String, dynamic> json) => HandlersLoginRequest(json);
+  factory HandlersLoginRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersLoginRequest(json);
 
   static const schemaName = 'handlers.LoginRequest';
   final Map<String, dynamic> value;
@@ -490,9 +587,10 @@ final class HandlersLoginRequest {
 
 final class HandlersLogoutEnvelope {
   HandlersLogoutEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLogoutEnvelope.fromJson(Map<String, dynamic> json) => HandlersLogoutEnvelope(json);
+  factory HandlersLogoutEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersLogoutEnvelope(json);
 
   static const schemaName = 'handlers.LogoutEnvelope';
   final Map<String, dynamic> value;
@@ -510,9 +608,10 @@ final class HandlersLogoutEnvelope {
 
 final class HandlersLogoutResult {
   HandlersLogoutResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersLogoutResult.fromJson(Map<String, dynamic> json) => HandlersLogoutResult(json);
+  factory HandlersLogoutResult.fromJson(Map<String, dynamic> json) =>
+      HandlersLogoutResult(json);
 
   static const schemaName = 'handlers.LogoutResult';
   final Map<String, dynamic> value;
@@ -524,9 +623,10 @@ final class HandlersLogoutResult {
 
 final class HandlersManifestEnvelope {
   HandlersManifestEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersManifestEnvelope.fromJson(Map<String, dynamic> json) => HandlersManifestEnvelope(json);
+  factory HandlersManifestEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersManifestEnvelope(json);
 
   static const schemaName = 'handlers.ManifestEnvelope';
   final Map<String, dynamic> value;
@@ -544,9 +644,10 @@ final class HandlersManifestEnvelope {
 
 final class HandlersMarkdownUpdateEnvelope {
   HandlersMarkdownUpdateEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersMarkdownUpdateEnvelope.fromJson(Map<String, dynamic> json) => HandlersMarkdownUpdateEnvelope(json);
+  factory HandlersMarkdownUpdateEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersMarkdownUpdateEnvelope(json);
 
   static const schemaName = 'handlers.MarkdownUpdateEnvelope';
   final Map<String, dynamic> value;
@@ -564,9 +665,10 @@ final class HandlersMarkdownUpdateEnvelope {
 
 final class HandlersMarkdownUpdateResult {
   HandlersMarkdownUpdateResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersMarkdownUpdateResult.fromJson(Map<String, dynamic> json) => HandlersMarkdownUpdateResult(json);
+  factory HandlersMarkdownUpdateResult.fromJson(Map<String, dynamic> json) =>
+      HandlersMarkdownUpdateResult(json);
 
   static const schemaName = 'handlers.MarkdownUpdateResult';
   final Map<String, dynamic> value;
@@ -580,9 +682,11 @@ final class HandlersMarkdownUpdateResult {
 
 final class HandlersNotificationCampaignEnvelope {
   HandlersNotificationCampaignEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersNotificationCampaignEnvelope.fromJson(Map<String, dynamic> json) => HandlersNotificationCampaignEnvelope(json);
+  factory HandlersNotificationCampaignEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationCampaignEnvelope(json);
 
   static const schemaName = 'handlers.NotificationCampaignEnvelope';
   final Map<String, dynamic> value;
@@ -600,9 +704,10 @@ final class HandlersNotificationCampaignEnvelope {
 
 final class HandlersNotificationEnvelope {
   HandlersNotificationEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersNotificationEnvelope.fromJson(Map<String, dynamic> json) => HandlersNotificationEnvelope(json);
+  factory HandlersNotificationEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersNotificationEnvelope(json);
 
   static const schemaName = 'handlers.NotificationEnvelope';
   final Map<String, dynamic> value;
@@ -620,9 +725,10 @@ final class HandlersNotificationEnvelope {
 
 final class HandlersNotificationStatusInput {
   HandlersNotificationStatusInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersNotificationStatusInput.fromJson(Map<String, dynamic> json) => HandlersNotificationStatusInput(json);
+  factory HandlersNotificationStatusInput.fromJson(Map<String, dynamic> json) =>
+      HandlersNotificationStatusInput(json);
 
   static const schemaName = 'handlers.NotificationStatusInput';
   final Map<String, dynamic> value;
@@ -634,9 +740,11 @@ final class HandlersNotificationStatusInput {
 
 final class HandlersNotificationTemplateEnvelope {
   HandlersNotificationTemplateEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersNotificationTemplateEnvelope.fromJson(Map<String, dynamic> json) => HandlersNotificationTemplateEnvelope(json);
+  factory HandlersNotificationTemplateEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationTemplateEnvelope(json);
 
   static const schemaName = 'handlers.NotificationTemplateEnvelope';
   final Map<String, dynamic> value;
@@ -654,9 +762,10 @@ final class HandlersNotificationTemplateEnvelope {
 
 final class HandlersPaginatedCalculators {
   HandlersPaginatedCalculators(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedCalculators.fromJson(Map<String, dynamic> json) => HandlersPaginatedCalculators(json);
+  factory HandlersPaginatedCalculators.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedCalculators(json);
 
   static const schemaName = 'handlers.PaginatedCalculators';
   final Map<String, dynamic> value;
@@ -664,7 +773,10 @@ final class HandlersPaginatedCalculators {
   List<ModelsCalculator> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsCalculator.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsCalculator.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -680,9 +792,11 @@ final class HandlersPaginatedCalculators {
 
 final class HandlersPaginatedCalculatorsEnvelope {
   HandlersPaginatedCalculatorsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedCalculatorsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedCalculatorsEnvelope(json);
+  factory HandlersPaginatedCalculatorsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedCalculatorsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedCalculatorsEnvelope';
   final Map<String, dynamic> value;
@@ -700,9 +814,11 @@ final class HandlersPaginatedCalculatorsEnvelope {
 
 final class HandlersPaginatedClinicalProtocols {
   HandlersPaginatedClinicalProtocols(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedClinicalProtocols.fromJson(Map<String, dynamic> json) => HandlersPaginatedClinicalProtocols(json);
+  factory HandlersPaginatedClinicalProtocols.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedClinicalProtocols(json);
 
   static const schemaName = 'handlers.PaginatedClinicalProtocols';
   final Map<String, dynamic> value;
@@ -710,7 +826,10 @@ final class HandlersPaginatedClinicalProtocols {
   List<ModelsClinicalProtocol> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsClinicalProtocol.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsClinicalProtocol.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -726,9 +845,11 @@ final class HandlersPaginatedClinicalProtocols {
 
 final class HandlersPaginatedClinicalProtocolsEnvelope {
   HandlersPaginatedClinicalProtocolsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedClinicalProtocolsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedClinicalProtocolsEnvelope(json);
+  factory HandlersPaginatedClinicalProtocolsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedClinicalProtocolsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedClinicalProtocolsEnvelope';
   final Map<String, dynamic> value;
@@ -744,11 +865,35 @@ final class HandlersPaginatedClinicalProtocolsEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedDocumentationEnvelope {
+  HandlersPaginatedDocumentationEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedDocumentationEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedDocumentationEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedDocumentationEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsDocumentation? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsDocumentation.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedDrugCategoriesEnvelope {
   HandlersPaginatedDrugCategoriesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedDrugCategoriesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedDrugCategoriesEnvelope(json);
+  factory HandlersPaginatedDrugCategoriesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedDrugCategoriesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedDrugCategoriesEnvelope';
   final Map<String, dynamic> value;
@@ -762,9 +907,11 @@ final class HandlersPaginatedDrugCategoriesEnvelope {
 
 final class HandlersPaginatedDrugClassesEnvelope {
   HandlersPaginatedDrugClassesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedDrugClassesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedDrugClassesEnvelope(json);
+  factory HandlersPaginatedDrugClassesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedDrugClassesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedDrugClassesEnvelope';
   final Map<String, dynamic> value;
@@ -778,9 +925,11 @@ final class HandlersPaginatedDrugClassesEnvelope {
 
 final class HandlersPaginatedDrugTagsEnvelope {
   HandlersPaginatedDrugTagsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedDrugTagsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedDrugTagsEnvelope(json);
+  factory HandlersPaginatedDrugTagsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedDrugTagsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedDrugTagsEnvelope';
   final Map<String, dynamic> value;
@@ -794,9 +943,10 @@ final class HandlersPaginatedDrugTagsEnvelope {
 
 final class HandlersPaginatedDrugs {
   HandlersPaginatedDrugs(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedDrugs.fromJson(Map<String, dynamic> json) => HandlersPaginatedDrugs(json);
+  factory HandlersPaginatedDrugs.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedDrugs(json);
 
   static const schemaName = 'handlers.PaginatedDrugs';
   final Map<String, dynamic> value;
@@ -804,7 +954,10 @@ final class HandlersPaginatedDrugs {
   List<ModelsDrug> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsDrug.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDrug.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -820,9 +973,10 @@ final class HandlersPaginatedDrugs {
 
 final class HandlersPaginatedDrugsEnvelope {
   HandlersPaginatedDrugsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedDrugsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedDrugsEnvelope(json);
+  factory HandlersPaginatedDrugsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedDrugsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedDrugsEnvelope';
   final Map<String, dynamic> value;
@@ -838,11 +992,56 @@ final class HandlersPaginatedDrugsEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedFAQTagsEnvelope {
+  HandlersPaginatedFAQTagsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedFAQTagsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedFAQTagsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedFAQTagsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsFAQTag? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsFAQTag.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedFAQsEnvelope {
+  HandlersPaginatedFAQsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedFAQsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedFAQsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedFAQsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsFAQ? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsFAQ.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedGuidelineChunks {
   HandlersPaginatedGuidelineChunks(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineChunks.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineChunks(json);
+  factory HandlersPaginatedGuidelineChunks.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineChunks(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineChunks';
   final Map<String, dynamic> value;
@@ -850,7 +1049,10 @@ final class HandlersPaginatedGuidelineChunks {
   List<ModelsGuidelineChunk> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsGuidelineChunk.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineChunk.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -866,9 +1068,11 @@ final class HandlersPaginatedGuidelineChunks {
 
 final class HandlersPaginatedGuidelineChunksEnvelope {
   HandlersPaginatedGuidelineChunksEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineChunksEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineChunksEnvelope(json);
+  factory HandlersPaginatedGuidelineChunksEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineChunksEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineChunksEnvelope';
   final Map<String, dynamic> value;
@@ -886,9 +1090,11 @@ final class HandlersPaginatedGuidelineChunksEnvelope {
 
 final class HandlersPaginatedGuidelineDocuments {
   HandlersPaginatedGuidelineDocuments(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineDocuments.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineDocuments(json);
+  factory HandlersPaginatedGuidelineDocuments.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineDocuments(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineDocuments';
   final Map<String, dynamic> value;
@@ -896,7 +1102,10 @@ final class HandlersPaginatedGuidelineDocuments {
   List<ModelsGuidelineDocument> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsGuidelineDocument.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineDocument.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -912,9 +1121,11 @@ final class HandlersPaginatedGuidelineDocuments {
 
 final class HandlersPaginatedGuidelineDocumentsEnvelope {
   HandlersPaginatedGuidelineDocumentsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineDocumentsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineDocumentsEnvelope(json);
+  factory HandlersPaginatedGuidelineDocumentsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineDocumentsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineDocumentsEnvelope';
   final Map<String, dynamic> value;
@@ -932,9 +1143,11 @@ final class HandlersPaginatedGuidelineDocumentsEnvelope {
 
 final class HandlersPaginatedGuidelineSections {
   HandlersPaginatedGuidelineSections(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineSections.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineSections(json);
+  factory HandlersPaginatedGuidelineSections.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineSections(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineSections';
   final Map<String, dynamic> value;
@@ -942,7 +1155,10 @@ final class HandlersPaginatedGuidelineSections {
   List<ModelsGuidelineSection> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsGuidelineSection.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineSection.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -958,9 +1174,11 @@ final class HandlersPaginatedGuidelineSections {
 
 final class HandlersPaginatedGuidelineSectionsEnvelope {
   HandlersPaginatedGuidelineSectionsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedGuidelineSectionsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedGuidelineSectionsEnvelope(json);
+  factory HandlersPaginatedGuidelineSectionsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedGuidelineSectionsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedGuidelineSectionsEnvelope';
   final Map<String, dynamic> value;
@@ -978,9 +1196,10 @@ final class HandlersPaginatedGuidelineSectionsEnvelope {
 
 final class HandlersPaginatedLanguages {
   HandlersPaginatedLanguages(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedLanguages.fromJson(Map<String, dynamic> json) => HandlersPaginatedLanguages(json);
+  factory HandlersPaginatedLanguages.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedLanguages(json);
 
   static const schemaName = 'handlers.PaginatedLanguages';
   final Map<String, dynamic> value;
@@ -988,7 +1207,10 @@ final class HandlersPaginatedLanguages {
   List<ModelsLanguage> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsLanguage.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsLanguage.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -1004,9 +1226,11 @@ final class HandlersPaginatedLanguages {
 
 final class HandlersPaginatedLanguagesEnvelope {
   HandlersPaginatedLanguagesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedLanguagesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedLanguagesEnvelope(json);
+  factory HandlersPaginatedLanguagesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedLanguagesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedLanguagesEnvelope';
   final Map<String, dynamic> value;
@@ -1024,9 +1248,11 @@ final class HandlersPaginatedLanguagesEnvelope {
 
 final class HandlersPaginatedNotificationCampaigns {
   HandlersPaginatedNotificationCampaigns(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotificationCampaigns.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotificationCampaigns(json);
+  factory HandlersPaginatedNotificationCampaigns.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationCampaigns(json);
 
   static const schemaName = 'handlers.PaginatedNotificationCampaigns';
   final Map<String, dynamic> value;
@@ -1034,7 +1260,10 @@ final class HandlersPaginatedNotificationCampaigns {
   List<ModelsNotificationCampaign> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsNotificationCampaign.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsNotificationCampaign.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -1050,9 +1279,11 @@ final class HandlersPaginatedNotificationCampaigns {
 
 final class HandlersPaginatedNotificationCampaignsEnvelope {
   HandlersPaginatedNotificationCampaignsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotificationCampaignsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotificationCampaignsEnvelope(json);
+  factory HandlersPaginatedNotificationCampaignsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationCampaignsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedNotificationCampaignsEnvelope';
   final Map<String, dynamic> value;
@@ -1070,9 +1301,11 @@ final class HandlersPaginatedNotificationCampaignsEnvelope {
 
 final class HandlersPaginatedNotificationTemplates {
   HandlersPaginatedNotificationTemplates(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotificationTemplates.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotificationTemplates(json);
+  factory HandlersPaginatedNotificationTemplates.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationTemplates(json);
 
   static const schemaName = 'handlers.PaginatedNotificationTemplates';
   final Map<String, dynamic> value;
@@ -1080,7 +1313,10 @@ final class HandlersPaginatedNotificationTemplates {
   List<ModelsNotificationTemplate> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsNotificationTemplate.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsNotificationTemplate.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -1096,9 +1332,11 @@ final class HandlersPaginatedNotificationTemplates {
 
 final class HandlersPaginatedNotificationTemplatesEnvelope {
   HandlersPaginatedNotificationTemplatesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotificationTemplatesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotificationTemplatesEnvelope(json);
+  factory HandlersPaginatedNotificationTemplatesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationTemplatesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedNotificationTemplatesEnvelope';
   final Map<String, dynamic> value;
@@ -1116,9 +1354,10 @@ final class HandlersPaginatedNotificationTemplatesEnvelope {
 
 final class HandlersPaginatedNotifications {
   HandlersPaginatedNotifications(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotifications.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotifications(json);
+  factory HandlersPaginatedNotifications.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedNotifications(json);
 
   static const schemaName = 'handlers.PaginatedNotifications';
   final Map<String, dynamic> value;
@@ -1126,7 +1365,10 @@ final class HandlersPaginatedNotifications {
   List<ModelsNotification> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsNotification.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsNotification.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -1142,9 +1384,11 @@ final class HandlersPaginatedNotifications {
 
 final class HandlersPaginatedNotificationsEnvelope {
   HandlersPaginatedNotificationsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedNotificationsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedNotificationsEnvelope(json);
+  factory HandlersPaginatedNotificationsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedNotificationsEnvelope';
   final Map<String, dynamic> value;
@@ -1162,9 +1406,10 @@ final class HandlersPaginatedNotificationsEnvelope {
 
 final class HandlersPaginatedRolesEnvelope {
   HandlersPaginatedRolesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedRolesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedRolesEnvelope(json);
+  factory HandlersPaginatedRolesEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedRolesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedRolesEnvelope';
   final Map<String, dynamic> value;
@@ -1182,9 +1427,10 @@ final class HandlersPaginatedRolesEnvelope {
 
 final class HandlersPaginatedSettings {
   HandlersPaginatedSettings(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedSettings.fromJson(Map<String, dynamic> json) => HandlersPaginatedSettings(json);
+  factory HandlersPaginatedSettings.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedSettings(json);
 
   static const schemaName = 'handlers.PaginatedSettings';
   final Map<String, dynamic> value;
@@ -1192,7 +1438,10 @@ final class HandlersPaginatedSettings {
   List<ModelsSetting> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsSetting.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsSetting.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -1208,9 +1457,11 @@ final class HandlersPaginatedSettings {
 
 final class HandlersPaginatedSettingsEnvelope {
   HandlersPaginatedSettingsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedSettingsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedSettingsEnvelope(json);
+  factory HandlersPaginatedSettingsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedSettingsEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedSettingsEnvelope';
   final Map<String, dynamic> value;
@@ -1226,11 +1477,57 @@ final class HandlersPaginatedSettingsEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedSupportRepliesEnvelope {
+  HandlersPaginatedSupportRepliesEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedSupportRepliesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedSupportRepliesEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedSupportRepliesEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsSupportTicketReply? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsSupportTicketReply.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedSupportTicketsEnvelope {
+  HandlersPaginatedSupportTicketsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedSupportTicketsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedSupportTicketsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedSupportTicketsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsSupportTicket? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsSupportTicket.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedTherapeuticCategoriesEnvelope {
   HandlersPaginatedTherapeuticCategoriesEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedTherapeuticCategoriesEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedTherapeuticCategoriesEnvelope(json);
+  factory HandlersPaginatedTherapeuticCategoriesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedTherapeuticCategoriesEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedTherapeuticCategoriesEnvelope';
   final Map<String, dynamic> value;
@@ -1244,9 +1541,10 @@ final class HandlersPaginatedTherapeuticCategoriesEnvelope {
 
 final class HandlersPaginatedUsersEnvelope {
   HandlersPaginatedUsersEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPaginatedUsersEnvelope.fromJson(Map<String, dynamic> json) => HandlersPaginatedUsersEnvelope(json);
+  factory HandlersPaginatedUsersEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedUsersEnvelope(json);
 
   static const schemaName = 'handlers.PaginatedUsersEnvelope';
   final Map<String, dynamic> value;
@@ -1264,9 +1562,10 @@ final class HandlersPaginatedUsersEnvelope {
 
 final class HandlersPasswordChangeRequest {
   HandlersPasswordChangeRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPasswordChangeRequest.fromJson(Map<String, dynamic> json) => HandlersPasswordChangeRequest(json);
+  factory HandlersPasswordChangeRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersPasswordChangeRequest(json);
 
   static const schemaName = 'handlers.PasswordChangeRequest';
   final Map<String, dynamic> value;
@@ -1282,9 +1581,11 @@ final class HandlersPasswordChangeRequest {
 
 final class HandlersPasswordResetConfirmRequest {
   HandlersPasswordResetConfirmRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPasswordResetConfirmRequest.fromJson(Map<String, dynamic> json) => HandlersPasswordResetConfirmRequest(json);
+  factory HandlersPasswordResetConfirmRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPasswordResetConfirmRequest(json);
 
   static const schemaName = 'handlers.PasswordResetConfirmRequest';
   final Map<String, dynamic> value;
@@ -1300,9 +1601,10 @@ final class HandlersPasswordResetConfirmRequest {
 
 final class HandlersPasswordResetRequest {
   HandlersPasswordResetRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPasswordResetRequest.fromJson(Map<String, dynamic> json) => HandlersPasswordResetRequest(json);
+  factory HandlersPasswordResetRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersPasswordResetRequest(json);
 
   static const schemaName = 'handlers.PasswordResetRequest';
   final Map<String, dynamic> value;
@@ -1314,9 +1616,11 @@ final class HandlersPasswordResetRequest {
 
 final class HandlersPermissionDocumentEnvelope {
   HandlersPermissionDocumentEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPermissionDocumentEnvelope.fromJson(Map<String, dynamic> json) => HandlersPermissionDocumentEnvelope(json);
+  factory HandlersPermissionDocumentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPermissionDocumentEnvelope(json);
 
   static const schemaName = 'handlers.PermissionDocumentEnvelope';
   final Map<String, dynamic> value;
@@ -1330,9 +1634,10 @@ final class HandlersPermissionDocumentEnvelope {
 
 final class HandlersPermissionsEnvelope {
   HandlersPermissionsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPermissionsEnvelope.fromJson(Map<String, dynamic> json) => HandlersPermissionsEnvelope(json);
+  factory HandlersPermissionsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPermissionsEnvelope(json);
 
   static const schemaName = 'handlers.PermissionsEnvelope';
   final Map<String, dynamic> value;
@@ -1340,7 +1645,10 @@ final class HandlersPermissionsEnvelope {
   List<ModelsPermission> get data {
     final raw = value['data'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsPermission.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsPermission.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   bool? get success => value['success'] as bool?;
@@ -1350,9 +1658,10 @@ final class HandlersPermissionsEnvelope {
 
 final class HandlersProtocolRunEnvelope {
   HandlersProtocolRunEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersProtocolRunEnvelope.fromJson(Map<String, dynamic> json) => HandlersProtocolRunEnvelope(json);
+  factory HandlersProtocolRunEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersProtocolRunEnvelope(json);
 
   static const schemaName = 'handlers.ProtocolRunEnvelope';
   final Map<String, dynamic> value;
@@ -1370,9 +1679,10 @@ final class HandlersProtocolRunEnvelope {
 
 final class HandlersPublishEnvelope {
   HandlersPublishEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPublishEnvelope.fromJson(Map<String, dynamic> json) => HandlersPublishEnvelope(json);
+  factory HandlersPublishEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPublishEnvelope(json);
 
   static const schemaName = 'handlers.PublishEnvelope';
   final Map<String, dynamic> value;
@@ -1390,9 +1700,10 @@ final class HandlersPublishEnvelope {
 
 final class HandlersPublishResult {
   HandlersPublishResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersPublishResult.fromJson(Map<String, dynamic> json) => HandlersPublishResult(json);
+  factory HandlersPublishResult.fromJson(Map<String, dynamic> json) =>
+      HandlersPublishResult(json);
 
   static const schemaName = 'handlers.PublishResult';
   final Map<String, dynamic> value;
@@ -1404,9 +1715,10 @@ final class HandlersPublishResult {
 
 final class HandlersRefreshRequest {
   HandlersRefreshRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersRefreshRequest.fromJson(Map<String, dynamic> json) => HandlersRefreshRequest(json);
+  factory HandlersRefreshRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersRefreshRequest(json);
 
   static const schemaName = 'handlers.RefreshRequest';
   final Map<String, dynamic> value;
@@ -1418,9 +1730,10 @@ final class HandlersRefreshRequest {
 
 final class HandlersRegisterRequest {
   HandlersRegisterRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersRegisterRequest.fromJson(Map<String, dynamic> json) => HandlersRegisterRequest(json);
+  factory HandlersRegisterRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersRegisterRequest(json);
 
   static const schemaName = 'handlers.RegisterRequest';
   final Map<String, dynamic> value;
@@ -1472,9 +1785,10 @@ final class HandlersRegisterRequest {
 
 final class HandlersRolePermissionsRequest {
   HandlersRolePermissionsRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersRolePermissionsRequest.fromJson(Map<String, dynamic> json) => HandlersRolePermissionsRequest(json);
+  factory HandlersRolePermissionsRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersRolePermissionsRequest(json);
 
   static const schemaName = 'handlers.RolePermissionsRequest';
   final Map<String, dynamic> value;
@@ -1486,9 +1800,10 @@ final class HandlersRolePermissionsRequest {
 
 final class HandlersRoleViewEnvelope {
   HandlersRoleViewEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersRoleViewEnvelope.fromJson(Map<String, dynamic> json) => HandlersRoleViewEnvelope(json);
+  factory HandlersRoleViewEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersRoleViewEnvelope(json);
 
   static const schemaName = 'handlers.RoleViewEnvelope';
   final Map<String, dynamic> value;
@@ -1506,9 +1821,10 @@ final class HandlersRoleViewEnvelope {
 
 final class HandlersSearchResultsEnvelope {
   HandlersSearchResultsEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersSearchResultsEnvelope.fromJson(Map<String, dynamic> json) => HandlersSearchResultsEnvelope(json);
+  factory HandlersSearchResultsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersSearchResultsEnvelope(json);
 
   static const schemaName = 'handlers.SearchResultsEnvelope';
   final Map<String, dynamic> value;
@@ -1516,7 +1832,10 @@ final class HandlersSearchResultsEnvelope {
   List<ServicesSearchResult> get data {
     final raw = value['data'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesSearchResult.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesSearchResult.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   bool? get success => value['success'] as bool?;
@@ -1526,9 +1845,10 @@ final class HandlersSearchResultsEnvelope {
 
 final class HandlersSettingEnvelope {
   HandlersSettingEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersSettingEnvelope.fromJson(Map<String, dynamic> json) => HandlersSettingEnvelope(json);
+  factory HandlersSettingEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersSettingEnvelope(json);
 
   static const schemaName = 'handlers.SettingEnvelope';
   final Map<String, dynamic> value;
@@ -1544,11 +1864,54 @@ final class HandlersSettingEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersSupportReplyEnvelope {
+  HandlersSupportReplyEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersSupportReplyEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersSupportReplyEnvelope(json);
+
+  static const schemaName = 'handlers.SupportReplyEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsSupportTicketReply? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsSupportTicketReply.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersSupportTicketEnvelope {
+  HandlersSupportTicketEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersSupportTicketEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersSupportTicketEnvelope(json);
+
+  static const schemaName = 'handlers.SupportTicketEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsSupportTicket? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsSupportTicket.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersSyncPackageEnvelope {
   HandlersSyncPackageEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersSyncPackageEnvelope.fromJson(Map<String, dynamic> json) => HandlersSyncPackageEnvelope(json);
+  factory HandlersSyncPackageEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersSyncPackageEnvelope(json);
 
   static const schemaName = 'handlers.SyncPackageEnvelope';
   final Map<String, dynamic> value;
@@ -1564,11 +1927,51 @@ final class HandlersSyncPackageEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersTagUsageRecalculationEnvelope {
+  HandlersTagUsageRecalculationEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersTagUsageRecalculationEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersTagUsageRecalculationEnvelope(json);
+
+  static const schemaName = 'handlers.TagUsageRecalculationEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersTagUsageRecalculationResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersTagUsageRecalculationResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersTagUsageRecalculationResult {
+  HandlersTagUsageRecalculationResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersTagUsageRecalculationResult.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersTagUsageRecalculationResult(json);
+
+  static const schemaName = 'handlers.TagUsageRecalculationResult';
+  final Map<String, dynamic> value;
+
+  bool? get updated => value['updated'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersTherapeuticCategoryEnvelope {
   HandlersTherapeuticCategoryEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersTherapeuticCategoryEnvelope.fromJson(Map<String, dynamic> json) => HandlersTherapeuticCategoryEnvelope(json);
+  factory HandlersTherapeuticCategoryEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersTherapeuticCategoryEnvelope(json);
 
   static const schemaName = 'handlers.TherapeuticCategoryEnvelope';
   final Map<String, dynamic> value;
@@ -1586,9 +1989,10 @@ final class HandlersTherapeuticCategoryEnvelope {
 
 final class HandlersUpdateMarkdownInput {
   HandlersUpdateMarkdownInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersUpdateMarkdownInput.fromJson(Map<String, dynamic> json) => HandlersUpdateMarkdownInput(json);
+  factory HandlersUpdateMarkdownInput.fromJson(Map<String, dynamic> json) =>
+      HandlersUpdateMarkdownInput(json);
 
   static const schemaName = 'handlers.UpdateMarkdownInput';
   final Map<String, dynamic> value;
@@ -1600,9 +2004,10 @@ final class HandlersUpdateMarkdownInput {
 
 final class HandlersUserEnvelope {
   HandlersUserEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersUserEnvelope.fromJson(Map<String, dynamic> json) => HandlersUserEnvelope(json);
+  factory HandlersUserEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersUserEnvelope(json);
 
   static const schemaName = 'handlers.UserEnvelope';
   final Map<String, dynamic> value;
@@ -1620,9 +2025,10 @@ final class HandlersUserEnvelope {
 
 final class HandlersUserViewEnvelope {
   HandlersUserViewEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersUserViewEnvelope.fromJson(Map<String, dynamic> json) => HandlersUserViewEnvelope(json);
+  factory HandlersUserViewEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersUserViewEnvelope(json);
 
   static const schemaName = 'handlers.UserViewEnvelope';
   final Map<String, dynamic> value;
@@ -1640,9 +2046,10 @@ final class HandlersUserViewEnvelope {
 
 final class HandlersVerificationResult {
   HandlersVerificationResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersVerificationResult.fromJson(Map<String, dynamic> json) => HandlersVerificationResult(json);
+  factory HandlersVerificationResult.fromJson(Map<String, dynamic> json) =>
+      HandlersVerificationResult(json);
 
   static const schemaName = 'handlers.VerificationResult';
   final Map<String, dynamic> value;
@@ -1654,9 +2061,11 @@ final class HandlersVerificationResult {
 
 final class HandlersVerificationResultEnvelope {
   HandlersVerificationResultEnvelope(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory HandlersVerificationResultEnvelope.fromJson(Map<String, dynamic> json) => HandlersVerificationResultEnvelope(json);
+  factory HandlersVerificationResultEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersVerificationResultEnvelope(json);
 
   static const schemaName = 'handlers.VerificationResultEnvelope';
   final Map<String, dynamic> value;
@@ -1674,9 +2083,10 @@ final class HandlersVerificationResultEnvelope {
 
 final class ModelsCalculator {
   ModelsCalculator(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsCalculator.fromJson(Map<String, dynamic> json) => ModelsCalculator(json);
+  factory ModelsCalculator.fromJson(Map<String, dynamic> json) =>
+      ModelsCalculator(json);
 
   static const schemaName = 'models.Calculator';
   final Map<String, dynamic> value;
@@ -1716,9 +2126,10 @@ final class ModelsCalculator {
 
 final class ModelsCalculatorUsageLog {
   ModelsCalculatorUsageLog(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsCalculatorUsageLog.fromJson(Map<String, dynamic> json) => ModelsCalculatorUsageLog(json);
+  factory ModelsCalculatorUsageLog.fromJson(Map<String, dynamic> json) =>
+      ModelsCalculatorUsageLog(json);
 
   static const schemaName = 'models.CalculatorUsageLog';
   final Map<String, dynamic> value;
@@ -1744,9 +2155,10 @@ final class ModelsCalculatorUsageLog {
 
 final class ModelsClinicalProtocol {
   ModelsClinicalProtocol(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsClinicalProtocol.fromJson(Map<String, dynamic> json) => ModelsClinicalProtocol(json);
+  factory ModelsClinicalProtocol.fromJson(Map<String, dynamic> json) =>
+      ModelsClinicalProtocol(json);
 
   static const schemaName = 'models.ClinicalProtocol';
   final Map<String, dynamic> value;
@@ -1776,9 +2188,40 @@ final class ModelsClinicalProtocol {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsDocumentation {
+  ModelsDocumentation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsDocumentation.fromJson(Map<String, dynamic> json) =>
+      ModelsDocumentation(json);
+
+  static const schemaName = 'models.Documentation';
+  final Map<String, dynamic> value;
+
+  String? get category => value['category']?.toString();
+
+  String? get content => value['content']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get tags => value['tags']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsDrug {
   ModelsDrug(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
   factory ModelsDrug.fromJson(Map<String, dynamic> json) => ModelsDrug(json);
 
@@ -1825,7 +2268,8 @@ final class ModelsDrug {
 
   String? get mechanismOfAction => value['mechanism_of_action']?.toString();
 
-  String? get monitoringParameters => value['monitoring_parameters']?.toString();
+  String? get monitoringParameters =>
+      value['monitoring_parameters']?.toString();
 
   String? get name => value['name']?.toString();
 
@@ -1837,7 +2281,8 @@ final class ModelsDrug {
 
   String? get reviewStatus => value['review_status']?.toString();
 
-  String? get routeOfAdministration => value['route_of_administration']?.toString();
+  String? get routeOfAdministration =>
+      value['route_of_administration']?.toString();
 
   String? get searchKeywords => value['search_keywords']?.toString();
 
@@ -1851,9 +2296,11 @@ final class ModelsDrug {
     return raw.whereType<String>().toList(growable: false);
   }
 
-  String? get therapeuticCategoryId => value['therapeutic_category_id']?.toString();
+  String? get therapeuticCategoryId =>
+      value['therapeutic_category_id']?.toString();
 
-  String? get therapeuticCategoryName => value['therapeutic_category_name']?.toString();
+  String? get therapeuticCategoryName =>
+      value['therapeutic_category_name']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -1868,9 +2315,10 @@ final class ModelsDrug {
 
 final class ModelsDrugCategory {
   ModelsDrugCategory(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsDrugCategory.fromJson(Map<String, dynamic> json) => ModelsDrugCategory(json);
+  factory ModelsDrugCategory.fromJson(Map<String, dynamic> json) =>
+      ModelsDrugCategory(json);
 
   static const schemaName = 'models.DrugCategory';
   final Map<String, dynamic> value;
@@ -1900,9 +2348,10 @@ final class ModelsDrugCategory {
 
 final class ModelsDrugClass {
   ModelsDrugClass(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsDrugClass.fromJson(Map<String, dynamic> json) => ModelsDrugClass(json);
+  factory ModelsDrugClass.fromJson(Map<String, dynamic> json) =>
+      ModelsDrugClass(json);
 
   static const schemaName = 'models.DrugClass';
   final Map<String, dynamic> value;
@@ -1926,9 +2375,10 @@ final class ModelsDrugClass {
 
 final class ModelsDrugTag {
   ModelsDrugTag(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsDrugTag.fromJson(Map<String, dynamic> json) => ModelsDrugTag(json);
+  factory ModelsDrugTag.fromJson(Map<String, dynamic> json) =>
+      ModelsDrugTag(json);
 
   static const schemaName = 'models.DrugTag';
   final Map<String, dynamic> value;
@@ -1956,9 +2406,10 @@ final class ModelsDrugTag {
 
 final class ModelsDrugUsageLog {
   ModelsDrugUsageLog(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsDrugUsageLog.fromJson(Map<String, dynamic> json) => ModelsDrugUsageLog(json);
+  factory ModelsDrugUsageLog.fromJson(Map<String, dynamic> json) =>
+      ModelsDrugUsageLog(json);
 
   static const schemaName = 'models.DrugUsageLog';
   final Map<String, dynamic> value;
@@ -1976,11 +2427,109 @@ final class ModelsDrugUsageLog {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsFAQ {
+  ModelsFAQ(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsFAQ.fromJson(Map<String, dynamic> json) => ModelsFAQ(json);
+
+  static const schemaName = 'models.FAQ';
+  final Map<String, dynamic> value;
+
+  String? get answer => value['answer']?.toString();
+
+  String? get authorEmail => value['author_email']?.toString();
+
+  String? get authorId => value['author_id']?.toString();
+
+  String? get authorName => value['author_name']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isFeatured => value['is_featured'] as bool?;
+
+  String? get keywords => value['keywords']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get question => value['question']?.toString();
+
+  List<String> get relatedFaqs {
+    final raw = value['related_faqs'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get reviewDue => value['review_due']?.toString();
+
+  String? get reviewerEmail => value['reviewer_email']?.toString();
+
+  String? get reviewerId => value['reviewer_id']?.toString();
+
+  String? get reviewerName => value['reviewer_name']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  List<String> get tags {
+    final raw = value['tags'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get targetAudience => value['target_audience']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsFAQTag {
+  ModelsFAQTag(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsFAQTag.fromJson(Map<String, dynamic> json) =>
+      ModelsFAQTag(json);
+
+  static const schemaName = 'models.FAQTag';
+  final Map<String, dynamic> value;
+
+  String? get color => value['color']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isActive => value['is_active'] as bool?;
+
+  String? get name => value['name']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  int? get usageCount => (value['usage_count'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsFacilityUsageLog {
   ModelsFacilityUsageLog(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsFacilityUsageLog.fromJson(Map<String, dynamic> json) => ModelsFacilityUsageLog(json);
+  factory ModelsFacilityUsageLog.fromJson(Map<String, dynamic> json) =>
+      ModelsFacilityUsageLog(json);
 
   static const schemaName = 'models.FacilityUsageLog';
   final Map<String, dynamic> value;
@@ -2000,9 +2549,10 @@ final class ModelsFacilityUsageLog {
 
 final class ModelsGuidelineChunk {
   ModelsGuidelineChunk(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsGuidelineChunk.fromJson(Map<String, dynamic> json) => ModelsGuidelineChunk(json);
+  factory ModelsGuidelineChunk.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineChunk(json);
 
   static const schemaName = 'models.GuidelineChunk';
   final Map<String, dynamic> value;
@@ -2042,9 +2592,10 @@ final class ModelsGuidelineChunk {
 
 final class ModelsGuidelineDocument {
   ModelsGuidelineDocument(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsGuidelineDocument.fromJson(Map<String, dynamic> json) => ModelsGuidelineDocument(json);
+  factory ModelsGuidelineDocument.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineDocument(json);
 
   static const schemaName = 'models.GuidelineDocument';
   final Map<String, dynamic> value;
@@ -2072,7 +2623,10 @@ final class ModelsGuidelineDocument {
   List<ModelsGuidelineVersion> get versions {
     final raw = value['versions'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsGuidelineVersion.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineVersion.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   Map<String, dynamic> toJson() => Map.of(value);
@@ -2080,9 +2634,10 @@ final class ModelsGuidelineDocument {
 
 final class ModelsGuidelineSection {
   ModelsGuidelineSection(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsGuidelineSection.fromJson(Map<String, dynamic> json) => ModelsGuidelineSection(json);
+  factory ModelsGuidelineSection.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineSection(json);
 
   static const schemaName = 'models.GuidelineSection';
   final Map<String, dynamic> value;
@@ -2118,9 +2673,10 @@ final class ModelsGuidelineSection {
 
 final class ModelsGuidelineVersion {
   ModelsGuidelineVersion(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsGuidelineVersion.fromJson(Map<String, dynamic> json) => ModelsGuidelineVersion(json);
+  factory ModelsGuidelineVersion.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineVersion(json);
 
   static const schemaName = 'models.GuidelineVersion';
   final Map<String, dynamic> value;
@@ -2150,7 +2706,10 @@ final class ModelsGuidelineVersion {
   List<ModelsGuidelineSection> get sections {
     final raw = value['sections'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsGuidelineSection.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineSection.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   String? get status => value['status']?.toString();
@@ -2164,9 +2723,10 @@ final class ModelsGuidelineVersion {
 
 final class ModelsIngestionJob {
   ModelsIngestionJob(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsIngestionJob.fromJson(Map<String, dynamic> json) => ModelsIngestionJob(json);
+  factory ModelsIngestionJob.fromJson(Map<String, dynamic> json) =>
+      ModelsIngestionJob(json);
 
   static const schemaName = 'models.IngestionJob';
   final Map<String, dynamic> value;
@@ -2198,9 +2758,10 @@ final class ModelsIngestionJob {
 
 final class ModelsLanguage {
   ModelsLanguage(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsLanguage.fromJson(Map<String, dynamic> json) => ModelsLanguage(json);
+  factory ModelsLanguage.fromJson(Map<String, dynamic> json) =>
+      ModelsLanguage(json);
 
   static const schemaName = 'models.Language';
   final Map<String, dynamic> value;
@@ -2225,7 +2786,8 @@ final class ModelsLanguage {
 
   String? get status => value['status']?.toString();
 
-  Map<String, dynamic> get translationsJson => _jsonMap(value['translations_json']);
+  Map<String, dynamic> get translationsJson =>
+      _jsonMap(value['translations_json']);
 
   String? get translationsUrl => value['translations_url']?.toString();
 
@@ -2238,9 +2800,10 @@ final class ModelsLanguage {
 
 final class ModelsNotification {
   ModelsNotification(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsNotification.fromJson(Map<String, dynamic> json) => ModelsNotification(json);
+  factory ModelsNotification.fromJson(Map<String, dynamic> json) =>
+      ModelsNotification(json);
 
   static const schemaName = 'models.Notification';
   final Map<String, dynamic> value;
@@ -2270,9 +2833,10 @@ final class ModelsNotification {
 
 final class ModelsNotificationCampaign {
   ModelsNotificationCampaign(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsNotificationCampaign.fromJson(Map<String, dynamic> json) => ModelsNotificationCampaign(json);
+  factory ModelsNotificationCampaign.fromJson(Map<String, dynamic> json) =>
+      ModelsNotificationCampaign(json);
 
   static const schemaName = 'models.NotificationCampaign';
   final Map<String, dynamic> value;
@@ -2326,9 +2890,10 @@ final class ModelsNotificationCampaign {
 
 final class ModelsNotificationTemplate {
   ModelsNotificationTemplate(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsNotificationTemplate.fromJson(Map<String, dynamic> json) => ModelsNotificationTemplate(json);
+  factory ModelsNotificationTemplate.fromJson(Map<String, dynamic> json) =>
+      ModelsNotificationTemplate(json);
 
   static const schemaName = 'models.NotificationTemplate';
   final Map<String, dynamic> value;
@@ -2368,9 +2933,10 @@ final class ModelsNotificationTemplate {
 
 final class ModelsPermission {
   ModelsPermission(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsPermission.fromJson(Map<String, dynamic> json) => ModelsPermission(json);
+  factory ModelsPermission.fromJson(Map<String, dynamic> json) =>
+      ModelsPermission(json);
 
   static const schemaName = 'models.Permission';
   final Map<String, dynamic> value;
@@ -2390,7 +2956,7 @@ final class ModelsPermission {
 
 final class ModelsRole {
   ModelsRole(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
   factory ModelsRole.fromJson(Map<String, dynamic> json) => ModelsRole(json);
 
@@ -2410,10 +2976,14 @@ final class ModelsRole {
   List<ModelsPermission> get permissions {
     final raw = value['permissions'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsPermission.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsPermission.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
-  Map<String, dynamic> get permissionsJson => _jsonMap(value['permissions_json']);
+  Map<String, dynamic> get permissionsJson =>
+      _jsonMap(value['permissions_json']);
 
   String? get roleKey => value['role_key']?.toString();
 
@@ -2424,9 +2994,10 @@ final class ModelsRole {
 
 final class ModelsSetting {
   ModelsSetting(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsSetting.fromJson(Map<String, dynamic> json) => ModelsSetting(json);
+  factory ModelsSetting.fromJson(Map<String, dynamic> json) =>
+      ModelsSetting(json);
 
   static const schemaName = 'models.Setting';
   final Map<String, dynamic> value;
@@ -2450,11 +3021,82 @@ final class ModelsSetting {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsSupportTicket {
+  ModelsSupportTicket(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsSupportTicket.fromJson(Map<String, dynamic> json) =>
+      ModelsSupportTicket(json);
+
+  static const schemaName = 'models.SupportTicket';
+  final Map<String, dynamic> value;
+
+  String? get assignedTo => value['assigned_to']?.toString();
+
+  String? get assigneeName => value['assignee_name']?.toString();
+
+  String? get category => value['category']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get subject => value['subject']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get userEmail => value['user_email']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  String? get userName => value['user_name']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsSupportTicketReply {
+  ModelsSupportTicketReply(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsSupportTicketReply.fromJson(Map<String, dynamic> json) =>
+      ModelsSupportTicketReply(json);
+
+  static const schemaName = 'models.SupportTicketReply';
+  final Map<String, dynamic> value;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isInternal => value['is_internal'] as bool?;
+
+  String? get message => value['message']?.toString();
+
+  String? get ticketId => value['ticket_id']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get userEmail => value['user_email']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  String? get userName => value['user_name']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsSyncPackage {
   ModelsSyncPackage(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsSyncPackage.fromJson(Map<String, dynamic> json) => ModelsSyncPackage(json);
+  factory ModelsSyncPackage.fromJson(Map<String, dynamic> json) =>
+      ModelsSyncPackage(json);
 
   static const schemaName = 'models.SyncPackage';
   final Map<String, dynamic> value;
@@ -2484,9 +3126,10 @@ final class ModelsSyncPackage {
 
 final class ModelsTherapeuticCategory {
   ModelsTherapeuticCategory(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ModelsTherapeuticCategory.fromJson(Map<String, dynamic> json) => ModelsTherapeuticCategory(json);
+  factory ModelsTherapeuticCategory.fromJson(Map<String, dynamic> json) =>
+      ModelsTherapeuticCategory(json);
 
   static const schemaName = 'models.TherapeuticCategory';
   final Map<String, dynamic> value;
@@ -2510,7 +3153,7 @@ final class ModelsTherapeuticCategory {
 
 final class ModelsUser {
   ModelsUser(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
   factory ModelsUser.fromJson(Map<String, dynamic> json) => ModelsUser(json);
 
@@ -2558,7 +3201,10 @@ final class ModelsUser {
   List<ModelsRole> get roles {
     final raw = value['roles'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsRole.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsRole.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   List<String> get specialization {
@@ -2580,9 +3226,10 @@ final class ModelsUser {
 
 final class ServicesAccountActionResult {
   ServicesAccountActionResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesAccountActionResult.fromJson(Map<String, dynamic> json) => ServicesAccountActionResult(json);
+  factory ServicesAccountActionResult.fromJson(Map<String, dynamic> json) =>
+      ServicesAccountActionResult(json);
 
   static const schemaName = 'services.AccountActionResult';
   final Map<String, dynamic> value;
@@ -2598,9 +3245,10 @@ final class ServicesAccountActionResult {
 
 final class ServicesAskRequest {
   ServicesAskRequest(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesAskRequest.fromJson(Map<String, dynamic> json) => ServicesAskRequest(json);
+  factory ServicesAskRequest.fromJson(Map<String, dynamic> json) =>
+      ServicesAskRequest(json);
 
   static const schemaName = 'services.AskRequest';
   final Map<String, dynamic> value;
@@ -2620,9 +3268,10 @@ final class ServicesAskRequest {
 
 final class ServicesAskResponse {
   ServicesAskResponse(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesAskResponse.fromJson(Map<String, dynamic> json) => ServicesAskResponse(json);
+  factory ServicesAskResponse.fromJson(Map<String, dynamic> json) =>
+      ServicesAskResponse(json);
 
   static const schemaName = 'services.AskResponse';
   final Map<String, dynamic> value;
@@ -2632,7 +3281,10 @@ final class ServicesAskResponse {
   List<ServicesCitation> get citations {
     final raw = value['citations'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesCitation.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesCitation.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   String? get sessionId => value['session_id']?.toString();
@@ -2642,9 +3294,10 @@ final class ServicesAskResponse {
 
 final class ServicesCitation {
   ServicesCitation(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCitation.fromJson(Map<String, dynamic> json) => ServicesCitation(json);
+  factory ServicesCitation.fromJson(Map<String, dynamic> json) =>
+      ServicesCitation(json);
 
   static const schemaName = 'services.Citation';
   final Map<String, dynamic> value;
@@ -2666,9 +3319,10 @@ final class ServicesCitation {
 
 final class ServicesCreateCalculatorInput {
   ServicesCreateCalculatorInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateCalculatorInput.fromJson(Map<String, dynamic> json) => ServicesCreateCalculatorInput(json);
+  factory ServicesCreateCalculatorInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateCalculatorInput(json);
 
   static const schemaName = 'services.CreateCalculatorInput';
   final Map<String, dynamic> value;
@@ -2698,9 +3352,10 @@ final class ServicesCreateCalculatorInput {
 
 final class ServicesCreateGuidelineInput {
   ServicesCreateGuidelineInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateGuidelineInput.fromJson(Map<String, dynamic> json) => ServicesCreateGuidelineInput(json);
+  factory ServicesCreateGuidelineInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateGuidelineInput(json);
 
   static const schemaName = 'services.CreateGuidelineInput';
   final Map<String, dynamic> value;
@@ -2722,9 +3377,10 @@ final class ServicesCreateGuidelineInput {
 
 final class ServicesCreateLanguageInput {
   ServicesCreateLanguageInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateLanguageInput.fromJson(Map<String, dynamic> json) => ServicesCreateLanguageInput(json);
+  factory ServicesCreateLanguageInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateLanguageInput(json);
 
   static const schemaName = 'services.CreateLanguageInput';
   final Map<String, dynamic> value;
@@ -2745,7 +3401,8 @@ final class ServicesCreateLanguageInput {
 
   String? get status => value['status']?.toString();
 
-  Map<String, dynamic> get translationsJson => _jsonMap(value['translations_json']);
+  Map<String, dynamic> get translationsJson =>
+      _jsonMap(value['translations_json']);
 
   String? get translationsUrl => value['translations_url']?.toString();
 
@@ -2756,9 +3413,10 @@ final class ServicesCreateLanguageInput {
 
 final class ServicesCreateProtocolInput {
   ServicesCreateProtocolInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateProtocolInput.fromJson(Map<String, dynamic> json) => ServicesCreateProtocolInput(json);
+  factory ServicesCreateProtocolInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateProtocolInput(json);
 
   static const schemaName = 'services.CreateProtocolInput';
   final Map<String, dynamic> value;
@@ -2780,9 +3438,10 @@ final class ServicesCreateProtocolInput {
 
 final class ServicesCreateSettingInput {
   ServicesCreateSettingInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateSettingInput.fromJson(Map<String, dynamic> json) => ServicesCreateSettingInput(json);
+  factory ServicesCreateSettingInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateSettingInput(json);
 
   static const schemaName = 'services.CreateSettingInput';
   final Map<String, dynamic> value;
@@ -2802,9 +3461,10 @@ final class ServicesCreateSettingInput {
 
 final class ServicesCreateSyncPackageInput {
   ServicesCreateSyncPackageInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateSyncPackageInput.fromJson(Map<String, dynamic> json) => ServicesCreateSyncPackageInput(json);
+  factory ServicesCreateSyncPackageInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateSyncPackageInput(json);
 
   static const schemaName = 'services.CreateSyncPackageInput';
   final Map<String, dynamic> value;
@@ -2820,9 +3480,10 @@ final class ServicesCreateSyncPackageInput {
 
 final class ServicesCreateVersionInput {
   ServicesCreateVersionInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesCreateVersionInput.fromJson(Map<String, dynamic> json) => ServicesCreateVersionInput(json);
+  factory ServicesCreateVersionInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateVersionInput(json);
 
   static const schemaName = 'services.CreateVersionInput';
   final Map<String, dynamic> value;
@@ -2836,11 +3497,37 @@ final class ServicesCreateVersionInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesDocumentationInput {
+  ServicesDocumentationInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDocumentationInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDocumentationInput(json);
+
+  static const schemaName = 'services.DocumentationInput';
+  final Map<String, dynamic> value;
+
+  String? get category => value['category']?.toString();
+
+  String? get content => value['content']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get tags => value['tags']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesDrugCategoryInput {
   ServicesDrugCategoryInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesDrugCategoryInput.fromJson(Map<String, dynamic> json) => ServicesDrugCategoryInput(json);
+  factory ServicesDrugCategoryInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDrugCategoryInput(json);
 
   static const schemaName = 'services.DrugCategoryInput';
   final Map<String, dynamic> value;
@@ -2864,9 +3551,10 @@ final class ServicesDrugCategoryInput {
 
 final class ServicesDrugInput {
   ServicesDrugInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesDrugInput.fromJson(Map<String, dynamic> json) => ServicesDrugInput(json);
+  factory ServicesDrugInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDrugInput(json);
 
   static const schemaName = 'services.DrugInput';
   final Map<String, dynamic> value;
@@ -2905,7 +3593,8 @@ final class ServicesDrugInput {
 
   String? get mechanismOfAction => value['mechanism_of_action']?.toString();
 
-  String? get monitoringParameters => value['monitoring_parameters']?.toString();
+  String? get monitoringParameters =>
+      value['monitoring_parameters']?.toString();
 
   String? get name => value['name']?.toString();
 
@@ -2917,7 +3606,8 @@ final class ServicesDrugInput {
 
   String? get reviewStatus => value['review_status']?.toString();
 
-  String? get routeOfAdministration => value['route_of_administration']?.toString();
+  String? get routeOfAdministration =>
+      value['route_of_administration']?.toString();
 
   String? get searchKeywords => value['search_keywords']?.toString();
 
@@ -2931,7 +3621,8 @@ final class ServicesDrugInput {
     return raw.whereType<String>().toList(growable: false);
   }
 
-  String? get therapeuticCategoryId => value['therapeutic_category_id']?.toString();
+  String? get therapeuticCategoryId =>
+      value['therapeutic_category_id']?.toString();
 
   String? get warnings => value['warnings']?.toString();
 
@@ -2942,9 +3633,10 @@ final class ServicesDrugInput {
 
 final class ServicesDrugNamedReferenceInput {
   ServicesDrugNamedReferenceInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesDrugNamedReferenceInput.fromJson(Map<String, dynamic> json) => ServicesDrugNamedReferenceInput(json);
+  factory ServicesDrugNamedReferenceInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDrugNamedReferenceInput(json);
 
   static const schemaName = 'services.DrugNamedReferenceInput';
   final Map<String, dynamic> value;
@@ -2962,9 +3654,10 @@ final class ServicesDrugNamedReferenceInput {
 
 final class ServicesDrugTagInput {
   ServicesDrugTagInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesDrugTagInput.fromJson(Map<String, dynamic> json) => ServicesDrugTagInput(json);
+  factory ServicesDrugTagInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDrugTagInput(json);
 
   static const schemaName = 'services.DrugTagInput';
   final Map<String, dynamic> value;
@@ -2984,11 +3677,88 @@ final class ServicesDrugTagInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesFAQInput {
+  ServicesFAQInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFAQInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFAQInput(json);
+
+  static const schemaName = 'services.FAQInput';
+  final Map<String, dynamic> value;
+
+  String? get answer => value['answer']?.toString();
+
+  String? get authorId => value['author_id']?.toString();
+
+  bool? get isFeatured => value['is_featured'] as bool?;
+
+  String? get keywords => value['keywords']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get question => value['question']?.toString();
+
+  List<String> get relatedFaqs {
+    final raw = value['related_faqs'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get reviewDue => value['review_due']?.toString();
+
+  String? get reviewerId => value['reviewer_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  List<String> get tags {
+    final raw = value['tags'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get targetAudience => value['target_audience']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFAQTagInput {
+  ServicesFAQTagInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFAQTagInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFAQTagInput(json);
+
+  static const schemaName = 'services.FAQTagInput';
+  final Map<String, dynamic> value;
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  bool? get isActive => value['is_active'] as bool?;
+
+  String? get name => value['name']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesFacilityInput {
   ServicesFacilityInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFacilityInput.fromJson(Map<String, dynamic> json) => ServicesFacilityInput(json);
+  factory ServicesFacilityInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityInput(json);
 
   static const schemaName = 'services.FacilityInput';
   final Map<String, dynamic> value;
@@ -3001,7 +3771,8 @@ final class ServicesFacilityInput {
 
   String? get facilityLevelId => value['facility_level_id']?.toString();
 
-  String? get healthSubDistrictId => value['health_sub_district_id']?.toString();
+  String? get healthSubDistrictId =>
+      value['health_sub_district_id']?.toString();
 
   String? get healthSubRegionId => value['health_sub_region_id']?.toString();
 
@@ -3024,9 +3795,10 @@ final class ServicesFacilityInput {
 
 final class ServicesFacilityItem {
   ServicesFacilityItem(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFacilityItem.fromJson(Map<String, dynamic> json) => ServicesFacilityItem(json);
+  factory ServicesFacilityItem.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityItem(json);
 
   static const schemaName = 'services.FacilityItem';
   final Map<String, dynamic> value;
@@ -3046,9 +3818,10 @@ final class ServicesFacilityItem {
 
 final class ServicesFacilityPage {
   ServicesFacilityPage(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFacilityPage.fromJson(Map<String, dynamic> json) => ServicesFacilityPage(json);
+  factory ServicesFacilityPage.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityPage(json);
 
   static const schemaName = 'services.FacilityPage';
   final Map<String, dynamic> value;
@@ -3056,7 +3829,10 @@ final class ServicesFacilityPage {
   List<ServicesFacilityView> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesFacilityView.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -3076,9 +3852,10 @@ final class ServicesFacilityPage {
 
 final class ServicesFacilityReferenceView {
   ServicesFacilityReferenceView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFacilityReferenceView.fromJson(Map<String, dynamic> json) => ServicesFacilityReferenceView(json);
+  factory ServicesFacilityReferenceView.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityReferenceView(json);
 
   static const schemaName = 'services.FacilityReferenceView';
   final Map<String, dynamic> value;
@@ -3097,7 +3874,8 @@ final class ServicesFacilityReferenceView {
 
   String? get healthSubRegionId => value['health_sub_region_id']?.toString();
 
-  String? get healthSubRegionName => value['health_sub_region_name']?.toString();
+  String? get healthSubRegionName =>
+      value['health_sub_region_name']?.toString();
 
   String? get hsdtCode => value['hsdt_code']?.toString();
 
@@ -3126,9 +3904,10 @@ final class ServicesFacilityReferenceView {
 
 final class ServicesFacilityView {
   ServicesFacilityView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFacilityView.fromJson(Map<String, dynamic> json) => ServicesFacilityView(json);
+  factory ServicesFacilityView.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityView(json);
 
   static const schemaName = 'services.FacilityView';
   final Map<String, dynamic> value;
@@ -3151,13 +3930,16 @@ final class ServicesFacilityView {
 
   String? get facilityLevelName => value['facility_level_name']?.toString();
 
-  String? get healthSubDistrictId => value['health_sub_district_id']?.toString();
+  String? get healthSubDistrictId =>
+      value['health_sub_district_id']?.toString();
 
-  String? get healthSubDistrictName => value['health_sub_district_name']?.toString();
+  String? get healthSubDistrictName =>
+      value['health_sub_district_name']?.toString();
 
   String? get healthSubRegionId => value['health_sub_region_id']?.toString();
 
-  String? get healthSubRegionName => value['health_sub_region_name']?.toString();
+  String? get healthSubRegionName =>
+      value['health_sub_region_name']?.toString();
 
   String? get hsdtCode => value['hsdt_code']?.toString();
 
@@ -3192,9 +3974,11 @@ final class ServicesFacilityView {
 
 final class ServicesFinishCalculatorUsageInput {
   ServicesFinishCalculatorUsageInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesFinishCalculatorUsageInput.fromJson(Map<String, dynamic> json) => ServicesFinishCalculatorUsageInput(json);
+  factory ServicesFinishCalculatorUsageInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesFinishCalculatorUsageInput(json);
 
   static const schemaName = 'services.FinishCalculatorUsageInput';
   final Map<String, dynamic> value;
@@ -3206,9 +3990,10 @@ final class ServicesFinishCalculatorUsageInput {
 
 final class ServicesLoginResult {
   ServicesLoginResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesLoginResult.fromJson(Map<String, dynamic> json) => ServicesLoginResult(json);
+  factory ServicesLoginResult.fromJson(Map<String, dynamic> json) =>
+      ServicesLoginResult(json);
 
   static const schemaName = 'services.LoginResult';
   final Map<String, dynamic> value;
@@ -3234,9 +4019,10 @@ final class ServicesLoginResult {
 
 final class ServicesManifestResult {
   ServicesManifestResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesManifestResult.fromJson(Map<String, dynamic> json) => ServicesManifestResult(json);
+  factory ServicesManifestResult.fromJson(Map<String, dynamic> json) =>
+      ServicesManifestResult(json);
 
   static const schemaName = 'services.ManifestResult';
   final Map<String, dynamic> value;
@@ -3246,7 +4032,10 @@ final class ServicesManifestResult {
   List<ModelsSyncPackage> get packages {
     final raw = value['packages'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsSyncPackage.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsSyncPackage.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   Map<String, dynamic> toJson() => Map.of(value);
@@ -3254,9 +4043,11 @@ final class ServicesManifestResult {
 
 final class ServicesNotificationCampaignInput {
   ServicesNotificationCampaignInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesNotificationCampaignInput.fromJson(Map<String, dynamic> json) => ServicesNotificationCampaignInput(json);
+  factory ServicesNotificationCampaignInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationCampaignInput(json);
 
   static const schemaName = 'services.NotificationCampaignInput';
   final Map<String, dynamic> value;
@@ -3294,9 +4085,10 @@ final class ServicesNotificationCampaignInput {
 
 final class ServicesNotificationInput {
   ServicesNotificationInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesNotificationInput.fromJson(Map<String, dynamic> json) => ServicesNotificationInput(json);
+  factory ServicesNotificationInput.fromJson(Map<String, dynamic> json) =>
+      ServicesNotificationInput(json);
 
   static const schemaName = 'services.NotificationInput';
   final Map<String, dynamic> value;
@@ -3318,9 +4110,11 @@ final class ServicesNotificationInput {
 
 final class ServicesNotificationTemplateInput {
   ServicesNotificationTemplateInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesNotificationTemplateInput.fromJson(Map<String, dynamic> json) => ServicesNotificationTemplateInput(json);
+  factory ServicesNotificationTemplateInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationTemplateInput(json);
 
   static const schemaName = 'services.NotificationTemplateInput';
   final Map<String, dynamic> value;
@@ -3344,11 +4138,166 @@ final class ServicesNotificationTemplateInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultModelsDocumentation {
+  ServicesPageResultModelsDocumentation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsDocumentation.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsDocumentation(json);
+
+  static const schemaName = 'services.PageResult-models_Documentation';
+  final Map<String, dynamic> value;
+
+  List<ModelsDocumentation> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDocumentation.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultModelsFAQ {
+  ServicesPageResultModelsFAQ(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsFAQ.fromJson(Map<String, dynamic> json) =>
+      ServicesPageResultModelsFAQ(json);
+
+  static const schemaName = 'services.PageResult-models_FAQ';
+  final Map<String, dynamic> value;
+
+  List<ModelsFAQ> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsFAQ.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultModelsFAQTag {
+  ServicesPageResultModelsFAQTag(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsFAQTag.fromJson(Map<String, dynamic> json) =>
+      ServicesPageResultModelsFAQTag(json);
+
+  static const schemaName = 'services.PageResult-models_FAQTag';
+  final Map<String, dynamic> value;
+
+  List<ModelsFAQTag> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsFAQTag.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultModelsSupportTicket {
+  ServicesPageResultModelsSupportTicket(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsSupportTicket.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsSupportTicket(json);
+
+  static const schemaName = 'services.PageResult-models_SupportTicket';
+  final Map<String, dynamic> value;
+
+  List<ModelsSupportTicket> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsSupportTicket.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultModelsSupportTicketReply {
+  ServicesPageResultModelsSupportTicketReply(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsSupportTicketReply.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsSupportTicketReply(json);
+
+  static const schemaName = 'services.PageResult-models_SupportTicketReply';
+  final Map<String, dynamic> value;
+
+  List<ModelsSupportTicketReply> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsSupportTicketReply.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultServicesRoleView {
   ServicesPageResultServicesRoleView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesPageResultServicesRoleView.fromJson(Map<String, dynamic> json) => ServicesPageResultServicesRoleView(json);
+  factory ServicesPageResultServicesRoleView.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesRoleView(json);
 
   static const schemaName = 'services.PageResult-services_RoleView';
   final Map<String, dynamic> value;
@@ -3356,7 +4305,10 @@ final class ServicesPageResultServicesRoleView {
   List<ServicesRoleView> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesRoleView.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesRoleView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -3372,9 +4324,11 @@ final class ServicesPageResultServicesRoleView {
 
 final class ServicesPageResultServicesUserView {
   ServicesPageResultServicesUserView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesPageResultServicesUserView.fromJson(Map<String, dynamic> json) => ServicesPageResultServicesUserView(json);
+  factory ServicesPageResultServicesUserView.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesUserView(json);
 
   static const schemaName = 'services.PageResult-services_UserView';
   final Map<String, dynamic> value;
@@ -3382,7 +4336,10 @@ final class ServicesPageResultServicesUserView {
   List<ServicesUserView> get items {
     final raw = value['items'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesUserView.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesUserView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   int? get page => (value['page'] as num?)?.toInt();
@@ -3398,9 +4355,10 @@ final class ServicesPageResultServicesUserView {
 
 final class ServicesProtocolStep {
   ServicesProtocolStep(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesProtocolStep.fromJson(Map<String, dynamic> json) => ServicesProtocolStep(json);
+  factory ServicesProtocolStep.fromJson(Map<String, dynamic> json) =>
+      ServicesProtocolStep(json);
 
   static const schemaName = 'services.ProtocolStep';
   final Map<String, dynamic> value;
@@ -3428,9 +4386,10 @@ final class ServicesProtocolStep {
 
 final class ServicesRegionChildren {
   ServicesRegionChildren(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesRegionChildren.fromJson(Map<String, dynamic> json) => ServicesRegionChildren(json);
+  factory ServicesRegionChildren.fromJson(Map<String, dynamic> json) =>
+      ServicesRegionChildren(json);
 
   static const schemaName = 'services.RegionChildren';
   final Map<String, dynamic> value;
@@ -3438,13 +4397,19 @@ final class ServicesRegionChildren {
   List<ServicesFacilityReferenceView> get districts {
     final raw = value['districts'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   List<ServicesFacilityReferenceView> get healthSubRegions {
     final raw = value['health_sub_regions'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   ServicesFacilityReferenceView? get region {
@@ -3458,9 +4423,10 @@ final class ServicesRegionChildren {
 
 final class ServicesRoleInput {
   ServicesRoleInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesRoleInput.fromJson(Map<String, dynamic> json) => ServicesRoleInput(json);
+  factory ServicesRoleInput.fromJson(Map<String, dynamic> json) =>
+      ServicesRoleInput(json);
 
   static const schemaName = 'services.RoleInput';
   final Map<String, dynamic> value;
@@ -3480,9 +4446,10 @@ final class ServicesRoleInput {
 
 final class ServicesRoleView {
   ServicesRoleView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesRoleView.fromJson(Map<String, dynamic> json) => ServicesRoleView(json);
+  factory ServicesRoleView.fromJson(Map<String, dynamic> json) =>
+      ServicesRoleView(json);
 
   static const schemaName = 'services.RoleView';
   final Map<String, dynamic> value;
@@ -3510,9 +4477,10 @@ final class ServicesRoleView {
 
 final class ServicesRunProtocolResult {
   ServicesRunProtocolResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesRunProtocolResult.fromJson(Map<String, dynamic> json) => ServicesRunProtocolResult(json);
+  factory ServicesRunProtocolResult.fromJson(Map<String, dynamic> json) =>
+      ServicesRunProtocolResult(json);
 
   static const schemaName = 'services.RunProtocolResult';
   final Map<String, dynamic> value;
@@ -3534,9 +4502,10 @@ final class ServicesRunProtocolResult {
 
 final class ServicesSearchResult {
   ServicesSearchResult(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesSearchResult.fromJson(Map<String, dynamic> json) => ServicesSearchResult(json);
+  factory ServicesSearchResult.fromJson(Map<String, dynamic> json) =>
+      ServicesSearchResult(json);
 
   static const schemaName = 'services.SearchResult';
   final Map<String, dynamic> value;
@@ -3560,9 +4529,11 @@ final class ServicesSearchResult {
 
 final class ServicesStartCalculatorUsageInput {
   ServicesStartCalculatorUsageInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesStartCalculatorUsageInput.fromJson(Map<String, dynamic> json) => ServicesStartCalculatorUsageInput(json);
+  factory ServicesStartCalculatorUsageInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesStartCalculatorUsageInput(json);
 
   static const schemaName = 'services.StartCalculatorUsageInput';
   final Map<String, dynamic> value;
@@ -3574,11 +4545,75 @@ final class ServicesStartCalculatorUsageInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesSupportReplyCreate {
+  ServicesSupportReplyCreate(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesSupportReplyCreate.fromJson(Map<String, dynamic> json) =>
+      ServicesSupportReplyCreate(json);
+
+  static const schemaName = 'services.SupportReplyCreate';
+  final Map<String, dynamic> value;
+
+  bool? get isInternal => value['is_internal'] as bool?;
+
+  String? get message => value['message']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesSupportTicketCreate {
+  ServicesSupportTicketCreate(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesSupportTicketCreate.fromJson(Map<String, dynamic> json) =>
+      ServicesSupportTicketCreate(json);
+
+  static const schemaName = 'services.SupportTicketCreate';
+  final Map<String, dynamic> value;
+
+  String? get category => value['category']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  String? get subject => value['subject']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesSupportTicketUpdate {
+  ServicesSupportTicketUpdate(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesSupportTicketUpdate.fromJson(Map<String, dynamic> json) =>
+      ServicesSupportTicketUpdate(json);
+
+  static const schemaName = 'services.SupportTicketUpdate';
+  final Map<String, dynamic> value;
+
+  String? get assignedTo => value['assigned_to']?.toString();
+
+  String? get category => value['category']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get subject => value['subject']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesTreeNode {
   ServicesTreeNode(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesTreeNode.fromJson(Map<String, dynamic> json) => ServicesTreeNode(json);
+  factory ServicesTreeNode.fromJson(Map<String, dynamic> json) =>
+      ServicesTreeNode(json);
 
   static const schemaName = 'services.TreeNode';
   final Map<String, dynamic> value;
@@ -3602,9 +4637,10 @@ final class ServicesTreeNode {
 
 final class ServicesUpdateCalculatorInput {
   ServicesUpdateCalculatorInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesUpdateCalculatorInput.fromJson(Map<String, dynamic> json) => ServicesUpdateCalculatorInput(json);
+  factory ServicesUpdateCalculatorInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUpdateCalculatorInput(json);
 
   static const schemaName = 'services.UpdateCalculatorInput';
   final Map<String, dynamic> value;
@@ -3634,9 +4670,10 @@ final class ServicesUpdateCalculatorInput {
 
 final class ServicesUpdateGuidelineInput {
   ServicesUpdateGuidelineInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesUpdateGuidelineInput.fromJson(Map<String, dynamic> json) => ServicesUpdateGuidelineInput(json);
+  factory ServicesUpdateGuidelineInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUpdateGuidelineInput(json);
 
   static const schemaName = 'services.UpdateGuidelineInput';
   final Map<String, dynamic> value;
@@ -3658,9 +4695,10 @@ final class ServicesUpdateGuidelineInput {
 
 final class ServicesUserCreateInput {
   ServicesUserCreateInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesUserCreateInput.fromJson(Map<String, dynamic> json) => ServicesUserCreateInput(json);
+  factory ServicesUserCreateInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUserCreateInput(json);
 
   static const schemaName = 'services.UserCreateInput';
   final Map<String, dynamic> value;
@@ -3684,9 +4722,10 @@ final class ServicesUserCreateInput {
 
 final class ServicesUserUpdateInput {
   ServicesUserUpdateInput(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesUserUpdateInput.fromJson(Map<String, dynamic> json) => ServicesUserUpdateInput(json);
+  factory ServicesUserUpdateInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUserUpdateInput(json);
 
   static const schemaName = 'services.UserUpdateInput';
   final Map<String, dynamic> value;
@@ -3744,9 +4783,10 @@ final class ServicesUserUpdateInput {
 
 final class ServicesUserView {
   ServicesUserView(Map<String, dynamic> value)
-      : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
 
-  factory ServicesUserView.fromJson(Map<String, dynamic> json) => ServicesUserView(json);
+  factory ServicesUserView.fromJson(Map<String, dynamic> json) =>
+      ServicesUserView(json);
 
   static const schemaName = 'services.UserView';
   final Map<String, dynamic> value;
@@ -3796,7 +4836,10 @@ final class ServicesUserView {
   List<ModelsRole> get roles {
     final raw = value['roles'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((item) => ModelsRole.fromJson(_jsonMap(item))).toList(growable: false);
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsRole.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   List<String> get specialization {
