@@ -12483,6 +12483,9 @@ const docTemplate = `{
         "services.FacilityView": {
             "type": "object",
             "properties": {
+                "authority_code": {
+                    "type": "string"
+                },
                 "authority_id": {
                     "type": "string"
                 },
@@ -12502,6 +12505,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "district_name": {
+                    "type": "string"
+                },
+                "facility_level_code": {
                     "type": "string"
                 },
                 "facility_level_id": {
@@ -12532,6 +12538,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nhpi_code": {
+                    "type": "string"
+                },
+                "ownership_type_code": {
                     "type": "string"
                 },
                 "ownership_type_id": {
