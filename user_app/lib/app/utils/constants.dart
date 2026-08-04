@@ -4,9 +4,24 @@ const String _configuredApiBaseUrl = String.fromEnvironment(
   'MEDIGUIDE_API_BASE_URL',
   defaultValue: '',
 );
-final String mediguideApiBaseUrl = _configuredApiBaseUrl.isNotEmpty
-    ? _configuredApiBaseUrl
-    : _defaultLocalApiBaseUrl();
+final String mediguideApiBaseUrl = normalizeApiBaseUrlForPlatform(
+  _configuredApiBaseUrl.isNotEmpty
+      ? _configuredApiBaseUrl
+      : _defaultLocalApiBaseUrl(),
+  defaultTargetPlatform,
+);
+
+String normalizeApiBaseUrlForPlatform(String value, TargetPlatform platform) {
+  final trimmed = value.trim().replaceFirst(RegExp(r'/$'), '');
+  if (platform != TargetPlatform.android) return trimmed;
+
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null || (uri.host != 'localhost' && uri.host != '127.0.0.1')) {
+    return trimmed;
+  }
+
+  return uri.replace(host: '10.0.2.2').toString();
+}
 
 String _defaultLocalApiBaseUrl() {
   if (kIsWeb) {

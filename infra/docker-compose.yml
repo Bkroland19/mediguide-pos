@@ -56,6 +56,7 @@ services:
       APP_ENV: "${APP_ENV:-production}"
       HTTP_PORT: 8080
       AUTO_SEED: "false"
+      AUTO_IMPORT: "false"
       STATIC_SAMPLES_DIR: /app/dashboard/samples
       DATABASE_URL: "${DATABASE_URL:-postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable}"
       JWT_SECRET: "${JWT_SECRET:-development-only-change-this-secret-before-production}"
@@ -131,10 +132,18 @@ services:
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
+      RAG_CANDIDATE_K: ${RAG_CANDIDATE_K:-24}
+      RAG_CONTEXT_K: ${RAG_CONTEXT_K:-6}
+      RAG_MIN_SIMILARITY: ${RAG_MIN_SIMILARITY:-0.25}
+      RAG_COUNTRY_BOOST: ${RAG_COUNTRY_BOOST:-0.05}
       LLM_PROVIDER: ollama
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
+      OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0}
+      OLLAMA_TOP_P: ${OLLAMA_TOP_P:-0.9}
+      OLLAMA_SEED: ${OLLAMA_SEED:-42}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-8192}
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,10 +180,18 @@ services:
       CHUNK_OVERLAP: 60
       MIN_CHUNK_CHARS: 120
       EMBEDDING_REQUEST_BATCH_SIZE: 8
+      RAG_CANDIDATE_K: ${RAG_CANDIDATE_K:-24}
+      RAG_CONTEXT_K: ${RAG_CONTEXT_K:-6}
+      RAG_MIN_SIMILARITY: ${RAG_MIN_SIMILARITY:-0.25}
+      RAG_COUNTRY_BOOST: ${RAG_COUNTRY_BOOST:-0.05}
       LLM_PROVIDER: ollama
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large:latest}
+      OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0}
+      OLLAMA_TOP_P: ${OLLAMA_TOP_P:-0.9}
+      OLLAMA_SEED: ${OLLAMA_SEED:-42}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-8192}
     depends_on:
       postgres:
         condition: service_healthy

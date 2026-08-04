@@ -19,5 +19,4 @@ COPY --from=build /out/seed /app/seed
 COPY migrations /app/migrations
 COPY docs /app/docs
 EXPOSE 8080
-# CMD ["sh", "-c", "/app/migrate up && /app/importpb && /app/seed && /app/api"]
-CMD ["sh", "-c", "/app/migrate up && /app/api"]
+CMD ["sh", "-c", "/app/migrate up && if [ \"${AUTO_IMPORT:-false}\" = \"true\" ]; then /app/importpb; fi && if [ \"${AUTO_SEED:-false}\" = \"true\" ]; then /app/seed; fi && exec /app/api"]

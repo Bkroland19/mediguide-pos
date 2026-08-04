@@ -189,10 +189,11 @@ run-cfdp-ios-simulator:
 	flutter run --dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug
 
 ANDROID_DEVICE ?= emulator-5554
+ANDROID_API_BASE_URL ?= http://localhost:8080
 
 .PHONY: run-cfdp-android
 run-cfdp-android:
 	cd user_app && \
 	flutter run \
 		-d $(ANDROID_DEVICE) \
-		--dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug
+		--dart-define=MEDIGUIDE_API_BASE_URL=$(ANDROID_API_BASE_URL)
