@@ -1,13 +1,11 @@
-import 'dart:async';
 import 'dart:convert';
 
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/utils/constants.dart';
 
 import '../models/models.dart';
-import 'main_service.dart';
 
 class BackendApiException implements Exception {
   BackendApiException(
@@ -31,30 +29,23 @@ class BackendApiException implements Exception {
   }
 }
 
-class BackendApiService extends GetxService {
-  static BackendApiService get to => Get.find();
-
+class BackendApiService {
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _sessionIdKey = 'backend_session_id';
 
-  final RxBool schemaLoaded = false.obs;
+  final ValueNotifier<bool> schemaLoaded = ValueNotifier(false);
 
   late SharedPreferences _prefs;
   String _accessToken = '';
   String _refreshToken = '';
   String _sessionId = '';
+  Future<void>? _refreshInFlight;
 
   Future<BackendApiService> init() async {
     _prefs = await SharedPreferences.getInstance();
     _accessToken = _prefs.getString(SharedPreferencesKeys.userToken) ?? '';
     _refreshToken = _prefs.getString(_refreshTokenKey) ?? '';
     _sessionId = _prefs.getString(_sessionIdKey) ?? '';
-
-    ever(MainService.to.isOnline, (bool online) {
-      if (online) {
-        unawaited(_onReconnect());
-      }
-    });
 
     schemaLoaded.value = true;
     return this;
@@ -122,7 +113,20 @@ class BackendApiService extends GetxService {
 
   Future<List<String>> getAuthMethods() async => const ['password'];
 
-  Future<void> refreshAuth() async {
+  Future<void> refreshAuth() {
+    final activeRefresh = _refreshInFlight;
+    if (activeRefresh != null) return activeRefresh;
+
+    final refresh = _performRefresh();
+    _refreshInFlight = refresh;
+    return refresh.whenComplete(() {
+      if (identical(_refreshInFlight, refresh)) {
+        _refreshInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _performRefresh() async {
     if (_refreshToken.isEmpty) {
       throw Exception('No refresh token available');
     }
@@ -235,18 +239,6 @@ class BackendApiService extends GetxService {
     return '';
   }
 
-  Future<void> _onReconnect() async {
-    if (!isAuthenticated || _refreshToken.isEmpty) {
-      return;
-    }
-
-    try {
-      await refreshAuth();
-    } catch (_) {
-      // Ignore background refresh failures.
-    }
-  }
-
   Future<bool> checkConnection() async {
     try {
       final response = await _requestJson(
@@ -267,6 +259,7 @@ class BackendApiService extends GetxService {
     Map<String, String>? query,
     Map<String, String>? extraHeaders,
     bool includeAuth = true,
+    bool retryAfterRefresh = true,
   }) async {
     final uri = Uri.parse(mediguideApiBaseUrl).replace(
       path: _joinPath(Uri.parse(mediguideApiBaseUrl).path, path),
@@ -312,6 +305,22 @@ class BackendApiService extends GetxService {
     final map = decoded is Map<String, dynamic>
         ? decoded
         : <String, dynamic>{'data': decoded};
+
+    if (response.statusCode == 401 &&
+        includeAuth &&
+        retryAfterRefresh &&
+        _refreshToken.isNotEmpty) {
+      await refreshAuth();
+      return _requestJson(
+        path,
+        method: method,
+        body: body,
+        query: query,
+        extraHeaders: extraHeaders,
+        includeAuth: includeAuth,
+        retryAfterRefresh: false,
+      );
+    }
 
     if (response.statusCode >= 400 || map['success'] == false) {
       throw BackendApiException(
