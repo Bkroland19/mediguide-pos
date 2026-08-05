@@ -6,7 +6,7 @@ final class CalculatorRepository {
   CalculatorRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> list({
+  Future<PaginatedResponse<Calculator>> list({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -30,24 +30,35 @@ final class CalculatorRepository {
         'order': order,
       },
     );
-    return _page(response, Calculator.collection, page, perPage);
+    final data = _data(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Calculator.fromJson(Map<String, dynamic>.from(item)))
+        .toList(growable: false);
+    return PaginatedResponse(
+      items: items,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+    );
   }
 
   Future<String> content(String id) =>
       _api.requestText('/api/v2/calculators/$id/content');
 
-  Future<ApiRecord> get(String id) async {
+  Future<Calculator> get(String id) async {
     final response = await _api.requestJson(
       '/api/v2/calculators/$id',
       method: 'GET',
     );
-    return ApiRecord(_normalize(_data(response), Calculator.collection));
+    return Calculator.fromJson(_itemData(response));
   }
 
   String contentUrl(String id) =>
       '$mediguideApiBaseUrl/api/v2/calculators/$id/content';
 
-  Future<ApiRecord> startUsage({
+  Future<CalculatorUsageLog> startUsage({
     required String calculatorId,
     required String sessionStart,
     required String calculatorType,
@@ -57,12 +68,10 @@ final class CalculatorRepository {
       method: 'POST',
       body: {'session_start': sessionStart, 'calculator_type': calculatorType},
     );
-    return ApiRecord(
-      _normalize(_data(response), CalculatorUsageLog.collection),
-    );
+    return CalculatorUsageLog.fromJson(_itemData(response));
   }
 
-  Future<ApiRecord> finishUsage({
+  Future<CalculatorUsageLog> finishUsage({
     required String usageId,
     required String sessionEnd,
   }) async {
@@ -71,9 +80,7 @@ final class CalculatorRepository {
       method: 'PATCH',
       body: {'session_end': sessionEnd},
     );
-    return ApiRecord(
-      _normalize(_data(response), CalculatorUsageLog.collection),
-    );
+    return CalculatorUsageLog.fromJson(_itemData(response));
   }
 }
 
@@ -81,7 +88,7 @@ final class DrugRepository {
   DrugRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> list({
+  Future<PaginatedResponse<Drug>> list({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -117,16 +124,27 @@ final class DrugRepository {
         'order': order,
       },
     );
-    return _page(response, Drug.collection, page, perPage);
+    final data = _data(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Drug.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+    return PaginatedResponse(
+      items: items,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+    );
   }
 
-  Future<ApiRecord?> get(String id) async {
+  Future<Drug?> get(String id) async {
     try {
       final response = await _api.requestJson(
         '/api/v2/drugs/$id',
         method: 'GET',
       );
-      return ApiRecord(_normalize(_data(response), Drug.collection));
+      return Drug.fromJson(_itemData(response));
     } catch (_) {
       return null;
     }
@@ -137,93 +155,15 @@ final class DrugRepository {
   }
 }
 
-PagedResult<ApiRecord> _page(
-  Map<String, dynamic> response,
-  String kind,
-  int page,
-  int perPage,
-) {
-  final data = _data(response);
-  final items = (data['items'] as List? ?? const [])
-      .whereType<Map>()
-      .map(
-        (item) => ApiRecord(_normalize(Map<String, dynamic>.from(item), kind)),
-      )
-      .toList();
-  return PagedResult(
-    items: items,
-    page: (data['page'] as num?)?.toInt() ?? page,
-    perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
-    totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
-    totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
-  );
-}
-
-Map<String, dynamic> _normalize(Map<String, dynamic> raw, String kind) {
-  final result = <String, dynamic>{
-    ...raw,
-    'collectionName': kind,
-    'collectionId': kind,
-    'created': raw['created_at']?.toString() ?? '',
-    'updated': raw['updated_at']?.toString() ?? '',
-  };
-  for (final entry in raw.entries) {
-    final key = entry.key;
-    if (key.contains('_')) result[_camel(key)] = entry.value;
-    if (key.endsWith('_json')) {
-      final alias = key.substring(0, key.length - 5);
-      result[alias] = entry.value;
-      result[_camel(alias)] = entry.value;
-    }
-  }
-  if (kind == Calculator.collection) {
-    result['addedBy'] = raw['added_by_user_id']?.toString() ?? '';
-    result['appFile'] = _jsonPath(raw['app_file_json']);
-  }
-  if (kind == Drug.collection) {
-    result['drug_class'] = raw['drug_class_id']?.toString() ?? '';
-    result['therapeutic_category'] =
-        raw['therapeutic_category_id']?.toString() ?? '';
-    result['categories'] =
-        raw['categories'] ?? raw['categories_json'] ?? const [];
-    result['tags'] = raw['tags'] ?? raw['tags_json'] ?? const [];
-    result['expand'] = {
-      if (raw['drug_class_id'] != null)
-        'drug_class': {
-          'id': raw['drug_class_id'],
-          'name': raw['drug_class_name'] ?? '',
-        },
-      if (raw['therapeutic_category_id'] != null)
-        'therapeutic_category': {
-          'id': raw['therapeutic_category_id'],
-          'name': raw['therapeutic_category_name'] ?? '',
-        },
-    };
-  }
-  return result;
-}
-
 Map<String, dynamic> _data(Map<String, dynamic> response) =>
     response['data'] is Map
     ? Map<String, dynamic>.from(response['data'] as Map)
     : response;
-String _camel(String value) {
-  final parts = value.split('_');
-  return parts.first +
-      parts
-          .skip(1)
-          .map(
-            (part) =>
-                part.isEmpty ? '' : part[0].toUpperCase() + part.substring(1),
-          )
-          .join();
-}
 
-String _jsonPath(dynamic value) {
-  if (value is Map) {
-    return value['path']?.toString() ?? value['name']?.toString() ?? '';
-  }
-  return value?.toString() ?? '';
+Map<String, dynamic> _itemData(Map<String, dynamic> response) {
+  final data = _data(response);
+  final item = data['item'];
+  return item is Map ? Map<String, dynamic>.from(item) : data;
 }
 
 bool _present(String? value) => value?.trim().isNotEmpty == true;

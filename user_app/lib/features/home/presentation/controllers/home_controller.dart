@@ -44,10 +44,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<Guideline> guideline(String id) async {
-    final record = await ref
-        .read(guidelineContentRepositoryProvider)
-        .guideline(id);
-    return Guideline.fromRecord(record);
+    return ref.read(guidelineContentRepositoryProvider).guideline(id);
   }
 
   Future<HomeState> _load() async {
@@ -83,7 +80,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
         order: 'desc',
       );
       final calculators = featured.items
-          .map(Calculator.fromRecord)
+          .map((calculator) => calculator)
           .toList(growable: true);
       if (calculators.length < 6) {
         final fallback = await repository.list(
@@ -97,7 +94,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
         final existing = calculators.map((item) => item.id).toSet();
         calculators.addAll(
           fallback.items
-              .map(Calculator.fromRecord)
+              .map((calculator) => calculator)
               .where((item) => existing.add(item.id)),
         );
       }
@@ -114,9 +111,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(readingProgressRepositoryProvider)
           .inProgress(user.id, perPage: 6);
-      return result.items
-          .map(ReadingProgress.fromRecord)
-          .toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }
@@ -127,9 +122,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(guidelineContentRepositoryProvider)
           .categories(perPage: 30, rootOnly: true);
-      return result.items
-          .map(GuidelineCategory.fromRecord)
-          .toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }
@@ -140,7 +133,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(guidelineContentRepositoryProvider)
           .guidelines(perPage: 5, published: true, status: 'published');
-      return result.items.map(Guideline.fromRecord).toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }

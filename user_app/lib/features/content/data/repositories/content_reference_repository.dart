@@ -1,4 +1,4 @@
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/features/content/data/models/language_model.dart';
 import 'package:user_app/features/content/data/models/ministry_directory.dart';
 import 'package:user_app/core/network/api_client.dart';
@@ -9,7 +9,7 @@ final class GenericPageRepository {
   GenericPageRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<GenericPage>> list({
+  Future<PaginatedResponse<GenericPage>> list({
     int page = 1,
     int perPage = 50,
     String? search,
@@ -33,7 +33,7 @@ final class GenericPageRepository {
           ),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -80,7 +80,7 @@ final class MinistryDirectoryRepository {
   MinistryDirectoryRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<MinistryDirectory>> list({
+  Future<PaginatedResponse<MinistryDirectory>> list({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -111,39 +111,17 @@ final class MinistryDirectoryRepository {
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
         .map(
-          (value) => MinistryDirectory(
-            ApiRecord(_directoryRecord(Map<String, dynamic>.from(value))).data,
-          ),
+          (value) =>
+              MinistryDirectory.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
       totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
       items: items,
     );
-  }
-
-  Map<String, dynamic> _directoryRecord(Map<String, dynamic> value) {
-    final districtId = value['district_id']?.toString() ?? '';
-    final regionId = value['region_id']?.toString() ?? '';
-    return {
-      ...value,
-      'collectionId': MinistryDirectory.collection,
-      'collectionName': MinistryDirectory.collection,
-      'created': value['created_at'] ?? value['created'] ?? '',
-      'updated': value['updated_at'] ?? value['updated'] ?? '',
-      'district': districtId,
-      'region': regionId,
-      'alternativePhone': value['alternative_phone'] ?? '',
-      'expand': {
-        if (districtId.isNotEmpty)
-          'district': {'id': districtId, 'name': value['district_name'] ?? ''},
-        if (regionId.isNotEmpty)
-          'region': {'id': regionId, 'name': value['region_name'] ?? ''},
-      },
-    };
   }
 }
 

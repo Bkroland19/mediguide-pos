@@ -10,7 +10,7 @@ final class HelpContentRepository {
   final BackendApiService _api;
   final TtlResponseCache _cache;
 
-  Future<PagedResult<FAQ>> listFAQs({
+  Future<PaginatedResponse<FAQ>> listFAQs({
     int page = 1,
     int perPage = 10,
     String? search,
@@ -40,7 +40,7 @@ final class HelpContentRepository {
           (v) => FAQ.fromJson(_normalize(Map<String, dynamic>.from(v), 'faqs')),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -58,7 +58,7 @@ final class HelpContentRepository {
     return FAQ.fromJson(_normalize(_data(response), 'faqs'));
   }
 
-  Future<PagedResult<ApiRecord>> listDocumentation({
+  Future<PaginatedResponse<Documentation>> listDocumentation({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -82,13 +82,9 @@ final class HelpContentRepository {
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map(
-          (v) => ApiRecord(
-            _normalize(Map<String, dynamic>.from(v), 'documentation'),
-          ),
-        )
+        .map((v) => Documentation.fromJson(Map<String, dynamic>.from(v)))
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

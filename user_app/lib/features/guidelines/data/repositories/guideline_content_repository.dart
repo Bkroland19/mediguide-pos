@@ -6,7 +6,7 @@ final class GuidelineContentRepository {
 
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> guidelines({
+  Future<PaginatedResponse<Guideline>> guidelines({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -20,9 +20,9 @@ final class GuidelineContentRepository {
     bool? published,
     String sort = 'updated_at',
     String order = 'desc',
-  }) => _list(
+  }) => _typedList(
     '/api/v2/medical-guidelines',
-    Guideline.collection,
+    Guideline.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -40,19 +40,19 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<ApiRecord> guideline(String id) =>
-      _get('/api/v2/medical-guidelines/$id', Guideline.collection);
+  Future<Guideline> guideline(String id) =>
+      _get('/api/v2/medical-guidelines/$id', Guideline.fromJson);
 
-  Future<PagedResult<ApiRecord>> categories({
+  Future<PaginatedResponse<GuidelineCategory>> categories({
     int page = 1,
     int perPage = 100,
     String? search,
     String? status = 'active',
     String? parentId,
     bool rootOnly = false,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-categories',
-    GuidelineCategory.collection,
+    GuidelineCategory.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -65,13 +65,13 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> tags({
+  Future<PaginatedResponse<GuidelineTag>> tags({
     int page = 1,
     int perPage = 100,
     String? search,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-tags',
-    GuidelineTag.collection,
+    GuidelineTag.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -81,15 +81,15 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> index({
+  Future<PaginatedResponse<GuidelineIndex>> index({
     int page = 1,
     int perPage = 100,
     String? search,
     String? parentId,
     int? level,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-index',
-    GuidelineIndex.collection,
+    GuidelineIndex.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -101,27 +101,27 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> indexChildren(
+  Future<PaginatedResponse<GuidelineIndex>> indexChildren(
     String id, {
     int page = 1,
     int perPage = 100,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-index/$id/children',
-    GuidelineIndex.collection,
+    GuidelineIndex.fromJson,
     page: page,
     perPage: perPage,
   );
 
-  Future<PagedResult<ApiRecord>> abbreviations({
+  Future<PaginatedResponse<Abbreviation>> abbreviations({
     int page = 1,
     int perPage = 30,
     String? search,
     bool? commonUsage,
     String? categoryId,
     String? tagId,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/abbreviations',
-    Abbreviation.collection,
+    Abbreviation.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -134,12 +134,12 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<ApiRecord> abbreviation(String id) =>
-      _get('/api/v2/abbreviations/$id', Abbreviation.collection);
+  Future<Abbreviation> abbreviation(String id) =>
+      _get('/api/v2/abbreviations/$id', Abbreviation.fromJson);
 
-  Future<PagedResult<ApiRecord>> _list(
+  Future<PaginatedResponse<T>> _typedList<T>(
     String path,
-    String collectionName, {
+    T Function(Map<String, dynamic>) fromJson, {
     int page = 1,
     int perPage = 100,
     Map<String, String> query = const {},
@@ -152,13 +152,9 @@ final class GuidelineContentRepository {
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map(
-          (value) => ApiRecord(
-            _normalize(Map<String, dynamic>.from(value), collectionName),
-          ),
-        )
-        .toList();
-    return PagedResult(
+        .map((value) => fromJson(Map<String, dynamic>.from(value)))
+        .toList(growable: false);
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -167,49 +163,17 @@ final class GuidelineContentRepository {
     );
   }
 
-  Future<ApiRecord> _get(String path, String collectionName) async {
+  Future<T> _get<T>(
+    String path,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
     final response = await _api.requestJson(path, method: 'GET');
-    return ApiRecord(_normalize(_data(response), collectionName));
+    return fromJson(_data(response));
   }
 
   Map<String, dynamic> _data(Map<String, dynamic> response) {
     final data = response['data'];
     return data is Map ? Map<String, dynamic>.from(data) : response;
-  }
-
-  Map<String, dynamic> _normalize(
-    Map<String, dynamic> raw,
-    String collectionName,
-  ) {
-    final value = <String, dynamic>{
-      ...raw,
-      'collectionName': collectionName,
-      'collectionId': collectionName,
-      'created': raw['created_at']?.toString() ?? '',
-      'updated': raw['updated_at']?.toString() ?? '',
-    };
-    switch (collectionName) {
-      case Guideline.collection:
-        value['index_item'] = raw['index_item_id']?.toString() ?? '';
-        value['usageCount'] = (raw['usage_count'] as num?)?.toInt() ?? 0;
-        break;
-      case GuidelineCategory.collection:
-        value['parent_category'] = raw['parent_category_id']?.toString() ?? '';
-        break;
-      case GuidelineIndex.collection:
-        value['parent'] = raw['parent_id']?.toString() ?? '';
-        value['order'] = (raw['sort_order'] as num?)?.toInt() ?? 0;
-        value['hasChildren'] = raw['has_children'] == true;
-        break;
-      case Abbreviation.collection:
-        final categories = (raw['categories'] as List? ?? const [])
-            .map((e) => e.toString())
-            .toList();
-        value['category'] = categories.isEmpty ? '' : categories.first;
-        value['usageCount'] = (raw['usage_count'] as num?)?.toInt() ?? 0;
-        break;
-    }
-    return value;
   }
 
   static bool _present(String? value) => value?.trim().isNotEmpty == true;

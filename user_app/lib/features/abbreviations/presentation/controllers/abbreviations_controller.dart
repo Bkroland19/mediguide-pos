@@ -228,7 +228,7 @@ class AbbreviationsController extends ChangeNotifier {
       perPage: perPage,
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
@@ -237,7 +237,7 @@ class AbbreviationsController extends ChangeNotifier {
       commonUsage: true,
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   Future<List<Abbreviation>> _searchAbbreviations({
@@ -253,7 +253,7 @@ class AbbreviationsController extends ChangeNotifier {
       tagId: query.tagIds.isEmpty ? null : query.tagIds.join(','),
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   // ===============================
@@ -282,9 +282,7 @@ class AbbreviationsController extends ChangeNotifier {
     String? sort,
   }) async {
     final result = await _contentRepository.categories();
-    return result.items
-        .map((record) => GuidelineCategory.fromRecord(record))
-        .toList();
+    return result.items;
   }
 
   /// Get all guideline tags
@@ -293,9 +291,7 @@ class AbbreviationsController extends ChangeNotifier {
     String? sort,
   }) async {
     final result = await _contentRepository.tags();
-    return result.items
-        .map((record) => GuidelineTag.fromRecord(record))
-        .toList();
+    return result.items;
   }
 
   void _notify() {
