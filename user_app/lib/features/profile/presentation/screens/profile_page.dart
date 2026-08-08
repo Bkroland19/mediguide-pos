@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:in_app_review/in_app_review.dart';
@@ -95,7 +94,7 @@ class ProfilePage extends ConsumerWidget {
                 trailing: Switch(
                   value: biometric?.enabled ?? false,
                   onChanged: biometric?.available == true
-                      ? (value) => _toggleBiometric(ref, value)
+                      ? (value) => _toggleBiometric(context, ref, value)
                       : null,
                 ),
                 showChevron: false,
@@ -132,13 +131,13 @@ class ProfilePage extends ConsumerWidget {
                 icon: LucideIcons.circleHelp,
                 title: AppTranslationKey.helpCenter.tr,
                 subtitle: AppTranslationKey.getHelpAndSupport.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.helpCenter),
+                onTap: () => AppNavigator.push(AppRoutes.helpCenter),
               ),
               _SettingsTile(
                 icon: LucideIcons.messageCircleQuestion,
                 title: AppTranslationKey.frequentlyAskedQuestions.tr,
                 subtitle: AppTranslationKey.getAnswersToCommonQuestions.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.faq),
+                onTap: () => AppNavigator.push(AppRoutes.faq),
               ),
               _SettingsTile(
                 icon: LucideIcons.download,
@@ -154,26 +153,27 @@ class ProfilePage extends ConsumerWidget {
                       )
                     : const Icon(LucideIcons.chevronRight),
                 showChevron: false,
-                onTap: isCheckingForUpdate ? null : () => _checkForUpdate(ref),
+                onTap: isCheckingForUpdate
+                    ? null
+                    : () => _checkForUpdate(context, ref),
               ),
               _SettingsTile(
                 icon: LucideIcons.info,
                 title: AppTranslationKey.aboutMediGuide.tr,
                 subtitle: AppTranslationKey.appVersionAndInfo.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.aboutUs),
+                onTap: () => AppNavigator.push(AppRoutes.aboutUs),
               ),
               _SettingsTile(
                 icon: LucideIcons.fileText,
                 title: AppTranslationKey.termsAndPrivacy.tr,
                 subtitle: AppTranslationKey.legalInformation.tr,
-                onTap: () =>
-                    AppNavigator.pushNamed(AppRoutes.termsAndConditions),
+                onTap: () => AppNavigator.push(AppRoutes.termsAndConditions),
               ),
               _SettingsTile(
                 icon: LucideIcons.star,
                 title: AppTranslationKey.rateApp.tr,
                 subtitle: AppTranslationKey.rateUsOnAppStore.tr,
-                onTap: _rateApp,
+                onTap: () => _rateApp(context),
               ),
             ],
           ),
@@ -197,7 +197,7 @@ class ProfilePage extends ConsumerWidget {
                       )
                     : const Icon(LucideIcons.chevronRight),
                 showChevron: false,
-                onTap: isLoading ? null : () => _logout(ref),
+                onTap: isLoading ? null : () => _logout(context, ref),
               ),
               _SettingsTile(
                 icon: LucideIcons.trash2,
@@ -242,35 +242,40 @@ class ProfilePage extends ConsumerWidget {
     }
   }
 
-  Future<void> _toggleBiometric(WidgetRef ref, bool value) async {
+  Future<void> _toggleBiometric(
+    BuildContext context,
+    WidgetRef ref,
+    bool value,
+  ) async {
     final success = await ref
         .read(biometricControllerProvider.notifier)
         .setEnabled(value);
 
+    if (!context.mounted) return;
+
     if (success) {
       AppMessage.success(
-        AppKeys.navigatorKey.currentContext!,
+        context,
         value
             ? AppTranslationKey.biometricEnabled.tr
             : AppTranslationKey.biometricDisabled.tr,
       );
     } else {
       AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
+        context,
         AppTranslationKey.failedToUpdateBiometricSettings.tr,
       );
     }
   }
 
-  Future<void> _logout(WidgetRef ref) async {
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(authControllerProvider.notifier).logout();
       AppNavigator.go(AppRoutes.login);
     } catch (error) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        AppTranslationKey.error.tr,
-      );
+      if (context.mounted) {
+        AppMessage.error(context, AppTranslationKey.error.tr);
+      }
     }
   }
 
@@ -291,10 +296,9 @@ class ProfilePage extends ConsumerWidget {
     );
 
     if (confirmed == true) return;
-    if (confirmed == true) return;
   }
 
-  Future<void> _rateApp() async {
+  Future<void> _rateApp(BuildContext context) async {
     try {
       final review = InAppReview.instance;
       if (await review.isAvailable()) {
@@ -303,19 +307,18 @@ class ProfilePage extends ConsumerWidget {
         await review.openStoreListing();
       }
     } catch (_) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        AppTranslationKey.ratingFailed.tr,
-      );
+      if (context.mounted) {
+        AppMessage.error(context, AppTranslationKey.ratingFailed.tr);
+      }
     }
   }
 
-  Future<void> _checkForUpdate(WidgetRef ref) async {
+  Future<void> _checkForUpdate(BuildContext context, WidgetRef ref) async {
     try {
       final result = await ref
           .read(appUpdateControllerProvider.notifier)
           .check();
-      if (result == null) return;
+      if (result == null || !context.mounted) return;
       final description = switch (result) {
         AppUpdateResult.unsupported =>
           'Updates are only supported on Android devices',
@@ -324,12 +327,11 @@ class ProfilePage extends ConsumerWidget {
         AppUpdateResult.upToDate => AppTranslationKey.appIsUpToDate.tr,
       };
 
-      AppMessage.info(AppKeys.navigatorKey.currentContext!, description);
+      AppMessage.info(context, description);
     } catch (_) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        AppTranslationKey.failedToCheckForUpdates.tr,
-      );
+      if (context.mounted) {
+        AppMessage.error(context, AppTranslationKey.failedToCheckForUpdates.tr);
+      }
     }
   }
 

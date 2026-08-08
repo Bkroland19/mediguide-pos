@@ -1,10 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_local_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/consultants/presentation/controllers/consultants_controller.dart';
 import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'helpers/test_local_store.dart';
 
 final class DirectoryApi extends BackendApiService {
   String? lastPath;
@@ -88,47 +92,68 @@ final class DirectoryApi extends BackendApiService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferences.setMockInitialValues({}));
-
   test('facility catalogue restores typed tree filters', () async {
-    final controller = HealthInfrastructureController(
-      FacilityRepository(DirectoryApi()),
-      const {
-        'treeFilters': {'region': 'region-1', 'district': 'district-1'},
-      },
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = FacilityRepository(
+      DirectoryApi(),
+      FacilityLocalRepository(store.cache),
     );
-    addTearDown(controller.dispose);
-    await Future<void>.delayed(Duration.zero);
+    const arguments = {
+      'treeFilters': {'region': 'region-1', 'district': 'district-1'},
+    };
+    final provider = healthInfrastructureControllerProvider(arguments);
+    final container = ProviderContainer(
+      overrides: [facilityRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(provider, (_, _) {});
+    await container.read(provider.notifier).reloadFilterOptions();
+    final state = container.read(provider);
 
-    expect(controller.treeFilters['region'], 'region-1');
-    expect(controller.hasActiveFilters, isTrue);
-    expect(controller.availableRegions.single.name, 'Central');
+    expect(state.treeFilters['region'], 'region-1');
+    expect(state.hasActiveFilters, isTrue);
+    expect(state.availableRegions.single.name, 'Central');
   });
 
   test('consultant catalogue restores region and specialty filters', () async {
-    final controller = ConsultantsController(
-      ConsultantRepository(DirectoryApi()),
-      const {
-        'treeFilters': {
-          'region': 'Central',
-          'city': 'Kampala',
-          'specialty': 'cardiology',
-        },
-      },
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = ConsultantRepository(
+      DirectoryApi(),
+      ConsultantLocalRepository(store.cache),
     );
-    addTearDown(controller.dispose);
-    await Future<void>.delayed(Duration.zero);
+    const arguments = {
+      'treeFilters': {
+        'region': 'Central',
+        'city': 'Kampala',
+        'specialty': 'cardiology',
+      },
+    };
+    final provider = consultantsControllerProvider(arguments);
+    final container = ProviderContainer(
+      overrides: [consultantRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(provider, (_, _) {});
+    await container.read(provider.notifier).reloadFilterOptions();
+    final state = container.read(provider);
 
-    expect(controller.selectedRegion, 'Central');
-    expect(controller.selectedCity, 'Kampala');
-    expect(controller.selectedSpecialty, 'cardiology');
-    expect(controller.hasActiveFilters, isTrue);
-    expect(controller.availableLocations, contains('Kampala'));
+    expect(state.selectedRegion, 'Central');
+    expect(state.selectedCity, 'Kampala');
+    expect(state.selectedSpecialty, 'cardiology');
+    expect(state.hasActiveFilters, isTrue);
+    expect(state.availableLocations, contains('Kampala'));
   });
 
   test('facility list and usage use dedicated typed endpoints', () async {
     final api = DirectoryApi();
-    final repository = FacilityRepository(api);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = FacilityRepository(
+      api,
+      FacilityLocalRepository(store.cache),
+    );
     await repository.listFacilities(
       page: 1,
       perPage: 20,
@@ -146,7 +171,12 @@ void main() {
 
   test('consultant usage uses its dedicated endpoint', () async {
     final api = DirectoryApi();
-    await ConsultantRepository(api).recordUsage('consultant-1');
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    await ConsultantRepository(
+      api,
+      ConsultantLocalRepository(store.cache),
+    ).recordUsage('consultant-1');
     expect(api.lastPath, '/api/v2/consultants/consultant-1/usage');
   });
 }

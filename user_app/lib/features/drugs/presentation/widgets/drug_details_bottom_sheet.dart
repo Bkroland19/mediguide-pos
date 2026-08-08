@@ -11,6 +11,7 @@ import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/features/ai_assistant/data/services/ai_context_service.dart';
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/route_names.dart';
 
 /// Bottom sheet for displaying comprehensive drug details
 class DrugDetailsBottomSheet extends ConsumerWidget {
@@ -473,8 +474,8 @@ class DrugDetailsBottomSheet extends ConsumerWidget {
   /// Navigate to AI assistant with drug context
   void _showAiAssistant(AiContextService contextService) {
     final drugContext = _buildDrugContext(contextService);
-    AppNavigator.pushNamed(
-      '/aiAssistant',
+    AppNavigator.push(
+      AppRoutes.aiAssistant,
       extra: {'aiContext': drugContext.toJson()},
     );
   }

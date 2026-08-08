@@ -1,35 +1,18 @@
+// lib/core/database/app_database.dart
+
 import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path/path.dart' as path;
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:user_app/core/storage/database/tables/cache_sync_states.dart';
+import 'package:user_app/core/storage/database/tables/cached_entities.dart';
+import 'package:user_app/core/storage/database/tables/pending_mutations.dart';
 
 part 'app_database.g.dart';
 
-class CacheEntries extends Table {
-  TextColumn get key => text()();
-  TextColumn get payload => text()();
-  DateTimeColumn get cachedAt => dateTime()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {key};
-}
-
-class PendingSyncOperations extends Table {
-  TextColumn get id => text()();
-  TextColumn get resourceType => text()();
-  TextColumn get resourceId => text().nullable()();
-  TextColumn get operation => text()();
-  TextColumn get payload => text()();
-  DateTimeColumn get createdAt => dateTime()();
-  IntColumn get attempts => integer().withDefault(const Constant(0))();
-
-  @override
-  Set<Column<Object>> get primaryKey => {id};
-}
-
-@DriftDatabase(tables: [CacheEntries, PendingSyncOperations])
+@DriftDatabase(tables: [CachedEntities, CacheSyncStates, PendingMutations])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -38,25 +21,57 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 1;
 
-  Future<CacheEntry?> cacheEntry(String key) => (select(
-    cacheEntries,
-  )..where((row) => row.key.equals(key))).getSingleOrNull();
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async {
+      await migrator.createAll();
+    },
+
+    onUpgrade: (migrator, from, to) async {
+      // Future database migrations go here.
+    },
+
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+
+      await customStatement('PRAGMA journal_mode = WAL');
+    },
+  );
+
+  Future<CachedEntity?> cacheEntry(String key) {
+    return (select(cachedEntities)..where(
+          (table) =>
+              table.entityType.equals('http_response') &
+              table.entityId.equals(key) &
+              table.scope.equals('public') &
+              table.isDeleted.equals(false),
+        ))
+        .getSingleOrNull();
+  }
 
   Future<void> putCacheEntry({
     required String key,
     required String payload,
     required DateTime cachedAt,
-  }) => into(cacheEntries).insertOnConflictUpdate(
-    CacheEntriesCompanion.insert(
-      key: key,
-      payload: payload,
-      cachedAt: cachedAt,
-    ),
-  );
+  }) {
+    return into(cachedEntities).insertOnConflictUpdate(
+      CachedEntitiesCompanion.insert(
+        entityType: 'http_response',
+        entityId: key,
+        payload: payload,
+        scope: const Value('public'),
+        cachedAt: cachedAt,
+      ),
+    );
+  }
 }
 
-LazyDatabase _openConnection() => LazyDatabase(() async {
-  final directory = await getApplicationDocumentsDirectory();
-  final file = File(path.join(directory.path, 'mediguide.sqlite'));
-  return NativeDatabase.createInBackground(file);
-});
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    final file = File(p.join(directory.path, 'mediguide.sqlite'));
+
+    return NativeDatabase.createInBackground(file);
+  });
+}
