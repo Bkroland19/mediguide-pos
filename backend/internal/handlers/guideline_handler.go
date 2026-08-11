@@ -5,10 +5,12 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
+	"mediguide/internal/models"
 	"mediguide/internal/security"
 	"mediguide/internal/services"
 
@@ -175,17 +177,18 @@ func (h GuidelineHandler) CreateVersion(c *gin.Context) {
 }
 
 // UploadPDF godoc
-// @Summary Upload a guideline PDF
+// @Summary Upload a guideline PDF or Markdown source
 // @Tags guidelines
 // @Accept mpfd
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
-// @Param file formData file true "PDF file"
+// @Param file formData file true "PDF or Markdown file"
 // @Success 201 {object} handlers.IngestionJobEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
+// @Failure 413 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/guideline-versions/{id}/upload [post]
 func (h GuidelineHandler) UploadPDF(c *gin.Context) {
@@ -194,8 +197,17 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid id")
 		return
 	}
+	maxBytes := h.MaxUploadMB << 20
+	// Allow a small amount of multipart envelope overhead while still enforcing
+	// the configured source-file limit at the HTTP boundary.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes+(1<<20))
 	if err := c.Request.ParseMultipartForm(h.MaxUploadMB << 20); err != nil {
-		httpx.Error(c, 400, err.Error())
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			httpx.Error(c, http.StatusRequestEntityTooLarge, "guideline source exceeds maximum allowed size")
+			return
+		}
+		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	file, header, err := c.Request.FormFile("file")
@@ -204,8 +216,29 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	job, err := h.Service.UploadPDF(c.Request.Context(), versionID, file, header)
+	var job *models.IngestionJob
+	switch strings.ToLower(filepath.Ext(header.Filename)) {
+	case ".pdf":
+		job, err = h.Service.UploadPDF(c.Request.Context(), versionID, file, header)
+	case ".md", ".markdown":
+		job, err = h.Service.UploadMarkdown(c.Request.Context(), versionID, file, header)
+	default:
+		httpx.Error(c, http.StatusBadRequest, services.ErrUnsupportedGuidelineSource.Error())
+		return
+	}
 	if err != nil {
+		if errors.Is(err, services.ErrPublishedVersionImmutable) {
+			httpx.Error(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			httpx.Error(c, http.StatusNotFound, "guideline version not found")
+			return
+		}
+		if strings.Contains(strings.ToLower(err.Error()), "markdown content is required") {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}
@@ -231,9 +264,13 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 		return
 	}
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
-	if err := h.Service.PublishVersion(versionID, claims.UserID); err != nil {
+	if err := h.Service.PublishVersion(versionID, claims.UserID, c.ClientIP()); err != nil {
 		if errors.Is(err, services.ErrGuidelineIngestionIncomplete) || errors.Is(err, services.ErrGuidelineIngestionFailed) {
 			httpx.Error(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, services.ErrGuidelineValidationFailed) {
+			httpx.Error(c, http.StatusUnprocessableEntity, err.Error())
 			return
 		}
 		httpx.Error(c, 400, err.Error())
@@ -318,7 +355,7 @@ func (h GuidelineHandler) Chunks(c *gin.Context) {
 // @Produce application/octet-stream
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
-// @Param format path string true "Asset format: md, markdown, or html"
+// @Param format path string true "Asset format: original, pdf, md, markdown, or html"
 // @Success 200 {file} binary
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
@@ -401,7 +438,8 @@ func (h GuidelineHandler) UpdateMarkdown(c *gin.Context) {
 		}
 	}
 
-	if err := h.Service.UpdateMarkdown(c.Request.Context(), versionID, content); err != nil {
+	job, err := h.Service.ReplaceMarkdown(c.Request.Context(), versionID, content)
+	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrGuidelineAssetMissing), errors.Is(err, gorm.ErrRecordNotFound):
 			httpx.Error(c, http.StatusNotFound, err.Error())
@@ -414,5 +452,10 @@ func (h GuidelineHandler) UpdateMarkdown(c *gin.Context) {
 		}
 		return
 	}
-	httpx.OK(c, MarkdownUpdateResult{Updated: true, Size: len(content)})
+	httpx.OK(c, MarkdownUpdateResult{
+		Updated: true,
+		Queued:  true,
+		Size:    len(content),
+		JobID:   job.ID,
+	})
 }
