@@ -25,6 +25,7 @@ type GuidelineReviewIssue struct {
 	Message   string     `json:"message"`
 	SectionID *uuid.UUID `json:"section_id,omitempty"`
 	BlockID   *uuid.UUID `json:"block_id,omitempty"`
+	AssetID   *uuid.UUID `json:"asset_id,omitempty"`
 }
 
 type GuidelinePublicationValidation struct {
@@ -505,7 +506,23 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 		result.Valid = false
 	}
 	if strings.TrimSpace(version.OriginalFileKey) == "" {
-		addError("missing_original_file", "The original PDF is missing.", nil, nil)
+		// Structured versions created before Markdown revisions were introduced
+		// were PDF-derived. Keep the safe legacy requirement unless an immutable
+		// revision explicitly proves that the source is Markdown-only.
+		requiresOriginalPDF := true
+		if version.CurrentMarkdownRevisionID != nil {
+			var revision models.GuidelineMarkdownRevision
+			if err := tx.Select("source_type").First(&revision, "id = ? AND version_id = ?", *version.CurrentMarkdownRevisionID, version.ID).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, err
+			} else if err == nil {
+				requiresOriginalPDF = revision.SourceType == "pdf_generated"
+			}
+		}
+		if requiresOriginalPDF {
+			addError("missing_original_file", "The original PDF for this PDF-derived revision is missing.", nil, nil)
+		} else {
+			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "markdown_only_source", Message: "This Markdown-only guideline has no original PDF or PDF page citations."})
+		}
 	}
 	if version.ExtractionSchemaVersion == 0 {
 		result.Warnings = append(result.Warnings, GuidelineReviewIssue{
@@ -567,6 +584,20 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 	for _, block := range blocks {
 		if block.ReviewStatus != models.GuidelineBlockRejected {
 			activeBlockCount++
+		}
+	}
+	var assets []models.GuidelineAsset
+	if err := tx.Where("version_id = ?", version.ID).Find(&assets).Error; err != nil {
+		return nil, err
+	}
+	for _, asset := range assets {
+		current := asset
+		if asset.Type == models.GuidelineAssetFigure && strings.TrimSpace(asset.AlternativeText) == "" {
+			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_asset_alternative_text", Message: fmt.Sprintf("Image %s is missing alternative text.", asset.ID)})
+		}
+		if asset.ClinicallySensitive && asset.ReviewStatus != models.GuidelineBlockReviewed {
+			result.Errors = append(result.Errors, GuidelineReviewIssue{Code: "unreviewed_clinical_asset", Message: "A clinically sensitive image requires publisher review.", SectionID: asset.SectionID, AssetID: &current.ID})
+			result.Valid = false
 		}
 	}
 	if activeBlockCount == 0 {
@@ -659,9 +690,12 @@ func validateGuidelineBlockPayload(tx *gorm.DB, versionID uuid.UUID, blockType m
 			return fmt.Errorf("figure references a missing asset")
 		}
 		return nil
-	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint:
+	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference:
 		var payload models.GuidelineCalloutBlockPayload
-		if err := json.Unmarshal(content, &payload); err != nil || strings.TrimSpace(payload.Content) == "" {
+		if err := json.Unmarshal(content, &payload); err != nil || strings.TrimSpace(payload.Content) == "" || !validOptionalGuidelineSeverity(payload.Severity) {
 			return fmt.Errorf("invalid clinical callout payload")
 		}
 		return requireType(payload.Type)
@@ -692,7 +726,10 @@ func validGuidelineBlockType(value models.GuidelineBlockType) bool {
 	switch value {
 	case models.GuidelineBlockHeading, models.GuidelineBlockParagraph, models.GuidelineBlockOrderedList,
 		models.GuidelineBlockUnorderedList, models.GuidelineBlockTable, models.GuidelineBlockFigure,
-		models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint,
+		models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference,
 		models.GuidelineBlockAlgorithm, models.GuidelineBlockReference, models.GuidelineBlockPageBreak,
 		models.GuidelineBlockUnknown:
 		return true
@@ -704,7 +741,9 @@ func validGuidelineBlockType(value models.GuidelineBlockType) bool {
 func highRiskGuidelineBlock(value models.GuidelineBlockType) bool {
 	switch value {
 	case models.GuidelineBlockTable, models.GuidelineBlockRecommendation, models.GuidelineBlockWarning,
-		models.GuidelineBlockKeyPoint, models.GuidelineBlockAlgorithm:
+		models.GuidelineBlockCaution, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockProcedure, models.GuidelineBlockAlgorithm, models.GuidelineBlockAlgorithmReference,
+		models.GuidelineBlockReferralCriteria:
 		return true
 	default:
 		return false
@@ -758,7 +797,10 @@ func guidelineBlockSearchText(blockType models.GuidelineBlockType, content json.
 			return "", "", err
 		}
 		return strings.TrimSpace(strings.Join([]string{payload.Caption, payload.AlternativeText}, "\n")), strings.TrimSpace(payload.Caption), nil
-	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint:
+	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference:
 		var payload models.GuidelineCalloutBlockPayload
 		if err := json.Unmarshal(content, &payload); err != nil {
 			return "", "", err

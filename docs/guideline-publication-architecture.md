@@ -1,6 +1,9 @@
 # Guideline publication architecture
 
-- Status: Accepted for staged implementation
+The draft/revision and explicit-regeneration lifecycle is documented in
+[`markdown-authoring-workspace.md`](markdown-authoring-workspace.md).
+
+- Status: Implemented through Markdown authoring Phase 24
 - Date: 2026-08-10
 - Scope: backend, AI worker, dashboard, Flutter `user_app`, and `guidelines-platform`
 
@@ -254,6 +257,16 @@ The editorial API now includes extraction status, reviewed-content preview, sect
 
 Swagger/OpenAPI and generated TypeScript/Dart contracts include the Phase 6 routes and concrete response DTOs. Backend ownership/isolation, editor lifecycle, public projection and conditional-request tests cover the new surface. Migration `00017` has been validated up/down/up against the development PostgreSQL service.
 
+## Markdown authoring phases 12–14
+
+Markdown validation now runs twice: the dashboard provides immediate advisory feedback while `GET /api/v2/guideline-versions/:id/markdown-revisions/:revisionId/validation` validates the immutable object in backend storage. The backend result is authoritative for regeneration. Invalid and empty drafts remain saveable so clinical language is never silently corrected or lost; blocking validation errors prevent regeneration and publication instead. Issues include a severity, stable code, message, and source range. Rendering continues to sanitize untrusted Markdown and HTML.
+
+Manual regeneration is bound to the requested immutable revision and creates both an ingestion job and a pending regeneration review. Job status is available from `/regeneration-jobs/:jobId`, including the real worker stage and percentage. Cancellation is cooperative before persistence, and is rejected after transactional persistence begins. Failed or canceled jobs may be retried up to the configured attempt limit. The worker reports downloading, parsing, structure building, chunking, embedding, persistence, review-required, failed, canceled, and completed states. A newer Markdown source prevents a superseded job from persisting.
+
+Every regeneration records a before snapshot and a post-regeneration snapshot. Its comparison reports section additions/removals/renames and hierarchy changes, block-type changes, tables, chunks, asset references/provenance, and original-PDF availability. Reviewers may comment, approve or reject individual structured blocks with the existing block-review API, then accept or reject the overall regeneration. Rejection requires a comment and returns the Markdown revision to authoring. Acceptance is refused while any high-risk table, recommendation, warning, caution, contraindication, dosage, procedure, referral, or algorithm block is unreviewed. Publication requires an accepted regeneration review; the previously published version stays available throughout regeneration and review.
+
+Migration `00021_guideline_regeneration_review.sql` adds observable job progress, cooperative cancellation, durable regeneration comparisons, decisions, and review comments. Original PDFs and immutable Markdown revisions remain the provenance sources; generated output never fabricates citations.
+
 This does not complete the overall migration. The next safe slice is capability-driven rendering in `guidelines-platform`, followed by the Flutter canonical repository/offline package and dynamic reader behind a feature flag. Neither client should migrate progress/bookmark keys until the canonical/legacy identity mapping is implemented and verified.
 
 Direct Markdown ingestion is implemented as an additive editorial source option. The existing
@@ -268,3 +281,61 @@ Markdown-only publications deliberately report that original-PDF access and PDF 
 unavailable. When an editor revises Markdown originally generated from a PDF, the immutable PDF is
 retained as the fidelity reference. The dashboard upload and create workflows expose both formats,
 and save feedback states that structured content and the AI index are regenerating.
+
+## Markdown authoring phases 15–22
+
+The dashboard now provides explicit draft previews for sanitized Markdown, the canonical
+structured-reader layout, the public reader, Flutter/mobile reader, responsive mobile/tablet/
+desktop widths, print, search results, deterministic draft RAG chunks, citations, table of
+contents, and original-PDF comparison. Original-PDF comparison is offered only when the draft
+asset manifest contains an original PDF. Search and RAG previews are labelled simulations and
+never write to or expose the production public/RAG indexes. Raw HTML remains disabled.
+
+Non-blocking document information reports word, character, line, heading, table, image and
+clinical-callout counts, reading time, current revision, save/editor/checksum state, structured
+status, regeneration/embedding information available from the current API, validation totals and
+review completion. Browser recovery records are isolated by authenticated user, document and
+version, include the base ETag, and are cleared only after a confirmed server save.
+
+Migrations `00022_guideline_editor_permissions.sql` and
+`00023_guideline_editor_collaboration.sql` add the explicit Markdown read/edit/upload, asset,
+regeneration, review, high-risk approval, publish and restore permission vocabulary; safe default
+role mappings; reviewer assignments; and revision/section/block comments with durable resolution
+state. The editor exposes assignments, comments and the audit timeline. Collaboration is
+asynchronous: ETags and immutable revisions prevent overwrites, while presence and live cursor
+sharing remain explicitly unsupported because no realtime transport or server-side presence
+system exists. Mentions are not implemented because there is no verified notification workflow.
+
+Private editorial endpoints remain authenticated and version-scoped. Draft writes, asset uploads
+and regeneration have rate and concurrency controls. Save, checkpoint, upload, restore, duplicate,
+regeneration, review and publication transitions emit audit events with actor identity derived from
+JWT claims. Public and mobile contracts remain publication-only: current published versions stay
+available while drafts are authored, and accepted revision IDs continue to gate publication.
+
+The AI worker processes the exact immutable revision from the job payload, stores the revision and
+job IDs in extraction metadata and block provenance, escapes unsafe HTML, produces deterministic
+typed blocks/chunks/embeddings, and refuses superseded persistence. For Markdown-only sources page
+citations remain unavailable. For a PDF-derived draft, page provenance is retained only for blocks
+whose source fingerprint is unchanged; edited or unmatched blocks never inherit guessed pages.
+All derived content remains review-required and a processing failure preserves the source revision.
+
+Phase 22 adds an authoritative service-level publication workflow that creates a blank draft,
+creates checkpoints, restores history, explicitly regenerates, reviews high-risk content, accepts
+the regeneration, publishes the selected revision, verifies the public Markdown/structured
+projection, and proves RAG eligibility contains only approved chunks from the published version.
+Focused backend, worker and dashboard suites cover failure, conflict, validation, rendering,
+permission, provenance, supersession, idempotency and accessibility boundaries. A seeded browser
+smoke test remains an operational deployment check rather than a substitute for service
+authorization tests.
+
+Phase 23 standardizes contract generation. `make contracts` regenerates Go Swagger and the
+TypeScript/Dart consumers. `make contracts-check` regenerates into a temporary tree and fails on
+byte drift, preventing manually edited generated DTOs. Markdown revision, validation, asset,
+regeneration, review and public projection schemas are concrete OpenAPI definitions.
+
+Phase 24 closes the operator and maintainer handoff in
+[`markdown-authoring-workspace.md`](markdown-authoring-workspace.md),
+[`guideline-editor-permissions.md`](guideline-editor-permissions.md), the AI-worker pipeline guide
+and `infra/README.md`. These documents define syntax, lifecycle, autosave/recovery, conflicts,
+assets/limits, permissions, asynchronous collaboration, worker/embedding requirements,
+troubleshooting, reproducible builds and non-production validation.

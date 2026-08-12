@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, FileText, RefreshCw } from "lucide-react"
 
 import { GuidelineMarkdownEditor } from "@/components/guidelines/guideline-markdown-editor"
@@ -28,11 +28,13 @@ import {
 import {
   GuidelineMarkdownError,
   GuidelineMarkdownService,
+  MarkdownDraft,
 } from "@/services/guideline-markdown.service"
 
 interface EditorData {
   document: GuidelineDocumentRecord
   version: GuidelineVersionRecord
+  draft: MarkdownDraft | null
   markdown: string
 }
 
@@ -52,6 +54,7 @@ function EditorSkeleton() {
 export default function GuidelineMarkdownPage() {
   const params = useParams<{ id: string; versionId: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { hasPermission, loading: permissionsLoading } = usePermissionContext()
   const [data, setData] = React.useState<EditorData | null>(null)
   const [error, setError] = React.useState<GuidelineMarkdownError | null>(null)
@@ -77,9 +80,32 @@ export default function GuidelineMarkdownPage() {
           404,
         )
       }
-      const markdown = await GuidelineMarkdownService.load(params.versionId)
+      let draft: MarkdownDraft | null = null
+      let markdown = ""
+      try {
+        draft = await GuidelineMarkdownService.loadDraft(params.versionId)
+        markdown = draft.content
+      } catch (draftError) {
+        if (!(draftError instanceof GuidelineMarkdownError) || draftError.status !== 404) {
+          throw draftError
+        }
+        try {
+          markdown = await GuidelineMarkdownService.load(params.versionId)
+        } catch (legacyError) {
+          const publishedVersion = version.status.toLowerCase() === "published"
+          if (
+            publishedVersion ||
+            !(legacyError instanceof GuidelineMarkdownError) ||
+            legacyError.status !== 404
+          ) {
+            throw legacyError
+          }
+          // A writable version without a source is a valid blank-authoring entry point.
+          markdown = ""
+        }
+      }
       if (currentRequest === requestId.current) {
-        setData({ document, version, markdown })
+        setData({ document, version, draft, markdown })
       }
     } catch (loadError) {
       if (currentRequest !== requestId.current) return
@@ -179,7 +205,7 @@ export default function GuidelineMarkdownPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{data.document.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {canUpdate && !published
-              ? "Review, edit, and preview the extracted clinical Markdown."
+              ? "Author, validate, save, compare, and explicitly regenerate clinical Markdown."
               : "Preview the extracted clinical Markdown in read-only mode."}
           </p>
         </div>
@@ -193,8 +219,16 @@ export default function GuidelineMarkdownPage() {
 
       <GuidelineMarkdownEditor
         key={data.version.id}
+        documentId={data.document.id}
         versionId={data.version.id}
+        documentTitle={data.document.title}
+        versionLabel={data.version.version}
+        publishedVersionId={data.document.current_version_id}
+        structuredRevisionId={data.version.structured_markdown_revision_id}
+        publishedRevisionId={data.version.published_markdown_revision_id}
+        openTemplatesInitially={searchParams.get("start") === "template"}
         initialContent={data.markdown}
+        initialDraft={data.draft}
         editable={canUpdate}
         published={published}
       />

@@ -20,6 +20,10 @@ export interface GuidelineVersionRecord {
   extraction_schema_version?: number
   extraction_metadata?: Record<string, unknown>
   extraction_warnings?: string[]
+  current_markdown_revision_id?: string | null
+  structured_markdown_revision_id?: string | null
+  published_markdown_revision_id?: string | null
+  structured_content_status?: string
   created_at: string
   updated_at: string
 }
@@ -88,7 +92,9 @@ export interface GuidelineSectionRecord {
 
 export type GuidelineBlockType =
   | "heading" | "paragraph" | "ordered_list" | "unordered_list" | "table"
-  | "figure" | "recommendation" | "warning" | "key_point" | "algorithm"
+  | "figure" | "recommendation" | "warning" | "caution" | "key_point"
+  | "contraindication" | "dosage" | "evidence" | "definition" | "procedure"
+  | "clinical_note" | "referral_criteria" | "algorithm_reference" | "algorithm"
   | "reference" | "page_break" | "unknown"
 
 export type GuidelineBlockReviewStatus = "draft" | "reviewed" | "rejected"
@@ -127,6 +133,7 @@ export interface GuidelineReviewIssue {
   message: string
   section_id?: string
   block_id?: string
+  asset_id?: string
 }
 
 export interface GuidelinePublicationValidation {
@@ -359,7 +366,7 @@ export class GuidelineDocumentsService {
 
   static async getReviewAsset(versionId: string, assetId: string): Promise<Blob> {
     return getBackendClient().request<Blob>(
-      `/api/v2/guideline-versions/${versionId}/assets/${assetId}`,
+      `/api/v2/guideline-versions/${versionId}/assets/${assetId}/content`,
       { method: "GET", responseType: "blob" }
     )
   }

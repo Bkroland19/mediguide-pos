@@ -1,16 +1,61 @@
 "use client"
+/* eslint-disable @next/next/no-img-element -- guideline assets use short-lived signed URLs */
 
-import ReactMarkdown from "react-markdown"
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
+import type { GuidelineAsset } from "@/services/guideline-assets.service"
 
 interface MarkdownPreviewProps {
   content: string
   className?: string
+  assets?: GuidelineAsset[]
 }
 
-export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
+const calloutLabels: Record<string, string> = {
+  recommendation: "Recommendation",
+  warning: "Warning",
+  caution: "Caution",
+  "key-point": "Key point",
+  contraindication: "Contraindication",
+  dosage: "Dosage",
+  evidence: "Evidence statement",
+  definition: "Definition",
+  procedure: "Procedure",
+  "algorithm-reference": "Algorithm reference",
+  "clinical-note": "Clinical note",
+  "referral-criteria": "Referral criteria",
+}
+
+export function renderableClinicalMarkdown(content: string) {
+  const output: string[] = []
+  let callout: string | null = null
+  for (const line of content.split("\n")) {
+    const start = /^:::([a-z][a-z-]*)(?:\s+(.*))?$/u.exec(line)
+    if (!callout && start && calloutLabels[start[1]]) {
+      callout = start[1]
+      const title = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      const severity = /(?:^|\s)severity=([^\s]+)/u.exec(start[2] || "")
+      const evidence = /(?:^|\s)evidence_grade=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      const source = /(?:^|\s)source=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      output.push(`> **${title?.[1] || title?.[2] || title?.[3] || calloutLabels[callout]}**`)
+      if (severity?.[1]) output.push(`> _Priority: ${severity[1]}_`)
+      if (evidence) output.push(`> _Evidence grade: ${evidence[1] || evidence[2] || evidence[3]}_`)
+      if (source) output.push(`> _Source: ${source[1] || source[2] || source[3]}_`)
+      continue
+    }
+    if (callout && /^:::\s*$/u.test(line)) {
+      callout = null
+      output.push("")
+      continue
+    }
+    output.push(callout ? `> ${line || " "}` : line)
+  }
+  return output.join("\n")
+}
+
+export function MarkdownPreview({ content, className, assets = [] }: MarkdownPreviewProps) {
   if (!content.trim()) {
     return (
       <div className={cn("grid min-h-64 place-items-center text-sm text-muted-foreground", className)}>
@@ -41,6 +86,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
+        urlTransform={(url) => typeof url === "string" && url.startsWith("guideline-asset://") ? url : defaultUrlTransform(url)}
         components={{
           a: ({ href, children, node, ...props }) => {
             void node
@@ -55,9 +101,18 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
               </a>
             )
           },
+          img: ({ src, alt, node, ...props }) => {
+            void node
+            const source = typeof src === "string" ? src : ""
+            const asset = assets.find((item) => item.reference === source)
+            if (source.startsWith("guideline-asset://") && !asset) {
+              return <span role="img" aria-label={alt || "Broken guideline image"} className="my-3 block rounded border border-destructive p-3 text-destructive">Broken guideline asset reference</span>
+            }
+            return <img {...props} src={asset?.url || source} alt={alt || asset?.alternative_text || ""} loading="lazy" />
+          },
         }}
       >
-        {content}
+        {renderableClinicalMarkdown(content)}
       </ReactMarkdown>
     </article>
   )

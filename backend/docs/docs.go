@@ -4455,7 +4455,285 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List the guideline editorial activity timeline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum events (1-200)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.AuditLog"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/assets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "List a version's authored guideline assets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetList"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Upload a version-scoped guideline image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "PNG, JPEG, GIF or WebP image",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Image alternative text",
+                        "name": "alternative_text",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caption",
+                        "name": "caption",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source",
+                        "name": "source",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Attribution",
+                        "name": "attribution",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Copyright or license",
+                        "name": "license",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Positive figure number",
+                        "name": "figure_number",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Require clinical review",
+                        "name": "clinically_sensitive",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/assets/{assetId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Get guideline asset metadata and a short-lived URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Remove an asset from an editable guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Update editable guideline asset metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Asset metadata",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/assets/{assetId}/content": {
             "get": {
                 "security": [
                     {
@@ -4881,6 +5159,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Drafts branch from their current revision. Published versions branch from their exact published revision.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Duplicate a guideline Markdown revision into a new draft version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Source guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New draft version metadata",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DuplicateMarkdownVersionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DuplicatedMarkdownVersionEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/extracted/markdown": {
             "put": {
                 "security": [
@@ -4898,7 +5253,7 @@ const docTemplate = `{
                 "tags": [
                     "guidelines"
                 ],
-                "summary": "Replace extracted guideline Markdown",
+                "summary": "Save a guideline Markdown draft (legacy editor route)",
                 "parameters": [
                     {
                         "type": "string",
@@ -5071,6 +5426,497 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/markdown-draft": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Get the current guideline Markdown draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownDraftEnvelope"
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Save a guideline Markdown draft without regenerating structured content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Current draft ETag",
+                        "name": "If-Match",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Markdown draft",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MarkdownDraftInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownDraftEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/markdown-revisions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "List immutable Markdown revisions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source type",
+                        "name": "source_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Editor ID",
+                        "name": "created_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Created at or after",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Created at or before",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedMarkdownRevisionsEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Save a named Markdown checkpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Current draft ETag",
+                        "name": "If-Match",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Named Markdown checkpoint",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MarkdownDraftInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownDraftEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Get one Markdown revision and its content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Revision ID",
+                        "name": "revisionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownDraftEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/download": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/markdown"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Download a Markdown revision",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Revision ID",
+                        "name": "revisionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Restore a historical Markdown revision as a new draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Revision ID",
+                        "name": "revisionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Current draft ETag",
+                        "name": "If-Match",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Restore options",
+                        "name": "payload",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RestoreMarkdownRevisionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownDraftEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/validation": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Validate an immutable Markdown revision",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Markdown revision ID",
+                        "name": "revisionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownValidationEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/preview": {
             "get": {
                 "security": [
@@ -5159,6 +6005,436 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/regenerate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Regenerate structured content and RAG data from an exact Markdown revision",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Regeneration request",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MarkdownRegenerationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MarkdownRegenerationEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Get observable regeneration progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationJobViewEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Request safe cancellation of regeneration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.IngestionJobResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Retry a failed or canceled regeneration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.IngestionJobResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Compare regenerated content with the prior projection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationReviewEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Accept a regenerated projection after high-risk review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reviewer comment",
+                        "name": "payload",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/services.RegenerationDecisionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationReviewEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/comments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List ordered comments for a regeneration review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationCommentsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Add a review or block-level comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineReviewCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationCommentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Reject a regenerated projection and return to Markdown",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Regeneration job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Required rejection comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.RegenerationDecisionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RegenerationReviewEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/review": {
             "get": {
                 "security": [
@@ -5206,6 +6482,252 @@ const docTemplate = `{
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-comments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List revision, section, and block review comments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by resolution state",
+                        "name": "resolved",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.GuidelineEditorComment"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Add a revision, section, block, or version review comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateGuidelineEditorCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineEditorComment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-comments/{commentId}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Resolve or reopen an editor review comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Comment ID",
+                        "name": "commentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Resolution state",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ResolveGuidelineEditorCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineEditorComment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/reviewers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List assigned reviewers for a guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Assign a reviewer to a guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reviewer assignment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.AssignGuidelineReviewerInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/reviewers/{assignmentId}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Complete or dismiss a reviewer assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Assignment ID",
+                        "name": "assignmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Assignment transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineReviewAssignmentStatusInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
                         }
                     }
                 }
@@ -9749,6 +11271,18 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DuplicatedMarkdownVersionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.DuplicatedMarkdownVersion"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.EmailVerificationConfirmRequest": {
             "type": "object",
             "properties": {
@@ -9971,6 +11505,56 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.IngestionJobResponse": {
+            "type": "object",
+            "properties": {
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "cancel_requested_at": {
+                    "type": "string"
+                },
+                "canceled_at": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_type": {
+                    "type": "string"
+                },
+                "payload_json": {
+                    "type": "string"
+                },
+                "progress_percent": {
+                    "type": "integer"
+                },
+                "progress_stage": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.JSONMap": {
             "type": "object",
             "additionalProperties": {}
@@ -10170,6 +11754,30 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.MarkdownDraftEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.MarkdownDraft"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.MarkdownRegenerationEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.MarkdownRegenerationResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.MarkdownUpdateEnvelope": {
             "type": "object",
             "properties": {
@@ -10200,6 +11808,17 @@ const docTemplate = `{
                 "updated": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.MarkdownValidationEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.MarkdownValidationResult"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -10860,6 +12479,45 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedMarkdownRevisions": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineMarkdownRevision"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "per_page": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.PaginatedMarkdownRevisionsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedMarkdownRevisions"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.PaginatedMedicalGuidelinesEnvelope": {
             "type": "object",
             "properties": {
@@ -11459,6 +13117,53 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.RegenerationCommentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineReviewComment"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.RegenerationCommentsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineReviewComment"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.RegenerationJobViewEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.RegenerationJobView"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.RegenerationReviewEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineRegenerationReview"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -11543,6 +13248,14 @@ const docTemplate = `{
                 "timezone": {
                     "type": "string",
                     "example": "Africa/Kampala"
+                }
+            }
+        },
+        "handlers.RestoreMarkdownRevisionInput": {
+            "type": "object",
+            "properties": {
+                "expected_revision": {
+                    "type": "string"
                 }
             }
         },
@@ -11810,6 +13523,38 @@ const docTemplate = `{
                 },
                 "usage_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.AuditLog": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "metadata_json": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -12460,13 +14205,31 @@ const docTemplate = `{
         "models.GuidelineAsset": {
             "type": "object",
             "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
                 "checksum": {
                     "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
                 },
                 "created_at": {
                     "type": "string"
                 },
+                "figure_number": {
+                    "type": "integer"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "license": {
                     "type": "string"
                 },
                 "mime_type": {
@@ -12499,16 +14262,19 @@ const docTemplate = `{
                 "size_bytes": {
                     "type": "integer"
                 },
-                "source_fingerprint": {
+                "source": {
                     "type": "string"
                 },
-                "storage_key": {
+                "source_fingerprint": {
                     "type": "string"
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineAssetType"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uploaded_by": {
                     "type": "string"
                 },
                 "version_id": {
@@ -12559,7 +14325,16 @@ const docTemplate = `{
                 "figure",
                 "recommendation",
                 "warning",
+                "caution",
                 "key_point",
+                "contraindication",
+                "dosage",
+                "evidence",
+                "definition",
+                "procedure",
+                "clinical_note",
+                "referral_criteria",
+                "algorithm_reference",
                 "algorithm",
                 "reference",
                 "page_break",
@@ -12574,7 +14349,16 @@ const docTemplate = `{
                 "GuidelineBlockFigure",
                 "GuidelineBlockRecommendation",
                 "GuidelineBlockWarning",
+                "GuidelineBlockCaution",
                 "GuidelineBlockKeyPoint",
+                "GuidelineBlockContraindication",
+                "GuidelineBlockDosage",
+                "GuidelineBlockEvidence",
+                "GuidelineBlockDefinition",
+                "GuidelineBlockProcedure",
+                "GuidelineBlockClinicalNote",
+                "GuidelineBlockReferralCriteria",
+                "GuidelineBlockAlgorithmReference",
                 "GuidelineBlockAlgorithm",
                 "GuidelineBlockReference",
                 "GuidelineBlockPageBreak",
@@ -12772,6 +14556,47 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineEditorComment": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "resolved": {
+                    "type": "boolean"
+                },
+                "resolved_at": {
+                    "type": "string"
+                },
+                "resolved_by": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineExtractionQuality": {
             "type": "string",
             "enum": [
@@ -12835,6 +14660,176 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineMarkdownRevision": {
+            "type": "object",
+            "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
+                "change_summary": {
+                    "type": "string"
+                },
+                "checkpoint_name": {
+                    "type": "string"
+                },
+                "checksum": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "document_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_current": {
+                    "type": "boolean"
+                },
+                "parent_revision_id": {
+                    "type": "string"
+                },
+                "publication_state": {
+                    "type": "string"
+                },
+                "regeneration_job_id": {
+                    "type": "string"
+                },
+                "review_state": {
+                    "type": "string"
+                },
+                "revision_number": {
+                    "type": "integer"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "source_ingestion_job_id": {
+                    "type": "string"
+                },
+                "source_type": {
+                    "type": "string"
+                },
+                "structured_content_status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineRegenerationReview": {
+            "type": "object",
+            "properties": {
+                "after_snapshot": {
+                    "type": "object"
+                },
+                "before_snapshot": {
+                    "type": "object"
+                },
+                "comparison": {
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "decision_comment": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineReviewAssignment": {
+            "type": "object",
+            "properties": {
+                "assigned_by": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineReviewComment": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
                     "type": "string"
                 }
             }
@@ -12962,6 +14957,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "current_markdown_revision_id": {
+                    "type": "string"
+                },
                 "document_id": {
                     "type": "string"
                 },
@@ -12995,6 +14993,9 @@ const docTemplate = `{
                 "publication_date": {
                     "type": "string"
                 },
+                "published_markdown_revision_id": {
+                    "type": "string"
+                },
                 "review_date": {
                     "type": "string"
                 },
@@ -13005,6 +15006,12 @@ const docTemplate = `{
                     }
                 },
                 "status": {
+                    "type": "string"
+                },
+                "structured_content_status": {
+                    "type": "string"
+                },
+                "structured_markdown_revision_id": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -13098,6 +15105,12 @@ const docTemplate = `{
                 "attempt_count": {
                     "type": "integer"
                 },
+                "cancel_requested_at": {
+                    "type": "string"
+                },
+                "canceled_at": {
+                    "type": "string"
+                },
                 "completed_at": {
                     "type": "string"
                 },
@@ -13114,6 +15127,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payload_json": {
+                    "type": "string"
+                },
+                "progress_percent": {
+                    "type": "integer"
+                },
+                "progress_stage": {
                     "type": "string"
                 },
                 "started_at": {
@@ -13951,6 +15970,20 @@ const docTemplate = `{
                 }
             }
         },
+        "services.AssignGuidelineReviewerInput": {
+            "type": "object",
+            "required": [
+                "reviewer_id"
+            ],
+            "properties": {
+                "due_at": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.Citation": {
             "type": "object",
             "properties": {
@@ -14347,6 +16380,26 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CreateGuidelineEditorCommentInput": {
+            "type": "object",
+            "required": [
+                "body"
+            ],
+            "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "section_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.CreateGuidelineInput": {
             "type": "object",
             "properties": {
@@ -14649,6 +16702,66 @@ const docTemplate = `{
                 },
                 "tag_category": {
                     "type": "string"
+                }
+            }
+        },
+        "services.DuplicateMarkdownVersionInput": {
+            "type": "object",
+            "properties": {
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DuplicatedGuidelineVersion": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current_markdown_revision_id": {
+                    "type": "string"
+                },
+                "document_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "structured_content_status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DuplicatedMarkdownVersion": {
+            "type": "object",
+            "properties": {
+                "draft": {
+                    "$ref": "#/definitions/services.MarkdownDraft"
+                },
+                "version": {
+                    "$ref": "#/definitions/services.DuplicatedGuidelineVersion"
                 }
             }
         },
@@ -15047,6 +17160,126 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineAssetDTO": {
+            "type": "object",
+            "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "checksum": {
+                    "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "figure_number": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_filename": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                },
+                "referenced": {
+                    "type": "boolean"
+                },
+                "review_status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineAssetType"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uploaded_by": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "url_expires_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineAssetInput": {
+            "type": "object",
+            "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
+                },
+                "figure_number": {
+                    "type": "integer"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineAssetList": {
+            "type": "object",
+            "properties": {
+                "broken_references": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineAssetDTO"
+                    }
+                }
+            }
+        },
         "services.GuidelineBlockOrderInput": {
             "type": "object",
             "required": [
@@ -15303,9 +17536,34 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineReviewAssignmentStatusInput": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineReviewCommentInput": {
+            "type": "object",
+            "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                }
+            }
+        },
         "services.GuidelineReviewIssue": {
             "type": "object",
             "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
                 "block_id": {
                     "type": "string"
                 },
@@ -15458,6 +17716,138 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.SyncPackage"
                     }
+                }
+            }
+        },
+        "services.MarkdownDraft": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "etag": {
+                    "type": "string"
+                },
+                "revision": {
+                    "$ref": "#/definitions/models.GuidelineMarkdownRevision"
+                },
+                "saved": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.MarkdownDraftInput": {
+            "type": "object",
+            "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
+                "change_summary": {
+                    "type": "string"
+                },
+                "checkpoint_name": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "expected_revision": {
+                    "type": "string"
+                },
+                "parent_revision_id": {
+                    "type": "string"
+                },
+                "source_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MarkdownRegenerationInput": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "revision_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MarkdownRegenerationResult": {
+            "type": "object",
+            "properties": {
+                "job": {
+                    "$ref": "#/definitions/models.IngestionJob"
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "queued_at": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MarkdownValidationIssue": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "column": {
+                    "type": "integer"
+                },
+                "end_column": {
+                    "type": "integer"
+                },
+                "end_line": {
+                    "type": "integer"
+                },
+                "line": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MarkdownValidationResult": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "integer"
+                },
+                "info": {
+                    "type": "integer"
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.MarkdownValidationIssue"
+                    }
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                },
+                "warnings": {
+                    "type": "integer"
                 }
             }
         },
@@ -16570,6 +18960,31 @@ const docTemplate = `{
                 }
             }
         },
+        "services.RegenerationDecisionInput": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.RegenerationJobView": {
+            "type": "object",
+            "properties": {
+                "job": {
+                    "$ref": "#/definitions/models.IngestionJob"
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "revision_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.RegionChildren": {
             "type": "object",
             "properties": {
@@ -16615,6 +19030,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/services.GuidelineSectionOrderInput"
                     }
+                }
+            }
+        },
+        "services.ResolveGuidelineEditorCommentInput": {
+            "type": "object",
+            "properties": {
+                "resolved": {
+                    "type": "boolean"
                 }
             }
         },

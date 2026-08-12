@@ -90,6 +90,12 @@ export interface HandlersDrugUsageEnvelope {
   success?: boolean;
 }
 
+export interface HandlersDuplicatedMarkdownVersionEnvelope {
+  data?: ServicesDuplicatedMarkdownVersion;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersEmailVerificationConfirmRequest {
   token?: string;
 }
@@ -196,6 +202,24 @@ export interface HandlersIngestionJobEnvelope {
   success?: boolean;
 }
 
+export interface HandlersIngestionJobResponse {
+  attempt_count?: number;
+  cancel_requested_at?: string;
+  canceled_at?: string;
+  completed_at?: string;
+  created_at?: string;
+  error?: string;
+  id?: string;
+  job_type?: string;
+  payload_json?: string;
+  progress_percent?: number;
+  progress_stage?: string;
+  started_at?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export type HandlersJSONMap = Record<string, any>;
 
 export interface HandlersLanguageEnvelope {
@@ -269,6 +293,18 @@ export interface HandlersManifestEnvelope {
   success?: boolean;
 }
 
+export interface HandlersMarkdownDraftEnvelope {
+  data?: ServicesMarkdownDraft;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersMarkdownRegenerationEnvelope {
+  data?: ServicesMarkdownRegenerationResult;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersMarkdownUpdateEnvelope {
   data?: HandlersMarkdownUpdateResult;
   /** @example true */
@@ -284,6 +320,11 @@ export interface HandlersMarkdownUpdateResult {
   size?: number;
   /** @example true */
   updated?: boolean;
+}
+
+export interface HandlersMarkdownValidationEnvelope {
+  data?: ServicesMarkdownValidationResult;
+  success?: boolean;
 }
 
 export interface HandlersMedicalGuidelineEnvelope {
@@ -573,6 +614,24 @@ export interface HandlersPaginatedLanguagesEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedMarkdownRevisions {
+  items?: ModelsGuidelineMarkdownRevision[];
+  /** @example 1 */
+  page?: number;
+  /** @example 20 */
+  per_page?: number;
+  /** @example 1 */
+  total_items?: number;
+  /** @example 1 */
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedMarkdownRevisionsEnvelope {
+  data?: HandlersPaginatedMarkdownRevisions;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersPaginatedMedicalGuidelinesEnvelope {
   data?: ServicesPageResultModelsMedicalGuideline;
   success?: boolean;
@@ -830,6 +889,26 @@ export interface HandlersRefreshRequest {
   refresh_token?: string;
 }
 
+export interface HandlersRegenerationCommentEnvelope {
+  data?: ModelsGuidelineReviewComment;
+  success?: boolean;
+}
+
+export interface HandlersRegenerationCommentsEnvelope {
+  data?: ModelsGuidelineReviewComment[];
+  success?: boolean;
+}
+
+export interface HandlersRegenerationJobViewEnvelope {
+  data?: ServicesRegenerationJobView;
+  success?: boolean;
+}
+
+export interface HandlersRegenerationReviewEnvelope {
+  data?: ModelsGuidelineRegenerationReview;
+  success?: boolean;
+}
+
 export interface HandlersRegisterRequest {
   /** @example "Plot 12 Kampala Road" */
   address?: string;
@@ -869,6 +948,10 @@ export interface HandlersRegisterRequest {
   specialization?: string[];
   /** @example "Africa/Kampala" */
   timezone?: string;
+}
+
+export interface HandlersRestoreMarkdownRevisionInput {
+  expected_revision?: string;
 }
 
 export interface HandlersRolePermissionsRequest {
@@ -991,6 +1074,18 @@ export interface ModelsAbbreviation {
   tags?: string[];
   updated_at?: string;
   usage_count?: number;
+}
+
+export interface ModelsAuditLog {
+  action?: string;
+  actor_id?: string;
+  created_at?: string;
+  entity_id?: string;
+  entity_type?: string;
+  id?: string;
+  ip_address?: string;
+  metadata_json?: string;
+  updated_at?: string;
 }
 
 export interface ModelsCalculator {
@@ -1221,9 +1316,15 @@ export interface ModelsGuidelineAlgorithmNode {
 }
 
 export interface ModelsGuidelineAsset {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
   checksum?: string;
+  clinically_sensitive?: boolean;
   created_at?: string;
+  figure_number?: number;
   id?: string;
+  license?: string;
   mime_type?: string;
   original_filename?: string;
   page_end?: number;
@@ -1234,10 +1335,11 @@ export interface ModelsGuidelineAsset {
   reviewed_by?: string;
   section_id?: string;
   size_bytes?: number;
+  source?: string;
   source_fingerprint?: string;
-  storage_key?: string;
   type?: ModelsGuidelineAssetType;
   updated_at?: string;
+  uploaded_by?: string;
   version_id?: string;
 }
 
@@ -1263,7 +1365,16 @@ export type ModelsGuidelineBlockType =
   | "figure"
   | "recommendation"
   | "warning"
+  | "caution"
   | "key_point"
+  | "contraindication"
+  | "dosage"
+  | "evidence"
+  | "definition"
+  | "procedure"
+  | "clinical_note"
+  | "referral_criteria"
+  | "algorithm_reference"
   | "algorithm"
   | "reference"
   | "page_break"
@@ -1337,6 +1448,21 @@ export interface ModelsGuidelineDocument {
   versions?: ModelsGuidelineVersion[];
 }
 
+export interface ModelsGuidelineEditorComment {
+  author_id?: string;
+  block_id?: string;
+  body?: string;
+  created_at?: string;
+  id?: string;
+  resolved?: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  revision_id?: string;
+  section_id?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export type ModelsGuidelineExtractionQuality =
   | "reviewed"
   | "partially_reviewed"
@@ -1361,6 +1487,68 @@ export interface ModelsGuidelineIndexEntry {
   sort_order?: number;
   title?: string;
   updated_at?: string;
+}
+
+export interface ModelsGuidelineMarkdownRevision {
+  anchor_metadata?: object;
+  change_summary?: string;
+  checkpoint_name?: string;
+  checksum?: string;
+  created_at?: string;
+  created_by?: string;
+  document_id?: string;
+  id?: string;
+  is_current?: boolean;
+  parent_revision_id?: string;
+  publication_state?: string;
+  regeneration_job_id?: string;
+  review_state?: string;
+  revision_number?: number;
+  size_bytes?: number;
+  source_ingestion_job_id?: string;
+  source_type?: string;
+  structured_content_status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineRegenerationReview {
+  after_snapshot?: object;
+  before_snapshot?: object;
+  comparison?: object;
+  created_at?: string;
+  decision_comment?: string;
+  id?: string;
+  job_id?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  revision_id?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineReviewAssignment {
+  assigned_by?: string;
+  completed_at?: string;
+  created_at?: string;
+  due_at?: string;
+  id?: string;
+  reviewer_id?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineReviewComment {
+  author_id?: string;
+  block_id?: string;
+  body?: string;
+  created_at?: string;
+  id?: string;
+  job_id?: string;
+  updated_at?: string;
+  version_id?: string;
 }
 
 export interface ModelsGuidelineSection {
@@ -1402,6 +1590,7 @@ export interface ModelsGuidelineVersion {
   checksum?: string;
   content_blocks?: ModelsGuidelineContentBlock[];
   created_at?: string;
+  current_markdown_revision_id?: string;
   document_id?: string;
   extraction_metadata?: object;
   extraction_schema_version?: number;
@@ -1412,9 +1601,12 @@ export interface ModelsGuidelineVersion {
   markdown_file_key?: string;
   original_file_key?: string;
   publication_date?: string;
+  published_markdown_revision_id?: string;
   review_date?: string;
   sections?: ModelsGuidelineSection[];
   status?: string;
+  structured_content_status?: string;
+  structured_markdown_revision_id?: string;
   updated_at?: string;
   version?: string;
 }
@@ -1448,12 +1640,16 @@ export interface ModelsGuidelineVersionManifest {
 
 export interface ModelsIngestionJob {
   attempt_count?: number;
+  cancel_requested_at?: string;
+  canceled_at?: string;
   completed_at?: string;
   created_at?: string;
   error?: string;
   id?: string;
   job_type?: string;
   payload_json?: string;
+  progress_percent?: number;
+  progress_stage?: string;
   started_at?: string;
   status?: string;
   updated_at?: string;
@@ -1746,6 +1942,11 @@ export interface ServicesAskResponse {
   session_id?: string;
 }
 
+export interface ServicesAssignGuidelineReviewerInput {
+  due_at?: string;
+  reviewer_id: string;
+}
+
 export interface ServicesCitation {
   chunk_id?: string;
   page_end?: number;
@@ -1885,6 +2086,13 @@ export interface ServicesCreateGuidelineBlockInput {
   type: ModelsGuidelineBlockType;
 }
 
+export interface ServicesCreateGuidelineEditorCommentInput {
+  block_id?: string;
+  body: string;
+  revision_id?: string;
+  section_id?: string;
+}
+
 export interface ServicesCreateGuidelineInput {
   country?: string;
   description?: string;
@@ -1996,6 +2204,30 @@ export interface ServicesDrugTagInput {
   sort_order?: number;
   status?: string;
   tag_category?: string;
+}
+
+export interface ServicesDuplicateMarkdownVersionInput {
+  publication_date?: string;
+  review_date?: string;
+  version?: string;
+}
+
+export interface ServicesDuplicatedGuidelineVersion {
+  created_at?: string;
+  current_markdown_revision_id?: string;
+  document_id?: string;
+  id?: string;
+  publication_date?: string;
+  review_date?: string;
+  status?: string;
+  structured_content_status?: string;
+  updated_at?: string;
+  version?: string;
+}
+
+export interface ServicesDuplicatedMarkdownVersion {
+  draft?: ServicesMarkdownDraft;
+  version?: ServicesDuplicatedGuidelineVersion;
 }
 
 export interface ServicesEmergencyProtocolInput {
@@ -2139,6 +2371,48 @@ export interface ServicesGenericPageInput {
   title?: string;
 }
 
+export interface ServicesGuidelineAssetDTO {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
+  checksum?: string;
+  clinically_sensitive?: boolean;
+  created_at?: string;
+  figure_number?: number;
+  id?: string;
+  license?: string;
+  mime_type?: string;
+  original_filename?: string;
+  reference?: string;
+  referenced?: boolean;
+  review_status?: ModelsGuidelineBlockReviewStatus;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  size_bytes?: number;
+  source?: string;
+  type?: ModelsGuidelineAssetType;
+  updated_at?: string;
+  uploaded_by?: string;
+  url?: string;
+  url_expires_at?: string;
+  version_id?: string;
+}
+
+export interface ServicesGuidelineAssetInput {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
+  clinically_sensitive?: boolean;
+  figure_number?: number;
+  license?: string;
+  source?: string;
+}
+
+export interface ServicesGuidelineAssetList {
+  broken_references?: string[];
+  items?: ServicesGuidelineAssetDTO[];
+}
+
 export interface ServicesGuidelineBlockOrderInput {
   id: string;
   section_id?: string;
@@ -2231,7 +2505,17 @@ export interface ServicesGuidelinePublicationValidation {
   warnings?: ServicesGuidelineReviewIssue[];
 }
 
+export interface ServicesGuidelineReviewAssignmentStatusInput {
+  status: string;
+}
+
+export interface ServicesGuidelineReviewCommentInput {
+  block_id?: string;
+  body?: string;
+}
+
 export interface ServicesGuidelineReviewIssue {
+  asset_id?: string;
   block_id?: string;
   code?: string;
   message?: string;
@@ -2285,6 +2569,55 @@ export interface ServicesLoginResult {
 export interface ServicesManifestResult {
   generated_at?: string;
   packages?: ModelsSyncPackage[];
+}
+
+export interface ServicesMarkdownDraft {
+  content?: string;
+  etag?: string;
+  revision?: ModelsGuidelineMarkdownRevision;
+  saved?: boolean;
+}
+
+export interface ServicesMarkdownDraftInput {
+  anchor_metadata?: object;
+  change_summary?: string;
+  checkpoint_name?: string;
+  content?: string;
+  expected_revision?: string;
+  parent_revision_id?: string;
+  source_type?: string;
+}
+
+export interface ServicesMarkdownRegenerationInput {
+  idempotency_key?: string;
+  operations?: string[];
+  revision_id?: string;
+}
+
+export interface ServicesMarkdownRegenerationResult {
+  job?: ModelsIngestionJob;
+  operations?: string[];
+  queued_at?: string;
+  revision_id?: string;
+}
+
+export interface ServicesMarkdownValidationIssue {
+  code?: string;
+  column?: number;
+  end_column?: number;
+  end_line?: number;
+  line?: number;
+  message?: string;
+  severity?: string;
+}
+
+export interface ServicesMarkdownValidationResult {
+  errors?: number;
+  info?: number;
+  issues?: ServicesMarkdownValidationIssue[];
+  revision_id?: string;
+  valid?: boolean;
+  warnings?: number;
 }
 
 export interface ServicesMedicalGuidelineInput {
@@ -2679,6 +3012,16 @@ export interface ServicesReadingProgressInput {
   total_sections?: number;
 }
 
+export interface ServicesRegenerationDecisionInput {
+  comment?: string;
+}
+
+export interface ServicesRegenerationJobView {
+  job?: ModelsIngestionJob;
+  operations?: string[];
+  revision_id?: string;
+}
+
 export interface ServicesRegionChildren {
   districts?: ServicesFacilityReferenceView[];
   health_sub_regions?: ServicesFacilityReferenceView[];
@@ -2691,6 +3034,10 @@ export interface ServicesReorderGuidelineBlocksInput {
 
 export interface ServicesReorderGuidelineSectionsInput {
   sections: ServicesGuidelineSectionOrderInput[];
+}
+
+export interface ServicesResolveGuidelineEditorCommentInput {
+  resolved?: boolean;
 }
 
 export interface ServicesReviewGuidelineAssetInput {

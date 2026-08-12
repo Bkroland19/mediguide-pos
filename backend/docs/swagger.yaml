@@ -107,6 +107,14 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.DuplicatedMarkdownVersionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.DuplicatedMarkdownVersion'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.EmailVerificationConfirmRequest:
     properties:
       token:
@@ -251,6 +259,39 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.IngestionJobResponse:
+    properties:
+      attempt_count:
+        type: integer
+      cancel_requested_at:
+        type: string
+      canceled_at:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error:
+        type: string
+      id:
+        type: string
+      job_type:
+        type: string
+      payload_json:
+        type: string
+      progress_percent:
+        type: integer
+      progress_stage:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   handlers.JSONMap:
     additionalProperties: {}
     type: object
@@ -386,6 +427,22 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.MarkdownDraftEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownDraft'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.MarkdownRegenerationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownRegenerationResult'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.MarkdownUpdateEnvelope:
     properties:
       data:
@@ -407,6 +464,13 @@ definitions:
         type: integer
       updated:
         example: true
+        type: boolean
+    type: object
+  handlers.MarkdownValidationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownValidationResult'
+      success:
         type: boolean
     type: object
   handlers.MedicalGuidelineEnvelope:
@@ -846,6 +910,33 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedMarkdownRevisions:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineMarkdownRevision'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedMarkdownRevisionsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedMarkdownRevisions'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.PaginatedMedicalGuidelinesEnvelope:
     properties:
       data:
@@ -1238,6 +1329,36 @@ definitions:
         example: Gm8m3Wq2oJ7l6p4XnYx9QbT2f1WvL0H1v2z3k4m5n6o
         type: string
     type: object
+  handlers.RegenerationCommentEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineReviewComment'
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationCommentsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.GuidelineReviewComment'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationJobViewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.RegenerationJobView'
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationReviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineRegenerationReview'
+      success:
+        type: boolean
+    type: object
   handlers.RegisterRequest:
     properties:
       address:
@@ -1300,6 +1421,11 @@ definitions:
         type: array
       timezone:
         example: Africa/Kampala
+        type: string
+    type: object
+  handlers.RestoreMarkdownRevisionInput:
+    properties:
+      expected_revision:
         type: string
     type: object
   handlers.RolePermissionsRequest:
@@ -1477,6 +1603,27 @@ definitions:
         type: string
       usage_count:
         type: integer
+    type: object
+  models.AuditLog:
+    properties:
+      action:
+        type: string
+      actor_id:
+        type: string
+      created_at:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      ip_address:
+        type: string
+      metadata_json:
+        type: string
+      updated_at:
+        type: string
     type: object
   models.Calculator:
     properties:
@@ -1904,11 +2051,23 @@ definitions:
     type: object
   models.GuidelineAsset:
     properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
       checksum:
         type: string
+      clinically_sensitive:
+        type: boolean
       created_at:
         type: string
+      figure_number:
+        type: integer
       id:
+        type: string
+      license:
         type: string
       mime_type:
         type: string
@@ -1930,13 +2089,15 @@ definitions:
         type: string
       size_bytes:
         type: integer
-      source_fingerprint:
+      source:
         type: string
-      storage_key:
+      source_fingerprint:
         type: string
       type:
         $ref: '#/definitions/models.GuidelineAssetType'
       updated_at:
+        type: string
+      uploaded_by:
         type: string
       version_id:
         type: string
@@ -1977,7 +2138,16 @@ definitions:
     - figure
     - recommendation
     - warning
+    - caution
     - key_point
+    - contraindication
+    - dosage
+    - evidence
+    - definition
+    - procedure
+    - clinical_note
+    - referral_criteria
+    - algorithm_reference
     - algorithm
     - reference
     - page_break
@@ -1992,7 +2162,16 @@ definitions:
     - GuidelineBlockFigure
     - GuidelineBlockRecommendation
     - GuidelineBlockWarning
+    - GuidelineBlockCaution
     - GuidelineBlockKeyPoint
+    - GuidelineBlockContraindication
+    - GuidelineBlockDosage
+    - GuidelineBlockEvidence
+    - GuidelineBlockDefinition
+    - GuidelineBlockProcedure
+    - GuidelineBlockClinicalNote
+    - GuidelineBlockReferralCriteria
+    - GuidelineBlockAlgorithmReference
     - GuidelineBlockAlgorithm
     - GuidelineBlockReference
     - GuidelineBlockPageBreak
@@ -2123,6 +2302,33 @@ definitions:
           $ref: '#/definitions/models.GuidelineVersion'
         type: array
     type: object
+  models.GuidelineEditorComment:
+    properties:
+      author_id:
+        type: string
+      block_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      resolved:
+        type: boolean
+      resolved_at:
+        type: string
+      resolved_by:
+        type: string
+      revision_id:
+        type: string
+      section_id:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   models.GuidelineExtractionQuality:
     enum:
     - reviewed
@@ -2167,6 +2373,118 @@ definitions:
       title:
         type: string
       updated_at:
+        type: string
+    type: object
+  models.GuidelineMarkdownRevision:
+    properties:
+      anchor_metadata:
+        type: object
+      change_summary:
+        type: string
+      checkpoint_name:
+        type: string
+      checksum:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      document_id:
+        type: string
+      id:
+        type: string
+      is_current:
+        type: boolean
+      parent_revision_id:
+        type: string
+      publication_state:
+        type: string
+      regeneration_job_id:
+        type: string
+      review_state:
+        type: string
+      revision_number:
+        type: integer
+      size_bytes:
+        type: integer
+      source_ingestion_job_id:
+        type: string
+      source_type:
+        type: string
+      structured_content_status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  models.GuidelineRegenerationReview:
+    properties:
+      after_snapshot:
+        type: object
+      before_snapshot:
+        type: object
+      comparison:
+        type: object
+      created_at:
+        type: string
+      decision_comment:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      revision_id:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  models.GuidelineReviewAssignment:
+    properties:
+      assigned_by:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      due_at:
+        type: string
+      id:
+        type: string
+      reviewer_id:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  models.GuidelineReviewComment:
+    properties:
+      author_id:
+        type: string
+      block_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      updated_at:
+        type: string
+      version_id:
         type: string
     type: object
   models.GuidelineSection:
@@ -2250,6 +2568,8 @@ definitions:
         type: array
       created_at:
         type: string
+      current_markdown_revision_id:
+        type: string
       document_id:
         type: string
       extraction_metadata:
@@ -2272,6 +2592,8 @@ definitions:
         type: string
       publication_date:
         type: string
+      published_markdown_revision_id:
+        type: string
       review_date:
         type: string
       sections:
@@ -2279,6 +2601,10 @@ definitions:
           $ref: '#/definitions/models.GuidelineSection'
         type: array
       status:
+        type: string
+      structured_content_status:
+        type: string
+      structured_markdown_revision_id:
         type: string
       updated_at:
         type: string
@@ -2340,6 +2666,10 @@ definitions:
     properties:
       attempt_count:
         type: integer
+      cancel_requested_at:
+        type: string
+      canceled_at:
+        type: string
       completed_at:
         type: string
       created_at:
@@ -2351,6 +2681,10 @@ definitions:
       job_type:
         type: string
       payload_json:
+        type: string
+      progress_percent:
+        type: integer
+      progress_stage:
         type: string
       started_at:
         type: string
@@ -2902,6 +3236,15 @@ definitions:
       session_id:
         type: string
     type: object
+  services.AssignGuidelineReviewerInput:
+    properties:
+      due_at:
+        type: string
+      reviewer_id:
+        type: string
+    required:
+    - reviewer_id
+    type: object
   services.Citation:
     properties:
       chunk_id:
@@ -3163,6 +3506,19 @@ definitions:
     - content
     - type
     type: object
+  services.CreateGuidelineEditorCommentInput:
+    properties:
+      block_id:
+        type: string
+      body:
+        type: string
+      revision_id:
+        type: string
+      section_id:
+        type: string
+    required:
+    - body
+    type: object
   services.CreateGuidelineInput:
     properties:
       country:
@@ -3362,6 +3718,45 @@ definitions:
         type: string
       tag_category:
         type: string
+    type: object
+  services.DuplicateMarkdownVersionInput:
+    properties:
+      publication_date:
+        type: string
+      review_date:
+        type: string
+      version:
+        type: string
+    type: object
+  services.DuplicatedGuidelineVersion:
+    properties:
+      created_at:
+        type: string
+      current_markdown_revision_id:
+        type: string
+      document_id:
+        type: string
+      id:
+        type: string
+      publication_date:
+        type: string
+      review_date:
+        type: string
+      status:
+        type: string
+      structured_content_status:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  services.DuplicatedMarkdownVersion:
+    properties:
+      draft:
+        $ref: '#/definitions/services.MarkdownDraft'
+      version:
+        $ref: '#/definitions/services.DuplicatedGuidelineVersion'
     type: object
   services.EmergencyProtocolInput:
     properties:
@@ -3623,6 +4018,85 @@ definitions:
       title:
         type: string
     type: object
+  services.GuidelineAssetDTO:
+    properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
+      checksum:
+        type: string
+      clinically_sensitive:
+        type: boolean
+      created_at:
+        type: string
+      figure_number:
+        type: integer
+      id:
+        type: string
+      license:
+        type: string
+      mime_type:
+        type: string
+      original_filename:
+        type: string
+      reference:
+        type: string
+      referenced:
+        type: boolean
+      review_status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      size_bytes:
+        type: integer
+      source:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineAssetType'
+      updated_at:
+        type: string
+      uploaded_by:
+        type: string
+      url:
+        type: string
+      url_expires_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  services.GuidelineAssetInput:
+    properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
+      clinically_sensitive:
+        type: boolean
+      figure_number:
+        type: integer
+      license:
+        type: string
+      source:
+        type: string
+    type: object
+  services.GuidelineAssetList:
+    properties:
+      broken_references:
+        items:
+          type: string
+        type: array
+      items:
+        items:
+          $ref: '#/definitions/services.GuidelineAssetDTO'
+        type: array
+    type: object
   services.GuidelineBlockOrderInput:
     properties:
       id:
@@ -3790,8 +4264,24 @@ definitions:
           $ref: '#/definitions/services.GuidelineReviewIssue'
         type: array
     type: object
+  services.GuidelineReviewAssignmentStatusInput:
+    properties:
+      status:
+        type: string
+    required:
+    - status
+    type: object
+  services.GuidelineReviewCommentInput:
+    properties:
+      block_id:
+        type: string
+      body:
+        type: string
+    type: object
   services.GuidelineReviewIssue:
     properties:
+      asset_id:
+        type: string
       block_id:
         type: string
       code:
@@ -3892,6 +4382,92 @@ definitions:
         items:
           $ref: '#/definitions/models.SyncPackage'
         type: array
+    type: object
+  services.MarkdownDraft:
+    properties:
+      content:
+        type: string
+      etag:
+        type: string
+      revision:
+        $ref: '#/definitions/models.GuidelineMarkdownRevision'
+      saved:
+        type: boolean
+    type: object
+  services.MarkdownDraftInput:
+    properties:
+      anchor_metadata:
+        type: object
+      change_summary:
+        type: string
+      checkpoint_name:
+        type: string
+      content:
+        type: string
+      expected_revision:
+        type: string
+      parent_revision_id:
+        type: string
+      source_type:
+        type: string
+    type: object
+  services.MarkdownRegenerationInput:
+    properties:
+      idempotency_key:
+        type: string
+      operations:
+        items:
+          type: string
+        type: array
+      revision_id:
+        type: string
+    type: object
+  services.MarkdownRegenerationResult:
+    properties:
+      job:
+        $ref: '#/definitions/models.IngestionJob'
+      operations:
+        items:
+          type: string
+        type: array
+      queued_at:
+        type: string
+      revision_id:
+        type: string
+    type: object
+  services.MarkdownValidationIssue:
+    properties:
+      code:
+        type: string
+      column:
+        type: integer
+      end_column:
+        type: integer
+      end_line:
+        type: integer
+      line:
+        type: integer
+      message:
+        type: string
+      severity:
+        type: string
+    type: object
+  services.MarkdownValidationResult:
+    properties:
+      errors:
+        type: integer
+      info:
+        type: integer
+      issues:
+        items:
+          $ref: '#/definitions/services.MarkdownValidationIssue'
+        type: array
+      revision_id:
+        type: string
+      valid:
+        type: boolean
+      warnings:
+        type: integer
     type: object
   services.MedicalGuidelineInput:
     properties:
@@ -4620,6 +5196,22 @@ definitions:
       total_sections:
         type: integer
     type: object
+  services.RegenerationDecisionInput:
+    properties:
+      comment:
+        type: string
+    type: object
+  services.RegenerationJobView:
+    properties:
+      job:
+        $ref: '#/definitions/models.IngestionJob'
+      operations:
+        items:
+          type: string
+        type: array
+      revision_id:
+        type: string
+    type: object
   services.RegionChildren:
     properties:
       districts:
@@ -4650,6 +5242,11 @@ definitions:
         type: array
     required:
     - sections
+    type: object
+  services.ResolveGuidelineEditorCommentInput:
+    properties:
+      resolved:
+        type: boolean
     type: object
   services.ReviewGuidelineAssetInput:
     properties:
@@ -7807,7 +8404,183 @@ paths:
       summary: Update a guideline tag
       tags:
       - guideline-taxonomy
+  /api/v2/guideline-versions/{id}/activity:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Maximum events (1-200)
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AuditLog'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List the guideline editorial activity timeline
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/assets:
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetList'
+      security:
+      - BearerAuth: []
+      summary: List a version's authored guideline assets
+      tags:
+      - guideline-assets
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: PNG, JPEG, GIF or WebP image
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Image alternative text
+        in: formData
+        name: alternative_text
+        type: string
+      - description: Caption
+        in: formData
+        name: caption
+        type: string
+      - description: Source
+        in: formData
+        name: source
+        type: string
+      - description: Attribution
+        in: formData
+        name: attribution
+        type: string
+      - description: Copyright or license
+        in: formData
+        name: license
+        type: string
+      - description: Positive figure number
+        in: formData
+        name: figure_number
+        type: integer
+      - description: Require clinical review
+        in: formData
+        name: clinically_sensitive
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Upload a version-scoped guideline image
+      tags:
+      - guideline-assets
   /api/v2/guideline-versions/{id}/assets/{assetId}:
+    delete:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove an asset from an editable guideline version
+      tags:
+      - guideline-assets
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Get guideline asset metadata and a short-lived URL
+      tags:
+      - guideline-assets
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      - description: Asset metadata
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineAssetInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Update editable guideline asset metadata
+      tags:
+      - guideline-assets
+  /api/v2/guideline-versions/{id}/assets/{assetId}/content:
     get:
       parameters:
       - description: Guideline version ID
@@ -8082,6 +8855,57 @@ paths:
       summary: List chunks for a guideline version
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/duplicate:
+    post:
+      consumes:
+      - application/json
+      description: Drafts branch from their current revision. Published versions branch
+        from their exact published revision.
+      parameters:
+      - description: Source guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New draft version metadata
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DuplicateMarkdownVersionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DuplicatedMarkdownVersionEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Duplicate a guideline Markdown revision into a new draft version
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/extracted/{format}:
     get:
       parameters:
@@ -8183,7 +9007,7 @@ paths:
             $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Replace extracted guideline Markdown
+      summary: Save a guideline Markdown draft (legacy editor route)
       tags:
       - guidelines
   /api/v2/guideline-versions/{id}/extraction-status:
@@ -8204,6 +9028,324 @@ paths:
       summary: Get guideline version extraction status and typed content counts
       tags:
       - guideline-review
+  /api/v2/guideline-versions/{id}/markdown-draft:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "304":
+          description: Not Modified
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the current guideline Markdown draft
+      tags:
+      - guideline-markdown
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Markdown draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownDraftInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save a guideline Markdown draft without regenerating structured content
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Source type
+        in: query
+        name: source_type
+        type: string
+      - description: Editor ID
+        format: uuid
+        in: query
+        name: created_by
+        type: string
+      - description: Created at or after
+        format: date-time
+        in: query
+        name: from
+        type: string
+      - description: Created at or before
+        format: date-time
+        in: query
+        name: to
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedMarkdownRevisionsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List immutable Markdown revisions
+      tags:
+      - guideline-markdown
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Named Markdown checkpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownDraftInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save a named Markdown checkpoint
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get one Markdown revision and its content
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/download:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - text/markdown
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download a Markdown revision
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/restore:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Restore options
+        in: body
+        name: payload
+        schema:
+          $ref: '#/definitions/handlers.RestoreMarkdownRevisionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a historical Markdown revision as a new draft
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/validation:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Markdown revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownValidationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Validate an immutable Markdown revision
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/preview:
     get:
       parameters:
@@ -8259,6 +9401,283 @@ paths:
       summary: Publish a guideline version
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/regenerate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownRegenerationInput'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handlers.MarkdownRegenerationEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate structured content and RAG data from an exact Markdown revision
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationJobViewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get observable regeneration progress
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/cancel:
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.IngestionJobResponse'
+      security:
+      - BearerAuth: []
+      summary: Request safe cancellation of regeneration
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/retry:
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.IngestionJobResponse'
+      security:
+      - BearerAuth: []
+      summary: Retry a failed or canceled regeneration
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Compare regenerated content with the prior projection
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/accept:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Reviewer comment
+        in: body
+        name: payload
+        schema:
+          $ref: '#/definitions/services.RegenerationDecisionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Accept a regenerated projection after high-risk review
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/comments:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationCommentsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List ordered comments for a regeneration review
+      tags:
+      - guideline-review
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineReviewCommentInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.RegenerationCommentEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Add a review or block-level comment
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Required rejection comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.RegenerationDecisionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a regenerated projection and return to Markdown
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/review:
     get:
       parameters:
@@ -8290,6 +9709,162 @@ paths:
       security:
       - BearerAuth: []
       summary: Load a guideline version editorial review workspace
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/review-comments:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filter by resolution state
+        in: query
+        name: resolved
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.GuidelineEditorComment'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List revision, section, and block review comments
+      tags:
+      - guideline-review
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Review comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateGuidelineEditorCommentInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.GuidelineEditorComment'
+      security:
+      - BearerAuth: []
+      summary: Add a revision, section, block, or version review comment
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/review-comments/{commentId}:
+    patch:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comment ID
+        format: uuid
+        in: path
+        name: commentId
+        required: true
+        type: string
+      - description: Resolution state
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ResolveGuidelineEditorCommentInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GuidelineEditorComment'
+      security:
+      - BearerAuth: []
+      summary: Resolve or reopen an editor review comment
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/reviewers:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.GuidelineReviewAssignment'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List assigned reviewers for a guideline version
+      tags:
+      - guideline-review
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reviewer assignment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.AssignGuidelineReviewerInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.GuidelineReviewAssignment'
+      security:
+      - BearerAuth: []
+      summary: Assign a reviewer to a guideline version
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/reviewers/{assignmentId}:
+    patch:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Assignment ID
+        format: uuid
+        in: path
+        name: assignmentId
+        required: true
+        type: string
+      - description: Assignment transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineReviewAssignmentStatusInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GuidelineReviewAssignment'
+      security:
+      - BearerAuth: []
+      summary: Complete or dismiss a reviewer assignment
       tags:
       - guideline-review
   /api/v2/guideline-versions/{id}/sections:

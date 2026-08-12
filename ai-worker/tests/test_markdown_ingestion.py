@@ -57,6 +57,51 @@ def test_markdown_html_output_escapes_raw_html(tmp_path: Path):
     assert "&lt;script&gt;" in extracted.html
 
 
+def test_markdown_fenced_clinical_callouts_are_typed_and_preserved(tmp_path: Path):
+    path = tmp_path / "callouts.md"
+    path.write_text(
+        '# Safety\n\n:::dosage title="Reviewed dose" severity=high evidence_grade=A\n'
+        "Give 5 mg exactly as clinically reviewed.\n:::\n\n"
+        ":::contraindication\nDo not use in the documented condition.\n:::\n",
+        encoding="utf-8",
+    )
+
+    extracted = extract_markdown(path)
+    callouts = [block for block in extracted.blocks if block.type in {"dosage", "contraindication"}]
+
+    assert [block.type for block in callouts] == ["dosage", "contraindication"]
+    assert callouts[0].content["title"] == "Reviewed dose"
+    assert callouts[0].content["severity"] == "high"
+    assert ":::dosage" in extracted.markdown
+
+
+def test_markdown_rejects_unclosed_or_empty_clinical_callouts(tmp_path: Path):
+    path = tmp_path / "invalid-callout.md"
+    path.write_text("# Safety\n\n:::warning\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="not closed"):
+        extract_markdown(path)
+
+
+def test_markdown_guideline_asset_reference_becomes_typed_figure(tmp_path: Path):
+    asset_id = "3b9dfdf2-6ffc-42f4-bbd3-0bab9a6305fe"
+    path = tmp_path / "asset.md"
+    path.write_text(
+        f"# Care\n\n![Treatment pathway](guideline-asset://{asset_id})\n",
+        encoding="utf-8",
+    )
+
+    extracted = extract_markdown(path)
+
+    figure = next(block for block in extracted.blocks if block.type == "figure")
+    assert figure.content == {
+        "type": "figure",
+        "asset_id": asset_id,
+        "caption": "",
+        "alternative_text": "Treatment pathway",
+    }
+
+
 def test_markdown_source_requires_utf8(tmp_path: Path):
     path = tmp_path / "invalid.md"
     path.write_bytes(b"# Guidance\n\xff")
@@ -66,9 +111,12 @@ def test_markdown_source_requires_utf8(tmp_path: Path):
 
 
 def test_ingestion_job_payload_accepts_json_and_rejects_non_objects():
-    assert IngestionService._job_payload({
-        "payload_json": '{"file_key":"guidelines/source.md","source_format":"markdown"}'
-    })["source_format"] == "markdown"
+    assert (
+        IngestionService._job_payload(
+            {"payload_json": '{"file_key":"guidelines/source.md","source_format":"markdown"}'}
+        )["source_format"]
+        == "markdown"
+    )
 
     with pytest.raises(ValueError, match="must be an object"):
         IngestionService._job_payload({"payload_json": "[]"})

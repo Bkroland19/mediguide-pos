@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from app.core.db import db_conn
@@ -38,7 +37,8 @@ class IngestionRepository:
                     FOR UPDATE SKIP LOCKED
                 )
                 UPDATE ingestion_jobs j
-                SET status = 'running', started_at = coalesce(started_at, now()), updated_at = now()
+                SET status = 'running', progress_stage='downloading', progress_percent=5,
+                    started_at = coalesce(started_at, now()), updated_at = now()
                 FROM picked
                 WHERE j.id = picked.id
                 RETURNING j.*
@@ -49,7 +49,9 @@ class IngestionRepository:
             conn.commit()
             return rows
 
-    def claim_retryable_jobs(self, limit: int = 1, max_attempts: int = 3, backoff_seconds: int = 30) -> list[dict[str, Any]]:
+    def claim_retryable_jobs(
+        self, limit: int = 1, max_attempts: int = 3, backoff_seconds: int = 30
+    ) -> list[dict[str, Any]]:
         """Pick up previously-failed jobs that are within the retry limit and past their back-off window."""
         if not self._has_attempt_count():
             return []
@@ -91,7 +93,26 @@ class IngestionRepository:
         API-triggered jobs (the /run endpoint) where the claim step is skipped."""
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
-                "UPDATE ingestion_jobs SET status='running', started_at=coalesce(started_at, now()), updated_at=now() WHERE id=%s AND status != 'running'",
+                "UPDATE ingestion_jobs SET status='running', progress_stage='downloading', progress_percent=5, started_at=coalesce(started_at, now()), updated_at=now() WHERE id=%s AND status='queued'",
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_markdown_revisions
+                SET structured_content_status='processing', updated_at=now()
+                WHERE regeneration_job_id=%s AND deleted_at IS NULL
+                """,
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_versions gv
+                SET structured_content_status='processing', updated_at=now()
+                FROM guideline_markdown_revisions revision
+                WHERE revision.regeneration_job_id=%s
+                  AND revision.id=gv.current_markdown_revision_id
+                  AND revision.deleted_at IS NULL
+                """,
                 (job_id,),
             )
             conn.commit()
@@ -99,7 +120,60 @@ class IngestionRepository:
     def mark_completed(self, job_id: str) -> None:
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
-                "UPDATE ingestion_jobs SET status='completed', completed_at=now(), updated_at=now(), error=NULL WHERE id=%s",
+                "UPDATE ingestion_jobs SET status='completed', progress_stage='completed', progress_percent=100, completed_at=now(), updated_at=now(), error=NULL WHERE id=%s AND status='running'",
+                (job_id,),
+            )
+            conn.commit()
+
+    def set_progress(self, job_id: str, stage: str, percent: int) -> None:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE ingestion_jobs SET progress_stage=%s, progress_percent=%s, updated_at=now() WHERE id=%s AND status='running'",
+                (stage, max(0, min(100, percent)), job_id),
+            )
+            conn.commit()
+
+    def cancellation_requested(self, job_id: str) -> bool:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT status='cancel_requested' AS requested FROM ingestion_jobs WHERE id=%s",
+                (job_id,),
+            )
+            row = cur.fetchone()
+            return bool(row and row.get("requested"))
+
+    def mark_canceled(self, job_id: str) -> None:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE ingestion_jobs SET status='canceled', progress_stage='canceled', canceled_at=now(), completed_at=now(), updated_at=now() WHERE id=%s AND status='cancel_requested'",
+                (job_id,),
+            )
+            cur.execute(
+                "UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s",
+                (job_id,),
+            )
+            cur.execute(
+                "UPDATE guideline_versions gv SET structured_content_status='canceled', updated_at=now() FROM guideline_markdown_revisions r WHERE r.regeneration_job_id=%s AND gv.current_markdown_revision_id=r.id",
+                (job_id,),
+            )
+            conn.commit()
+
+    def mark_superseded(self, job_id: str) -> None:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE ingestion_jobs SET status='canceled', progress_stage='superseded', canceled_at=now(), completed_at=now(), updated_at=now() WHERE id=%s AND status='running'",
+                (job_id,),
+            )
+            cur.execute(
+                "UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s",
+                (job_id,),
+            )
+            conn.commit()
+
+    def complete_noop_comparison(self, job_id: str) -> None:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE guideline_regeneration_reviews SET after_snapshot=before_snapshot, comparison='{\"no_changes\":true}'::jsonb, updated_at=now() WHERE job_id=%s AND deleted_at IS NULL",
                 (job_id,),
             )
             conn.commit()
@@ -117,6 +191,7 @@ class IngestionRepository:
                        WHERE id=%s""",
                     (error[:4000], job_id),
                 )
+                self._mark_revision_failed(cur, job_id)
                 conn.commit()
             return
         with db_conn() as conn, conn.cursor() as cur:
@@ -130,4 +205,27 @@ class IngestionRepository:
                    WHERE id=%s""",
                 (error[:4000], job_id),
             )
+            self._mark_revision_failed(cur, job_id)
             conn.commit()
+
+    @staticmethod
+    def _mark_revision_failed(cur, job_id: str) -> None:
+        cur.execute(
+            """
+            UPDATE guideline_markdown_revisions
+            SET structured_content_status='failed', updated_at=now()
+            WHERE regeneration_job_id=%s AND deleted_at IS NULL
+            """,
+            (job_id,),
+        )
+        cur.execute(
+            """
+            UPDATE guideline_versions gv
+            SET structured_content_status='failed', updated_at=now()
+            FROM guideline_markdown_revisions revision
+            WHERE revision.regeneration_job_id=%s
+              AND revision.id=gv.current_markdown_revision_id
+              AND revision.deleted_at IS NULL
+            """,
+            (job_id,),
+        )

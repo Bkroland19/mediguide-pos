@@ -440,6 +440,11 @@ type GuidelineVersionEnvelope struct {
 	Data    models.GuidelineVersion `json:"data"`
 }
 
+type DuplicatedMarkdownVersionEnvelope struct {
+	Success bool                               `json:"success" example:"true"`
+	Data    services.DuplicatedMarkdownVersion `json:"data"`
+}
+
 type GuidelineSectionEnvelope struct {
 	Success bool                    `json:"success" example:"true"`
 	Data    models.GuidelineSection `json:"data"`
@@ -468,6 +473,29 @@ type PublishEnvelope struct {
 type MarkdownUpdateEnvelope struct {
 	Success bool                 `json:"success" example:"true"`
 	Data    MarkdownUpdateResult `json:"data"`
+}
+
+type MarkdownDraftEnvelope struct {
+	Success bool                   `json:"success" example:"true"`
+	Data    services.MarkdownDraft `json:"data"`
+}
+
+type PaginatedMarkdownRevisions struct {
+	Items      []models.GuidelineMarkdownRevision `json:"items"`
+	Page       int                                `json:"page" example:"1"`
+	PerPage    int                                `json:"per_page" example:"20"`
+	TotalItems int64                              `json:"total_items" example:"1"`
+	TotalPages int                                `json:"total_pages" example:"1"`
+}
+
+type PaginatedMarkdownRevisionsEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    PaginatedMarkdownRevisions `json:"data"`
+}
+
+type MarkdownRegenerationEnvelope struct {
+	Success bool                                `json:"success" example:"true"`
+	Data    services.MarkdownRegenerationResult `json:"data"`
 }
 
 type PaginatedGuidelineSections struct {
@@ -791,4 +819,25 @@ type PaginatedGuidelineDownloads struct {
 type PaginatedGuidelineDownloadsEnvelope struct {
 	Success bool                        `json:"success"`
 	Data    PaginatedGuidelineDownloads `json:"data"`
+}
+
+type MarkdownValidationEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.MarkdownValidationResult `json:"data"`
+}
+type RegenerationJobViewEnvelope struct {
+	Success bool                         `json:"success"`
+	Data    services.RegenerationJobView `json:"data"`
+}
+type RegenerationReviewEnvelope struct {
+	Success bool                               `json:"success"`
+	Data    models.GuidelineRegenerationReview `json:"data"`
+}
+type RegenerationCommentsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    []models.GuidelineReviewComment `json:"data"`
+}
+type RegenerationCommentEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    models.GuidelineReviewComment `json:"data"`
 }
