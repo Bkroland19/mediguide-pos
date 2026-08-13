@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
@@ -15,6 +16,7 @@ import 'package:user_app/features/drugs/data/repositories/drug_local_repository.
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
 import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
@@ -22,6 +24,8 @@ import 'package:user_app/features/support/data/repositories/help_content_local_r
 import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
 import 'package:user_app/features/notifications/data/repositories/notification_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
+import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
@@ -32,6 +36,7 @@ import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/network/ttl_response_cache.dart';
 import 'package:user_app/core/storage/database/database_provider.dart';
 import 'package:user_app/core/storage/local_cache_service.dart';
+import 'package:user_app/core/services/download_service.dart';
 import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/ministry_directory_local_repository.dart';
 
@@ -97,6 +102,14 @@ final guidelineContentRepositoryProvider = Provider<GuidelineContentRepository>(
     ref.watch(abbreviationLocalRepositoryProvider),
   ),
 );
+
+final guidelinePublicationRepositoryProvider =
+    Provider<GuidelinePublicationRepository>(
+      (ref) => GuidelinePublicationRepository(
+        ref.watch(backendApiServiceProvider),
+        ref.watch(localCacheServiceProvider),
+      ),
+    );
 
 final facilityRepositoryProvider = Provider<FacilityRepository>(
   (ref) => FacilityRepository(
@@ -165,6 +178,31 @@ final readingProgressRepositoryProvider = Provider<ReadingProgressRepository>(
     ref.watch(localCacheServiceProvider),
   ),
 );
+
+final guidelineLibraryRepositoryProvider = Provider<GuidelineLibraryRepository>(
+  (ref) => GuidelineLibraryRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
+  ),
+);
+
+final outbreakRepositoryProvider = Provider<OutbreakRepository>(
+  (ref) => OutbreakRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
+  ),
+);
+
+final guidelineDownloadServiceProvider = Provider<GuidelineDownloadService>((
+  ref,
+) {
+  final service = GuidelineDownloadService(
+    Dio(),
+    ref.watch(localCacheServiceProvider),
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 final usageRepositoryProvider = Provider<UsageRepository>(
   (ref) => UsageRepository(ref.watch(backendApiServiceProvider)),

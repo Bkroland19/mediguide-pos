@@ -21,7 +21,6 @@ import 'package:user_app/features/tree_selector/data/models/tree_selector_models
 import 'package:user_app/features/tree_selector/presentation/screens/tree_selector_page.dart';
 
 import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/widgets/global_search_delegate.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
@@ -38,13 +37,21 @@ class HomePage extends ConsumerWidget {
 
     final controller = ref.read(homeControllerProvider.notifier);
 
-    final userName = ref.watch(
-      authControllerProvider.select((value) {
-        final name = value.valueOrNull?.user?.name.trim() ?? '';
-
-        return name.isEmpty ? 'Healthcare Professional' : name;
-      }),
+    final user = ref.watch(
+      authControllerProvider.select((value) => value.valueOrNull?.user),
     );
+    final userName = user?.name.trim().isNotEmpty == true
+        ? user!.name.trim()
+        : 'Healthcare Professional';
+    final professionalContext = <String>[
+      if (user?.jobTitle.trim().isNotEmpty == true)
+        user!.jobTitle.trim()
+      else if (user?.role != null)
+        user!.role!.label,
+      if (user?.organization.trim().isNotEmpty == true)
+        user!.organization.trim(),
+    ].join(' · ');
+    final greeting = _greetingFor(DateTime.now().hour);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -53,14 +60,15 @@ class HomePage extends ConsumerWidget {
       // APP BAR
       // =====================================================
       appBar: AppBar(
+        toolbarHeight: professionalContext.isEmpty ? kToolbarHeight : 82,
         automaticallyImplyLeading: false,
         titleSpacing: AppSpacing.md,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hello,',
-              style: context.textTheme.titleMedium?.copyWith(
+              greeting,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
               ),
@@ -73,6 +81,15 @@ class HomePage extends ConsumerWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            if (professionalContext.isNotEmpty)
+              Text(
+                professionalContext,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
           ],
         ),
         actions: [
@@ -84,9 +101,7 @@ class HomePage extends ConsumerWidget {
             icon: const Icon(LucideIcons.layoutGrid),
           ),
           IconButton(
-            onPressed: () {
-              showSearch(context: context, delegate: GlobalSearchDelegate());
-            },
+            onPressed: () => AppNavigator.push(AppRoutes.search),
             tooltip: 'Search',
             icon: const Icon(LucideIcons.search),
           ),
@@ -123,6 +138,12 @@ class HomePage extends ConsumerWidget {
     );
   }
 
+  static String _greetingFor(int hour) {
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
   Widget _buildBody({
     required BuildContext context,
     required WidgetRef ref,
@@ -130,6 +151,7 @@ class HomePage extends ConsumerWidget {
     required HomeState data,
     required HomeController controller,
   }) {
+    final cs = Theme.of(context).colorScheme;
     // =====================================================
     // INITIAL LOADING
     //
@@ -176,27 +198,16 @@ class HomePage extends ConsumerWidget {
             AppSpacing.md.gap,
           ],
 
-          // =================================================
-          // GUIDELINES
-          // =================================================
-          SectionHeader(
-            title: AppTranslationKey.guidelines,
-            subtitle: 'Recently added and updated clinical guidance',
-            icon: LucideIcons.bookOpenText,
-            onSeeAll: _openAllGuidelines,
-          ),
-
-          AppSpacing.md.gap,
-
-          if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
-            _GuidelinesPreviewList(
-              guidelines: data.recentlyUpdatedGuidelines,
-              onOpenGuideline: _openGuideline,
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              minTileHeight: 56,
+              leading: const Icon(LucideIcons.search),
+              title: const Text('Search guidelines, drugs, tools and more'),
+              trailing: const Icon(LucideIcons.slidersHorizontal),
+              onTap: () => AppNavigator.push(AppRoutes.search),
             ),
-          ] else ...[
-            _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
-          ],
-
+          ),
           AppSpacing.lg.gap,
 
           // =================================================
@@ -205,33 +216,82 @@ class HomePage extends ConsumerWidget {
           if (data.continueReadingItems.isNotEmpty) ...[
             SectionHeader(
               title: AppTranslationKey.continueReading,
-              subtitle: AppTranslationKey.resumeWhereYouLeftOff,
-              icon: LucideIcons.bookOpen,
+              onSeeAll: () => AppNavigator.push(AppRoutes.library),
             ),
 
-            AppSpacing.md.gap,
+            AppSpacing.sm.gap,
 
-            SizedBox(
-              height: 220,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: data.continueReadingItems.length,
-                separatorBuilder: (_, _) => AppSpacing.md.gap,
-                itemBuilder: (context, index) {
-                  final progress = data.continueReadingItems[index];
-
-                  return ContinueReadingCard(
-                    progress: progress,
-                    onTap: () {
-                      _continueReading(ref, progress);
-                    },
-                  );
-                },
-              ),
+            ContinueReadingCard(
+              compact: true,
+              progress: data.continueReadingItems.first,
+              onTap: () =>
+                  _continueReading(ref, data.continueReadingItems.first),
             ),
 
             AppSpacing.lg.gap,
           ],
+
+          // =================================================
+          // RECENT UPDATES
+          // =================================================
+          SectionHeader(title: 'Recent updates', onSeeAll: _openAllGuidelines),
+
+          AppSpacing.sm.gap,
+
+          if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
+            _GuidelinesPreviewList(
+              guidelines: data.recentlyUpdatedGuidelines.take(3).toList(),
+              onOpenGuideline: (guideline) => _openGuideline(ref, guideline),
+            ),
+          ] else ...[
+            _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
+          ],
+
+          AppSpacing.lg.gap,
+
+          SectionHeader(title: 'Quick actions'),
+          AppSpacing.sm.gap,
+          _QuickActionGrid(
+            actions: [
+              _HomeQuickAction(
+                icon: LucideIcons.pill,
+                title: 'Drug Index',
+                subtitle: 'Reviewed medicines',
+                color: cs.primary,
+                onTap: () async {
+                  await AppNavigator.push(AppRoutes.drugIndex);
+                },
+              ),
+              _HomeQuickAction(
+                icon: LucideIcons.calculator,
+                title: 'Calculators',
+                subtitle: 'Clinical tools',
+                color: cs.secondary,
+                onTap: () async {
+                  await AppNavigator.push(AppRoutes.calculators);
+                },
+              ),
+              _HomeQuickAction(
+                icon: LucideIcons.bookOpenText,
+                title: 'Guidelines',
+                subtitle: 'Published guidance',
+                color: cs.tertiary,
+                onTap: () async {
+                  await AppNavigator.push(AppRoutes.publicGuidelines);
+                },
+              ),
+              _HomeQuickAction(
+                icon: LucideIcons.hospital,
+                title: 'Facilities',
+                subtitle: 'Find health services',
+                color: cs.primary,
+                onTap: () async {
+                  await AppNavigator.push(AppRoutes.healthFacilities);
+                },
+              ),
+            ],
+          ),
+          AppSpacing.lg.gap,
 
           // =================================================
           // OPTIONAL FEATURED TOOLS
@@ -307,26 +367,33 @@ class HomePage extends ConsumerWidget {
   // =======================================================
 
   static void _openAllGuidelines() {
-    AppNavigator.push(
-      AppRoutes.guidelines,
-      extra: const {'filterType': 'all', 'title': 'All Guidelines'},
-    );
+    AppNavigator.push(AppRoutes.publicGuidelines);
   }
 
-  static void _openGuideline(Guideline guideline) {
-    AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
+  static Future<void> _openGuideline(
+    WidgetRef ref,
+    GuidelinePublication guideline,
+  ) async {
+    await AppNavigator.push(AppRoutes.publicGuideline(guideline.id));
+    ref.invalidate(homeControllerProvider);
   }
 
   static Future<void> _continueReading(
     WidgetRef ref,
     ReadingProgress progress,
   ) async {
-    try {
-      final guideline = await ref
-          .read(homeControllerProvider.notifier)
-          .guideline(progress.guidelineId);
+    final guidelineId = progress.guidelineId.trim();
+    if (guidelineId.isEmpty) return;
 
-      _openGuideline(guideline);
+    try {
+      final section = progress.currentSection.trim();
+      final location = AppRoutes.readPublicGuideline(guidelineId);
+      await AppNavigator.push(
+        section.isEmpty
+            ? location
+            : '$location?section=${Uri.encodeQueryComponent(section)}',
+      );
+      ref.invalidate(homeControllerProvider);
     } catch (_) {
       // The existing progress card remains available.
       // Offline/network errors should not remove it.
@@ -468,6 +535,69 @@ class _HomeQuickAction {
   final Future<void> Function() onTap;
 }
 
+class _QuickActionGrid extends StatelessWidget {
+  const _QuickActionGrid({required this.actions});
+
+  final List<_HomeQuickAction> actions;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 340 ? 4 : 2;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
+          childAspectRatio: columns == 4 ? 0.86 : 1.45,
+        ),
+        itemCount: actions.length,
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return Semantics(
+            button: true,
+            label: '${action.title}. ${action.subtitle}',
+            child: Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: action.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: action.color.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(action.icon, color: action.color, size: 20),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        action.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 // =========================================================
 // QUICK ACTION SHEET
 // =========================================================
@@ -569,8 +699,8 @@ class _GuidelinesPreviewList extends StatelessWidget {
     required this.onOpenGuideline,
   });
 
-  final List<Guideline> guidelines;
-  final void Function(Guideline guideline) onOpenGuideline;
+  final List<GuidelinePublication> guidelines;
+  final void Function(GuidelinePublication guideline) onOpenGuideline;
 
   @override
   Widget build(BuildContext context) {
@@ -598,21 +728,21 @@ class _GuidelinesPreviewList extends StatelessWidget {
 class _GuidelinePreview extends StatelessWidget {
   const _GuidelinePreview({required this.guideline, required this.onTap});
 
-  final Guideline guideline;
+  final GuidelinePublication guideline;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final category = guideline.categories.firstOrNull?.name ?? '';
+    final category = guideline.programArea;
 
-    final updatedAt = guideline.updatedDate != null
-        ? 'Updated on ${AppDateUtils.formatDate(guideline.updatedDate!)}'
+    final updatedAt = guideline.lastUpdated != null
+        ? 'Updated on ${AppDateUtils.formatDate(guideline.lastUpdated!)}'
         : 'Recently added';
 
     return _HomeGuidelineTile(
-      title: guideline.displayName,
+      title: guideline.title,
       category: category,
-      priority: guideline.priority,
+      priority: '',
       updatedAt: updatedAt,
       onTap: onTap,
     );

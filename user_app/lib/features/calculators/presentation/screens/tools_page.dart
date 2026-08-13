@@ -17,6 +17,7 @@ import 'package:user_app/features/calculators/presentation/widgets/calculator_ca
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key, this.arguments});
@@ -57,6 +58,114 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isHub) {
+      return _buildHub(context);
+    }
+
+    return _buildCatalogue(context);
+  }
+
+  bool get _isHub {
+    final arguments = _routeArguments;
+    return arguments is! Map || arguments['initialTab'] is! int;
+  }
+
+  Widget _buildHub(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: AppSpacing.md,
+        title: Text(
+          'Tools'.tr,
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Search',
+            onPressed: () => AppNavigator.push(AppRoutes.search),
+            icon: const Icon(LucideIcons.search),
+          ),
+          AppSpacing.hGapSm,
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xxxl,
+        ),
+        children: const [
+          _DestinationGroup(
+            title: 'Clinical Tools',
+            items: [
+              _Destination(
+                icon: LucideIcons.calculator,
+                title: 'Calculators',
+                description: 'Doses, scores, conversions',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 1},
+              ),
+              _Destination(
+                icon: LucideIcons.gitBranch,
+                title: 'Decision Tools',
+                description: 'Algorithms & decision support',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 2},
+              ),
+              _Destination(
+                icon: LucideIcons.listChecks,
+                title: 'Checklists',
+                description: 'Clinical & procedural checklists',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 3},
+              ),
+            ],
+          ),
+          AppSpacing.gapLg,
+          _DestinationGroup(
+            title: 'References',
+            items: [
+              _Destination(
+                icon: LucideIcons.pill,
+                title: 'Drug Index',
+                description: 'WHO essential medicines',
+                route: AppRoutes.drugIndex,
+              ),
+              _Destination(
+                icon: LucideIcons.wholeWord,
+                title: 'Abbreviations',
+                description: 'Medical terms & abbreviations',
+                route: AppRoutes.abbreviations,
+              ),
+            ],
+          ),
+          AppSpacing.gapLg,
+          _DestinationGroup(
+            title: 'Other',
+            items: [
+              _Destination(
+                icon: LucideIcons.hospital,
+                title: 'Health Facilities',
+                description: 'Find facilities & services',
+                route: AppRoutes.healthFacilities,
+              ),
+              _Destination(
+                icon: LucideIcons.landmark,
+                title: 'Ministry Directory',
+                description: 'Contacts & departments',
+                route: AppRoutes.ministryDirectory,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCatalogue(BuildContext context) {
     final state = ref.watch(toolsControllerProvider(_routeArguments));
 
     final controller = ref.read(
@@ -65,10 +174,9 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         titleSpacing: AppSpacing.md,
         title: Text(
-          'Tools'.tr,
+          _catalogueTitle(state.selectedTabIndex),
           style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -94,15 +202,25 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.sm,
+                AppSpacing.md,
                 AppSpacing.md,
                 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: _ToolsHeaderCard(
-                  onOpenFilters: () {
-                    controller.showFilterModal(context);
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Clinical tools',
+                      style: context.textTheme.titleMedium,
+                    ),
+                    AppSpacing.gapSm,
+                    _ToolTypeFilterBar(
+                      filters: _toolFilters,
+                      selectedIndex: state.selectedTabIndex,
+                      onChanged: controller.onTabChanged,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -112,23 +230,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _ToolTypeFilterBar(
-                  filters: _toolFilters,
-                  selectedIndex: state.selectedTabIndex,
-                  onChanged: controller.onTabChanged,
-                ),
-              ),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.xxxl,
               ),
               sliver: PagingListener<int, Calculator>(
                 controller: controller.pagingController,
@@ -224,72 +326,160 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 },
               ),
             ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xxxl,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DestinationGroup(
+                      title: 'References',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.pill,
+                          title: 'Drug Index',
+                          description: 'Reviewed medicine references',
+                          route: AppRoutes.drugIndex,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.wholeWord,
+                          title: 'Abbreviations',
+                          description: 'Medical abbreviations and meanings',
+                          route: AppRoutes.abbreviations,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.workflow,
+                          title: 'Clinical algorithms',
+                          description: 'Reviewed guideline algorithms',
+                          route: AppRoutes.publicGuidelines,
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapMd,
+                    _DestinationGroup(
+                      title: 'Other',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.hospital,
+                          title: 'Health Facilities',
+                          description: 'Find facilities and services',
+                          route: AppRoutes.healthFacilities,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.landmark,
+                          title: 'Ministry Directory',
+                          description: 'Official contacts and departments',
+                          route: AppRoutes.ministryDirectory,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  String _catalogueTitle(int tabIndex) => switch (tabIndex) {
+    1 => 'Calculators',
+    2 => 'Decision Tools',
+    3 => 'Checklists',
+    _ => 'Clinical Tools',
+  };
 }
 
-class _ToolsHeaderCard extends StatelessWidget {
-  const _ToolsHeaderCard({required this.onOpenFilters});
+class _Destination {
+  const _Destination({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.route,
+    this.arguments,
+  });
+  final IconData icon;
+  final String title;
+  final String description;
+  final String route;
+  final Object? arguments;
+}
 
-  final VoidCallback onOpenFilters;
+class _DestinationGroup extends StatelessWidget {
+  const _DestinationGroup({required this.title, required this.items});
+  final String title;
+  final List<_Destination> items;
 
   @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.xs),
+        child: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.calculator, color: cs.primary, size: 28),
+      AppSpacing.gapSm,
+      Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
-          AppSpacing.md.gap,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Clinical Tools',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              ListTile(
+                minTileHeight: 68,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Use calculators, decision tools and checklists to support clinical care.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+                leading: ClinicalIconTile(icon: items[index].icon),
+                title: Text(
+                  items[index].title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
-              ],
-            ),
-          ),
-          AppSpacing.sm.gap,
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'Filter tools',
-          ),
-        ],
+                subtitle: Text(
+                  items[index].description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => AppNavigator.push(
+                  items[index].route,
+                  extra: items[index].arguments,
+                ),
+              ),
+              if (index < items.length - 1)
+                const Divider(
+                  height: 1,
+                  indent: AppSpacing.md + 40 + AppSpacing.md,
+                ),
+            ],
+          ],
+        ),
       ),
-    );
-  }
+    ],
+  );
 }
 
 class _ToolTypeFilterBar extends StatelessWidget {

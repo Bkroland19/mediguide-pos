@@ -37,6 +37,7 @@ dependencies:
   # ==========================================================
 
   dio: ^5.11.0
+  crypto: ^3.0.6
   connectivity_plus: ^7.0.0
   internet_connection_checker_plus: ^3.1.1
 
@@ -114,6 +115,7 @@ dependencies:
   # ==========================================================
 
   file_picker: ^10.3.10
+  flutter_pdfview: ^1.4.4
   url_launcher: ^6.3.2
 
   # ==========================================================
@@ -151,6 +153,7 @@ dependencies:
 # ============================================================
 
 dev_dependencies:
+  sqlite3: ^2.9.4
   flutter_test:
     sdk: flutter
 

@@ -14,8 +14,18 @@ abstract final class AppRoutes {
   static const String main = '/main';
   static const String home = '/home';
   static const String guidelines = '/guidelines';
+  static const String publicGuidelines = '/public/guidelines';
   static const String tools = '/tools';
   static const String profile = '/profile';
+  static const String search = '/search';
+  static const String library = '/library';
+  static const String offlineContent = '/offline-content';
+  static const String documentReader = '/document-reader';
+  static const String more = '/more';
+  static const String outbreakHub = '/outbreak-hub';
+  static const String situationReports = '/situation-reports';
+  static const String outbreakDetails = '/outbreak-hub/:outbreakId';
+  static const String situationReportDetails = '/situation-reports/:reportId';
 
   // Clinical content
   static const String drugIndex = '/drug-index';
@@ -46,6 +56,14 @@ abstract final class AppRoutes {
 
   // Parameterized route templates
   static const String guidelineDetails = '/guidelines/:guidelineId';
+  static const String publicGuidelineDetails =
+      '/public/guidelines/:guidelineId';
+  static const String publicGuidelineReader =
+      '/public/guidelines/:guidelineId/read';
+  static const String publicGuidelineTable =
+      '/public/guidelines/:guidelineId/tables/:blockId';
+  static const String publicGuidelineAlgorithm =
+      '/public/guidelines/:guidelineId/algorithms/:blockId';
   static const String calculatorDetails = '/calculators/:calculatorId';
   static const String healthFacilityDetails = '/health-facilities/:facilityId';
   static const String consultantDetails = '/consultants/:consultantId';
@@ -59,19 +77,83 @@ abstract final class AppRoutes {
     register,
     onboarding,
     forgotPassword,
+    main,
+    home,
+    search,
+    more,
+    publicGuidelines,
+    offlineContent,
+    documentReader,
+    outbreakHub,
+    situationReports,
+    drugIndex,
+    abbreviations,
+    healthInfrastructure,
+    healthFacilities,
+    helpCenter,
+    faq,
+    aboutUs,
     termsAndConditions,
   };
 
   static bool isPublic(String location) {
-    return publicRoutes.any(
-      (route) => location == route || location.startsWith('$route?'),
-    );
+    final path = Uri.tryParse(location)?.path ?? location;
+    return publicRoutes.contains(path) ||
+        path.startsWith('$publicGuidelines/') ||
+        path.startsWith('$outbreakHub/') ||
+        path.startsWith('$situationReports/') ||
+        path.startsWith('$healthFacilities/');
+  }
+
+  /// Accepts only in-app absolute paths for post-authentication navigation.
+  /// This prevents external redirects and redirect loops from crafted links.
+  static String safeDestination(String? value, {String fallback = main}) {
+    if (value == null || value.isEmpty) return fallback;
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        uri.hasScheme ||
+        uri.hasAuthority ||
+        !value.startsWith('/') ||
+        value.startsWith('//') ||
+        uri.path == login ||
+        uri.path == register ||
+        uri.path == onboarding) {
+      return fallback;
+    }
+    return value;
   }
 
   // Route builders
 
   static String guideline(String guidelineId) {
     return '/guidelines/${Uri.encodeComponent(guidelineId)}';
+  }
+
+  static String publicGuideline(String guidelineId) {
+    return '$publicGuidelines/${Uri.encodeComponent(guidelineId)}';
+  }
+
+  static String readPublicGuideline(String guidelineId) {
+    return '${publicGuideline(guidelineId)}/read';
+  }
+
+  static String publicGuidelineTableView(String guidelineId, String blockId) {
+    return '${publicGuideline(guidelineId)}/tables/${Uri.encodeComponent(blockId)}';
+  }
+
+  static String publicGuidelineAlgorithmView(
+    String guidelineId,
+    String blockId,
+  ) {
+    return '${publicGuideline(guidelineId)}/algorithms/${Uri.encodeComponent(blockId)}';
+  }
+
+  static String outbreak(String outbreakId) {
+    return '$outbreakHub/${Uri.encodeComponent(outbreakId)}';
+  }
+
+  static String situationReport(String reportId) {
+    return '$situationReports/${Uri.encodeComponent(reportId)}';
   }
 
   static String calculator(String calculatorId) {

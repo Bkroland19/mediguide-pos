@@ -13,8 +13,9 @@ import 'package:user_app/features/drugs/data/models/drug.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_repository.dart';
 import 'package:user_app/features/facilities/data/models/health_facility.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
-import 'package:user_app/features/guidelines/data/models/guideline.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
 
 import 'package:user_app/shared/models/search_models.dart';
@@ -93,6 +94,7 @@ GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
   return RepositoryGlobalSearchDataSource(
     drugs: ref.watch(drugRepositoryProvider),
     guidelines: ref.watch(guidelineContentRepositoryProvider),
+    publications: ref.watch(guidelinePublicationRepositoryProvider),
     consultants: ref.watch(consultantRepositoryProvider),
     facilities: ref.watch(facilityRepositoryProvider),
     helpContent: ref.watch(helpContentRepositoryProvider),
@@ -200,12 +202,14 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   RepositoryGlobalSearchDataSource({
     required DrugRepository drugs,
     required GuidelineContentRepository guidelines,
+    required GuidelinePublicationRepository publications,
     required ConsultantRepository consultants,
     required FacilityRepository facilities,
     required HelpContentRepository helpContent,
     required CalculatorRepository calculators,
   }) : _drugs = drugs,
        _guidelines = guidelines,
+       _publications = publications,
        _consultants = consultants,
        _facilities = facilities,
        _helpContent = helpContent,
@@ -213,6 +217,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
 
   final DrugRepository _drugs;
   final GuidelineContentRepository _guidelines;
+  final GuidelinePublicationRepository _publications;
   final ConsultantRepository _consultants;
   final FacilityRepository _facilities;
   final HelpContentRepository _helpContent;
@@ -269,17 +274,20 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             .toList(growable: false);
 
       case SearchCategory.guidelines:
-        final response = await _guidelines.guidelines(
+        final publicationsFuture = _publications.publications(
           page: 1,
           perPage: 10,
           search: query,
-          published: true,
-          status: 'published',
         );
-
-        return response.items
-            .map((item) => _toSearchResult(item, category, query))
-            .toList(growable: false);
+        final contentFuture = _publications.searchContent(query, limit: 15);
+        await Future.wait<Object>([publicationsFuture, contentFuture]);
+        final publications = await publicationsFuture;
+        final content = await contentFuture;
+        return <SearchResult>[
+          for (final item in publications.items)
+            _toSearchResult(item, category, query),
+          for (final item in content) _contentSearchResult(item, query),
+        ];
 
       case SearchCategory.abbreviations:
         final response = await _guidelines.abbreviations(
@@ -389,18 +397,18 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
         );
 
       case SearchCategory.guidelines:
-        final guideline = record as Guideline;
+        final guideline = record as GuidelinePublication;
 
         return _withRelevance(
           SearchResult(
             id: guideline.id,
-            title: guideline.conditionName,
-            subtitle: guideline.icd10Code.isEmpty ? null : guideline.icd10Code,
-            description: _nullableHtml(guideline.definition),
+            title: guideline.title,
+            subtitle: guideline.programArea.isEmpty
+                ? null
+                : guideline.programArea,
+            description: _nullableHtml(guideline.description),
             category: category,
-
-            // Use the parameterized route.
-            route: AppRoutes.guideline(guideline.id),
+            route: AppRoutes.publicGuideline(guideline.id),
             routeArguments: {'guidelineId': guideline.id},
             item: guideline,
           ),
@@ -485,6 +493,38 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       case SearchCategory.faq:
         throw UnsupportedError('Unsupported search category: $category');
     }
+  }
+
+  SearchResult _contentSearchResult(
+    GuidelineContentSearchResult item,
+    String query,
+  ) {
+    final route = switch (item.contentType) {
+      'table' when item.blockId.isNotEmpty =>
+        AppRoutes.publicGuidelineTableView(item.guidelineId, item.blockId),
+      'algorithm' when item.blockId.isNotEmpty =>
+        AppRoutes.publicGuidelineAlgorithmView(item.guidelineId, item.blockId),
+      _ when item.sectionId.isNotEmpty =>
+        '${AppRoutes.readPublicGuideline(item.guidelineId)}?section=${Uri.encodeQueryComponent(item.sectionId)}',
+      _ => AppRoutes.publicGuideline(item.guidelineId),
+    };
+    final source = [
+      item.sourceName,
+      item.sourceVersion,
+      if (item.pageStart != null) 'page ${item.pageStart}',
+    ].where((value) => value.trim().isNotEmpty).join(' · ');
+    return _withRelevance(
+      SearchResult(
+        id: 'content:${item.id}',
+        title: item.title.isEmpty ? 'Guideline content' : item.title,
+        subtitle: source.isEmpty ? item.contentType : source,
+        description: item.snippet,
+        category: SearchCategory.guidelines,
+        route: route,
+        item: item,
+      ),
+      query,
+    );
   }
 
   // ======================================================
