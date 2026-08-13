@@ -220,9 +220,10 @@ jobs:
         run: flutter pub get
 
       - name: Build web release
-        run: >-
-          flutter build web --release
-          --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+        run: |
+          bash tool/prepare_web_database.sh
+          flutter build web --release \
+            --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v7

@@ -33,6 +33,10 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/web/sqlite3.wasm
+/web/drift_worker.dart.js
+/web/drift_worker.dart.js.deps
+/web/drift_worker.dart.js.map
 /coverage/
 
 # Generated files

@@ -1,20 +1,18 @@
 // lib/core/database/app_database.dart
 
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:user_app/core/storage/database/tables/cache_sync_states.dart';
 import 'package:user_app/core/storage/database/tables/cached_entities.dart';
 import 'package:user_app/core/storage/database/tables/pending_mutations.dart';
+
+import 'database_connection_native.dart'
+    if (dart.library.js_interop) 'database_connection_web.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(tables: [CachedEntities, CacheSyncStates, PendingMutations])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(openDatabaseConnection());
 
   AppDatabase.forTesting(super.executor);
 
@@ -153,14 +151,4 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
   }
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final directory = await getApplicationDocumentsDirectory();
-
-    final file = File(p.join(directory.path, 'mediguide.sqlite'));
-
-    return NativeDatabase.createInBackground(file);
-  });
 }
