@@ -141,6 +141,7 @@ jobs:
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           if [ -z "${ANDROID_UPLOAD_KEYSTORE_BASE64}" ] || \
              [ -z "${ANDROID_UPLOAD_STORE_PASSWORD}" ] || \
              [ -z "${ANDROID_UPLOAD_KEY_ALIAS}" ] || \
@@ -148,13 +149,29 @@ jobs:
             echo "Android release-signing secrets are incomplete." >&2
             exit 1
           fi
-          printf '%s' "${ANDROID_UPLOAD_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks
+          if ! printf '%s' "${ANDROID_UPLOAD_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks; then
+            echo "ANDROID_UPLOAD_KEYSTORE_BASE64 is not valid base64." >&2
+            exit 1
+          fi
+          if [ ! -s android/app/upload-keystore.jks ]; then
+            echo "The decoded Android upload keystore is empty." >&2
+            exit 1
+          fi
+          chmod 600 android/app/upload-keystore.jks
+          if ! keytool -list \
+            -keystore android/app/upload-keystore.jks \
+            -storepass "${ANDROID_UPLOAD_STORE_PASSWORD}" \
+            -alias "${ANDROID_UPLOAD_KEY_ALIAS}" >/dev/null; then
+            echo "The Android upload keystore, password, or alias is invalid." >&2
+            exit 1
+          fi
           {
             echo "storeFile=upload-keystore.jks"
             echo "storePassword=${ANDROID_UPLOAD_STORE_PASSWORD}"
             echo "keyAlias=${ANDROID_UPLOAD_KEY_ALIAS}"
             echo "keyPassword=${ANDROID_UPLOAD_KEY_PASSWORD}"
           } > android/key.properties
+          chmod 600 android/key.properties
 
       - name: Build release APK
         run: >-
@@ -338,6 +355,14 @@ jobs:
           set -eu
           mkdir -p dist
           version="${RELEASE_TAG#v}"
+          mobile_full_version="$(sed -n 's/^version:[[:space:]]*//p' user_app/pubspec.yaml | head -n 1)"
+          mobile_version="${mobile_full_version%%+*}"
+          mobile_build_number="${mobile_full_version##*+}"
+          if [ "${mobile_version}" != "${version}" ] || [ "${mobile_build_number}" = "${mobile_full_version}" ]; then
+            echo "Invalid mobile release metadata: ${mobile_full_version}." >&2
+            exit 1
+          fi
+          mobile_artifact_version="${mobile_version}+${mobile_build_number}"
           owner="$(printf '%s' "${REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
 
           apk="$(find release-artifacts -name app-release.apk -print -quit)"
@@ -347,14 +372,18 @@ jobs:
           web="$(find release-artifacts -type d -name 'mediguide-web-*' -print -quit)"
 
           test -n "${apk}" && test -n "${aab}" && test -n "${ios}" && test -n "${macos}" && test -n "${web}"
-          cp "${apk}" "dist/mediguide-${version}-android.apk"
-          cp "${aab}" "dist/mediguide-${version}-android.aab"
-          cp "${ios}" "dist/mediguide-${version}-ios-unsigned.zip"
-          cp "${macos}" "dist/mediguide-${version}-macos-unsigned.zip"
-          tar -C "${web}" -czf "dist/mediguide-${version}-web.tar.gz" .
+          cp "${apk}" "dist/mediguide-${mobile_artifact_version}-android.apk"
+          cp "${aab}" "dist/mediguide-${mobile_artifact_version}-android.aab"
+          cp "${ios}" "dist/mediguide-${mobile_artifact_version}-ios-unsigned.zip"
+          cp "${macos}" "dist/mediguide-${mobile_artifact_version}-macos-unsigned.zip"
+          tar -C "${web}" -czf "dist/mediguide-${mobile_artifact_version}-web.tar.gz" .
 
           printf '%s\n' \
             "release_tag=${RELEASE_TAG}" \
+            "platform_version=${version}" \
+            "mobile_version=${mobile_version}" \
+            "mobile_build_number=${mobile_build_number}" \
+            "mobile_full_version=${mobile_full_version}" \
             "git_revision=${GITHUB_SHA}" \
             "api_image=ghcr.io/${owner}/mediguide-pos-api:${version}" \
             "ai_worker_image=ghcr.io/${owner}/mediguide-pos-ai-worker:${version}" \
@@ -363,6 +392,8 @@ jobs:
             > "dist/mediguide-${version}-release-manifest.txt"
           printf '%s\n' \
             "## MediGuide ${RELEASE_TAG}" \
+            "" \
+            "Mobile version: ${mobile_version} (build ${mobile_build_number})." \
             "" \
             "The Android APK and AAB are signed with the configured upload key." \
             "The iOS and macOS archives are unsigned verification artifacts and are not store-ready." \

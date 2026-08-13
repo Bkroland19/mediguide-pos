@@ -51,6 +51,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-development}"
+        BUILD_REVISION: "${BUILD_REVISION:-unknown}"
     environment:
       APP_NAME: mediguide-backend
       APP_ENV: "${APP_ENV:-production}"
@@ -114,9 +117,14 @@ services:
     build:
       context: ../ai-worker
       dockerfile: Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-development}"
+        BUILD_REVISION: "${BUILD_REVISION:-unknown}"
     environment:
       APP_NAME: mediguide-ai-worker
       APP_ENV: "${APP_ENV:-production}"
+      BUILD_VERSION: "${BUILD_VERSION:-development}"
+      BUILD_REVISION: "${BUILD_REVISION:-unknown}"
       HTTP_PORT: 8090
       WORKER_GRPC_PORT: 50051
       DATABASE_URL: "${AI_DATABASE_URL:-postgresql://mediguide:mediguide@postgres:5432/mediguide}"
@@ -168,10 +176,15 @@ services:
     build:
       context: ../ai-worker
       dockerfile: Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-development}"
+        BUILD_REVISION: "${BUILD_REVISION:-unknown}"
     command: ["python", "-m", "app.worker"]
     environment:
       APP_NAME: mediguide-ai-worker
       APP_ENV: "${APP_ENV:-production}"
+      BUILD_VERSION: "${BUILD_VERSION:-development}"
+      BUILD_REVISION: "${BUILD_REVISION:-unknown}"
       WORKER_GRPC_PORT: 50051
       DATABASE_URL: "${AI_DATABASE_URL:-postgresql://mediguide:mediguide@postgres:5432/mediguide}"
       REDIS_URL: redis://redis:6379
@@ -218,6 +231,8 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:8080}"
+        BUILD_VERSION: "${BUILD_VERSION:-development}"
+        BUILD_REVISION: "${BUILD_REVISION:-unknown}"
     environment:
       NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:8080}"
       NODE_ENV: production

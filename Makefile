@@ -39,6 +39,10 @@ help:
 		"  swagger          Generate backend Swagger JSON/YAML docs" \
 		"  contracts        Regenerate Go, TypeScript, and Dart API contracts" \
 		"  contracts-check  Verify committed API contracts have no drift" \
+		"  release-prepare  Synchronize all versions from RELEASE_TAG" \
+		"  release-patch    Calculate and prepare the next patch release" \
+		"  release-minor    Calculate and prepare the next minor release" \
+		"  release-major    Calculate and prepare the next major release" \
 		"  release-check    Validate RELEASE_TAG metadata, Git state, and Compose" \
 		"  migrate-up       Apply backend migrations" \
 		"  migrate-down     Roll back backend migrations" \
@@ -150,6 +154,21 @@ contracts-check:
 	bash scripts/check-generated-contracts.sh
 
 RELEASE_TAG ?=
+MOBILE_BUILD_NUMBER ?=
+
+.PHONY: release-prepare
+release-prepare:
+	node scripts/prepare-release.js "$(RELEASE_TAG)" $(if $(MOBILE_BUILD_NUMBER),--build-number "$(MOBILE_BUILD_NUMBER)",)
+
+.PHONY: release-patch release-minor release-major
+release-patch:
+	node scripts/prepare-release.js patch $(if $(MOBILE_BUILD_NUMBER),--build-number "$(MOBILE_BUILD_NUMBER)",)
+
+release-minor:
+	node scripts/prepare-release.js minor $(if $(MOBILE_BUILD_NUMBER),--build-number "$(MOBILE_BUILD_NUMBER)",)
+
+release-major:
+	node scripts/prepare-release.js major $(if $(MOBILE_BUILD_NUMBER),--build-number "$(MOBILE_BUILD_NUMBER)",)
 
 .PHONY: release-check
 release-check:

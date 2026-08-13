@@ -16,6 +16,13 @@ RUN bun run build
 
 FROM oven/bun:1 AS runner
 
+ARG BUILD_VERSION=development
+ARG BUILD_REVISION=unknown
+
+LABEL org.opencontainers.image.title="MediGuide Dashboard" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.revision="${BUILD_REVISION}"
+
 WORKDIR /app
 
 ENV NODE_ENV=production

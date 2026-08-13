@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = Field(default="mediguide-ai-worker", validation_alias=AliasChoices("APP_NAME"))
+    app_version: str = Field(
+        default="development", validation_alias=AliasChoices("BUILD_VERSION", "APP_VERSION")
+    )
+    build_revision: str = Field(
+        default="unknown", validation_alias=AliasChoices("BUILD_REVISION")
+    )
     env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "ENV"))
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"

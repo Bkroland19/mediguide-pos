@@ -62,8 +62,12 @@ def _require_worker_secret(
 
 
 @router.get("/healthz", response_model=HealthResponse)
-def healthz():
-    return HealthResponse()
+def healthz(settings: Settings = Depends(get_settings)):
+    return HealthResponse(
+        service=settings.app_name,
+        version=settings.app_version,
+        revision=settings.build_revision,
+    )
 
 
 @router.get("/readyz", response_model=ReadinessResponse)

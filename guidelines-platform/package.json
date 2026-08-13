@@ -1,7 +1,7 @@
 {
   "name": "guidelines-platform",
   "private": true,
-  "version": "1.0.1",
+  "version": "2.0.16",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -15,11 +15,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "verify": "npm run lint && npm run test && npm run build",
-    "release:check": "node scripts/check-release-tag.mjs",
-    "release:patch": "npm run verify && npm version patch -m \"chore(release): v%s\"",
-    "release:minor": "npm run verify && npm version minor -m \"chore(release): v%s\"",
-    "release:major": "npm run verify && npm version major -m \"chore(release): v%s\"",
-    "release:push": "git push origin HEAD && git push origin --follow-tags",
+    "release:prepare": "node ../scripts/prepare-release.js",
+    "release:check": "bash ../scripts/check-release-readiness.sh",
     "preview": "vite preview"
   },
   "dependencies": {

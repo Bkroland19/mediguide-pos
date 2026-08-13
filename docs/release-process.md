@@ -6,25 +6,26 @@ modify production by itself.
 
 ## Release model
 
-Use one SemVer tag in the form `vMAJOR.MINOR.PATCH`. The tag must match the
-SemVer part of `user_app/pubspec.yaml`; the Flutter build number remains after
-the `+` and must increase for every store upload.
+Use one SemVer tag in the form `vMAJOR.MINOR.PATCH`. The root `VERSION` file is
+the source of truth. `make release-prepare` synchronizes the dashboard,
+guidelines site, backend Swagger, AI worker, and Flutter manifests. The Flutter
+build number remains after the `+` and must increase for every store upload.
 
-For example, the current mobile version `2.0.15+42` is released with Git tag
-`v2.0.15`. That tag produces these immutable container tags:
+For example, the current mobile version `2.0.16+43` is released with Git tag
+`v2.0.16`. That tag produces these immutable container tags:
 
-- `ghcr.io/<owner>/mediguide-pos-api:2.0.15`
-- `ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.15`
-- `ghcr.io/<owner>/mediguide-pos-dashboard:2.0.15`
-- `ghcr.io/<owner>/mediguide-pos-guidelines:2.0.15`
+- `ghcr.io/<owner>/mediguide-pos-api:2.0.16`
+- `ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.16`
+- `ghcr.io/<owner>/mediguide-pos-dashboard:2.0.16`
+- `ghcr.io/<owner>/mediguide-pos-guidelines:2.0.16`
 
 The AI HTTP service and background loop intentionally use the same AI-worker
 image. PostgreSQL, Redis, MinIO, Ollama, and the Ollama model-pull helper are
 third-party infrastructure images and are not republished to GHCR.
 
-The private dashboard and AI-worker package versions are not release inputs.
-Do not run the standalone `guidelines-platform` `npm version` scripts for a
-monorepo release; the repository tag is the platform source of truth.
+Do not run component-level `npm version` or mobile-only bump scripts for a
+monorepo release; they can create drift and incorrect component tags. The root
+preparation command and repository tag are the platform release interface.
 
 ## One-time GitHub setup
 
@@ -68,12 +69,41 @@ describe it as an installable iOS release.
 
 ## Prepare the release
 
-1. Choose the version and bump `user_app/pubspec.yaml`. Increment both the
-   SemVer and build number as appropriate. For the current candidate, keep
-   `version: 2.0.15+42` and use `v2.0.15`.
+1. Choose the new tag and synchronize every component version. Moving to a new
+   SemVer automatically increments the existing Flutter build number:
+
+```bash
+make release-patch
+# Or choose explicitly:
+make release-prepare RELEASE_TAG=v2.0.16
+```
+
+   `make release-minor` and `make release-major` provide the equivalent SemVer
+   bumps. Read the synchronized version printed by the command and use that
+   exact value for release notes, preflight, and the eventual Git tag.
+
+   To allocate a specific store build number instead, use:
+
+```bash
+make release-prepare RELEASE_TAG=v2.0.16 MOBILE_BUILD_NUMBER=43
+```
+
+   Re-running the first command for the same SemVer preserves its current
+   Flutter build number, making preparation idempotent. Review and commit all
+   generated version changes together.
 2. Update user-facing release notes and any migration or operational notes.
-3. Merge the release commit into the canonical `main` branch.
-4. Fetch `main` and all existing tags from the canonical remote. This checkout
+3. Run the metadata-only drift check before committing:
+
+```bash
+bash scripts/check-release-readiness.sh v2.0.16 --metadata-only
+git diff -- VERSION dashboard/package.json \
+  guidelines-platform/package.json guidelines-platform/package-lock.json \
+  backend/cmd/api/main.go backend/docs ai-worker/pyproject.toml \
+  user_app/pubspec.yaml
+```
+
+4. Merge the release commit into the canonical `main` branch.
+5. Fetch `main` and all existing tags from the canonical remote. This checkout
    currently calls that remote `upstream`; confirm with `git remote -v`.
 
 ```bash
@@ -81,12 +111,13 @@ git fetch upstream main --tags --prune
 git switch main
 git pull --ff-only upstream main
 git status --short
-make release-check RELEASE_TAG=v2.0.15
+make release-check RELEASE_TAG=v2.0.16
 ```
 
-The final status command must be empty. The release check validates the mobile
-version, clean Git state, reachability from a known `main`, existing-tag safety,
-and development and production Compose rendering.
+The final status command must be empty. The release check validates every
+component against `VERSION`, the mobile build metadata, clean Git state,
+reachability from a known `main`, existing-tag safety, and development and
+production Compose rendering.
 
 Run the complete gates locally when the required SDKs are available:
 
@@ -135,10 +166,10 @@ Create the tag only from the verified `main` commit. A signed tag is preferred;
 use an annotated tag only when signing is not configured.
 
 ```bash
-git tag -s v2.0.15 -m 'MediGuide v2.0.15'
-# Fallback: git tag -a v2.0.15 -m 'MediGuide v2.0.15'
-git show --no-patch --decorate v2.0.15
-git push upstream refs/tags/v2.0.15
+git tag -s v2.0.16 -m 'MediGuide v2.0.16'
+# Fallback: git tag -a v2.0.16 -m 'MediGuide v2.0.16'
+git show --no-patch --decorate v2.0.16
+git push upstream refs/tags/v2.0.16
 ```
 
 Never move, delete, or reuse a published release tag. Fix a bad release with a
@@ -147,19 +178,22 @@ new patch version and a higher Flutter build number.
 The tag starts two workflows:
 
 - `Build and publish container images` tests the platform and publishes four
-  GHCR packages with `2.0.15`, `2.0`, `2`, and `sha-*` tags, provenance, and an
+  GHCR packages with `2.0.16`, `2.0`, `2`, and `sha-*` tags, provenance, and an
   SBOM.
 - `Test and build mobile release` verifies generated code, analyzes and tests
   Flutter, builds signed Android APK/AAB, Flutter web, unsigned iOS, and macOS,
-  then creates a GitHub Release with a manifest and SHA-256 checksums.
+  then creates a GitHub Release with a manifest and SHA-256 checksums. The
+  release is created only after every mobile build succeeds. Mobile artifact
+  filenames and the manifest include both the SemVer and Flutter build number,
+  for example `mediguide-2.0.16+43-android.aab`.
 
 Monitor both workflows and do not deploy while either is incomplete:
 
 ```bash
-release_sha="$(git rev-list -n 1 v2.0.15)"
+release_sha="$(git rev-list -n 1 v2.0.16)"
 gh run list --commit "${release_sha}" --limit 10
 gh run watch <run-id> --exit-status
-gh release view v2.0.15
+gh release view v2.0.16
 ```
 
 Confirm all four immutable images exist. GHCR SemVer tags omit the leading `v`:
@@ -168,16 +202,16 @@ Confirm all four immutable images exist. GHCR SemVer tags omit the leading `v`:
 owner='<lowercase-github-owner>'
 for image in api ai-worker dashboard guidelines; do
   docker buildx imagetools inspect \
-    "ghcr.io/${owner}/mediguide-pos-${image}:2.0.15"
+    "ghcr.io/${owner}/mediguide-pos-${image}:2.0.16"
 done
 ```
 
 Download the release, then verify its checksums before distribution:
 
 ```bash
-mkdir -p /tmp/mediguide-v2.0.15
-gh release download v2.0.15 --dir /tmp/mediguide-v2.0.15
-(cd /tmp/mediguide-v2.0.15 && sha256sum --check SHA256SUMS)
+mkdir -p /tmp/mediguide-v2.0.16
+gh release download v2.0.16 --dir /tmp/mediguide-v2.0.16
+(cd /tmp/mediguide-v2.0.16 && sha256sum --check SHA256SUMS)
 ```
 
 On macOS, use `shasum -a 256 -c SHA256SUMS` if GNU `sha256sum` is unavailable.
@@ -188,11 +222,11 @@ Prepare `infra/production.env` outside Git. Replace every placeholder and pin
 the four first-party images to the exact released version, never `latest`:
 
 ```dotenv
-API_IMAGE=ghcr.io/<owner>/mediguide-pos-api:2.0.15
-AI_WORKER_IMAGE=ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.15
-DASHBOARD_IMAGE=ghcr.io/<owner>/mediguide-pos-dashboard:2.0.15
-GUIDELINES_IMAGE=ghcr.io/<owner>/mediguide-pos-guidelines:2.0.15
-BUILD_VERSION=v2.0.15
+API_IMAGE=ghcr.io/<owner>/mediguide-pos-api:2.0.16
+AI_WORKER_IMAGE=ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.16
+DASHBOARD_IMAGE=ghcr.io/<owner>/mediguide-pos-dashboard:2.0.16
+GUIDELINES_IMAGE=ghcr.io/<owner>/mediguide-pos-guidelines:2.0.16
+BUILD_VERSION=2.0.16
 BUILD_REVISION=<full-tagged-git-sha>
 ```
 

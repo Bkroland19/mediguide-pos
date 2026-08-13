@@ -11,7 +11,7 @@ if [[ -z "${release_tag}" ]]; then
   exit 2
 fi
 
-if [[ ! "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+if [[ ! "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
   echo "Invalid release tag '${release_tag}'. Expected vMAJOR.MINOR.PATCH." >&2
   exit 1
 fi
@@ -19,15 +19,50 @@ fi
 mobile_version_line="$(grep -E '^version:[[:space:]]+' "${repository_root}/user_app/pubspec.yaml")"
 mobile_version="${mobile_version_line#version: }"
 mobile_semver="${mobile_version%%+*}"
-expected_tag="v${mobile_semver}"
+mobile_build_number="${mobile_version##*+}"
+platform_version="$(tr -d '[:space:]' < "${repository_root}/VERSION")"
+expected_tag="v${platform_version}"
 
 if [[ "${release_tag}" != "${expected_tag}" ]]; then
-  echo "Release tag ${release_tag} does not match user_app version ${mobile_version}." >&2
-  echo "Expected ${expected_tag}; bump user_app/pubspec.yaml first." >&2
+  echo "Release tag ${release_tag} does not match VERSION (${platform_version})." >&2
+  echo "Expected ${expected_tag}; run make release-prepare RELEASE_TAG=${release_tag}." >&2
   exit 1
 fi
 
-echo "Release metadata is consistent: ${release_tag} / mobile ${mobile_version}."
+if [[ "${mobile_semver}" != "${platform_version}" ]]; then
+  echo "user_app version ${mobile_version} does not match VERSION (${platform_version})." >&2
+  exit 1
+fi
+
+if [[ "${mobile_build_number}" == "${mobile_version}" || ! "${mobile_build_number}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "user_app version ${mobile_version} has an invalid Flutter build number." >&2
+  exit 1
+fi
+
+json_version() {
+  sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$1" | head -n 1
+}
+
+assert_version() {
+  local component="$1"
+  local actual="$2"
+  if [[ "${actual}" != "${platform_version}" ]]; then
+    echo "${component} version ${actual:-<missing>} does not match VERSION (${platform_version})." >&2
+    echo "Run make release-prepare RELEASE_TAG=${release_tag}." >&2
+    exit 1
+  fi
+}
+
+assert_version "dashboard" "$(json_version "${repository_root}/dashboard/package.json")"
+assert_version "guidelines-platform" "$(json_version "${repository_root}/guidelines-platform/package.json")"
+assert_version "guidelines-platform lockfile" "$(json_version "${repository_root}/guidelines-platform/package-lock.json")"
+assert_version "ai-worker" "$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "${repository_root}/ai-worker/pyproject.toml" | head -n 1)"
+assert_version "ai-worker lockfile" "$(awk '/^name = "mediguide-ai-worker"$/ { getline; gsub(/^version = "|"$/, ""); print; exit }' "${repository_root}/ai-worker/uv.lock")"
+assert_version "backend Swagger source" "$(sed -n 's|^// @version[[:space:]]*||p' "${repository_root}/backend/cmd/api/main.go" | head -n 1)"
+assert_version "backend generated Swagger JSON" "$(json_version "${repository_root}/backend/docs/swagger.json")"
+assert_version "backend generated Swagger YAML" "$(sed -n 's/^  version:[[:space:]]*"\{0,1\}\([^"[:space:]]*\)"\{0,1\}.*/\1/p' "${repository_root}/backend/docs/swagger.yaml" | head -n 1)"
+
+echo "Release metadata is consistent: ${release_tag} / mobile ${mobile_version} / all services ${platform_version}."
 
 if [[ "${mode}" == "--metadata-only" ]]; then
   exit 0

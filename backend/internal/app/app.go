@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"mediguide/internal/buildinfo"
 	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -87,7 +88,14 @@ func New(cfg config.Config) (*App, error) {
 	r.Static("/samples", cfg.StaticSamplesDir)
 	r.Static("/dashboard/samples", cfg.StaticSamplesDir)
 
-	r.GET("/api/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName}) })
+	r.GET("/api/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"ok":       true,
+			"service":  cfg.AppName,
+			"version":  buildinfo.Version,
+			"revision": buildinfo.Revision,
+		})
+	})
 
 	// Readiness probe: verify DB connectivity.
 	r.GET("/api/readyz", func(c *gin.Context) {
@@ -104,7 +112,12 @@ func New(cfg config.Config) (*App, error) {
 				return
 			}
 		}
-		c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName})
+		c.JSON(http.StatusOK, gin.H{
+			"ok":       true,
+			"service":  cfg.AppName,
+			"version":  buildinfo.Version,
+			"revision": buildinfo.Revision,
+		})
 	})
 
 	authSvc := services.AuthService{DB: database, Cfg: cfg, Mailer: emailSender}

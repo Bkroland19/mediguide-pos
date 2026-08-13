@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     status: str = "ok"
     service: str = "mediguide-ai-worker"
+    version: str = "development"
+    revision: str = "unknown"
 
 
 class ExtractionPreviewResponse(BaseModel):

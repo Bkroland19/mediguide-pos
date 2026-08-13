@@ -2,6 +2,16 @@
 
 FROM python:3.12-slim
 
+ARG BUILD_VERSION=development
+ARG BUILD_REVISION=unknown
+
+ENV BUILD_VERSION=${BUILD_VERSION} \
+    BUILD_REVISION=${BUILD_REVISION}
+
+LABEL org.opencontainers.image.title="MediGuide AI Worker" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.revision="${BUILD_REVISION}"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \

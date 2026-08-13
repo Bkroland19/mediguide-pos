@@ -28,7 +28,10 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Verify release tag matches the mobile version
+      - name: Verify component version drift
+        run: bash scripts/check-release-readiness.sh "v$(tr -d '[:space:]' < VERSION)" --metadata-only
+
+      - name: Verify release tag matches the platform version
         if: startsWith(github.ref, 'refs/tags/v')
         run: bash scripts/check-release-readiness.sh "${GITHUB_REF_NAME}" --metadata-only
 
@@ -147,15 +150,11 @@ jobs:
         run: |
           {
             echo "value<<EOF"
-            case "${IMAGE_NAME}" in
-              mediguide-pos-dashboard)
-                echo "NEXT_PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL:-http://localhost:8080}"
-                ;;
-              mediguide-pos-guidelines)
-                echo "BUILD_VERSION=${GITHUB_REF_NAME}"
-                echo "BUILD_REVISION=${GITHUB_SHA}"
-                ;;
-            esac
+            echo "BUILD_VERSION=$(tr -d '[:space:]' < VERSION)"
+            echo "BUILD_REVISION=${GITHUB_SHA}"
+            if [ "${IMAGE_NAME}" = mediguide-pos-dashboard ]; then
+              echo "NEXT_PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL:-http://localhost:8080}"
+            fi
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
 

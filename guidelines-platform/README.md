@@ -134,43 +134,20 @@ docker run --rm -p 8081:8080 \
 
 ## Release process
 
-The platform follows semantic versioning. Choose the release command based on the change:
-
-- `patch` for backward-compatible fixes: `1.2.0` → `1.2.1`
-- `minor` for backward-compatible features: `1.2.0` → `1.3.0`
-- `major` for breaking changes: `1.2.0` → `2.0.0`
-
-Start from an up-to-date, clean default branch:
+This application is versioned and released with the full MediGuide monorepo.
+Do not run `npm version` or create a component-only tag. From the repository
+root, synchronize every service and the Flutter app with:
 
 ```bash
-git switch main
-git pull --ff-only
-npm ci
+make release-prepare RELEASE_TAG=vX.Y.Z
+# Or calculate it from VERSION: make release-patch
+make release-check RELEASE_TAG=vX.Y.Z
 ```
 
-Create the appropriate version commit and Git tag:
-
-```bash
-npm run release:patch
-# or: npm run release:minor
-# or: npm run release:major
-```
-
-The release command runs lint and build checks, updates both `package.json` and `package-lock.json`, creates a `chore(release): vX.Y.Z` commit, and creates the matching `vX.Y.Z` Git tag. It stops if the working tree is not clean.
-
-Inspect the result before publishing:
-
-```bash
-git show --stat HEAD
-git tag --points-at HEAD
-npm run release:check -- vX.Y.Z
-```
-
-Publish the release commit and tag:
-
-```bash
-npm run release:push
-```
+The first command updates `VERSION`, both guidelines manifests, dashboard,
+backend Swagger, AI worker, and `user_app`; it also increments the Flutter build
+number when the SemVer changes. Follow the complete review, validation, tagging,
+artifact, and deployment procedure in `docs/release-process.md`.
 
 Pushing the `vX.Y.Z` tag starts the repository container workflow. Alongside
 the API, AI worker, and dashboard images, it publishes the Guidelines image

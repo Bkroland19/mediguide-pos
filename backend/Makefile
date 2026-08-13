@@ -1,16 +1,20 @@
 -include .env
 export
 
+BUILD_VERSION ?= $(shell tr -d '[:space:]' < ../VERSION)
+BUILD_REVISION ?= $(shell git rev-parse --verify HEAD 2>/dev/null || printf unknown)
+API_LDFLAGS := -X mediguide/internal/buildinfo.Version=$(BUILD_VERSION) -X mediguide/internal/buildinfo.Revision=$(BUILD_REVISION)
+
 .PHONY: run build test tidy migrate-up migrate-down migrate-status seed importpb docker-up docker-down swagger proto
 
 run:
-	go run ./cmd/api
+	go run -ldflags "$(API_LDFLAGS)" ./cmd/api
 
 worker:
 	go run ./cmd/worker
 
 build:
-	go build -o bin/api ./cmd/api
+	go build -ldflags "$(API_LDFLAGS)" -o bin/api ./cmd/api
 	go build -o bin/worker ./cmd/worker
 
 test:
