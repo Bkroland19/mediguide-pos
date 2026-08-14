@@ -18,7 +18,7 @@ import (
 )
 
 // @title MediGuide Backend API
-// @version 2.0.19
+// @version 2.0.20
 // @description Offline-first clinical guideline backend API for MediGuide.
 // @termsOfService https://mediguide.local/terms
 // @contact.name MediGuide Backend

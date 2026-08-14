@@ -110,8 +110,9 @@ the approved secret manager.
 
 The production server must provide Bash, tar, Docker Engine, and Docker Compose
 v2. The deployment user needs access to Docker without an interactive password.
-The default production listeners are `127.0.0.1:8080` for the API,
-`127.0.0.1:3000` for the dashboard, and `127.0.0.1:5000` for guidelines. Route
+The production listeners are `0.0.0.0:8080` for the API,
+`0.0.0.0:3000` for the dashboard, and `0.0.0.0:5000` for guidelines. Restrict
+direct access with the host or provider firewall. Route
 `/api` to the API, `/admin` to the dashboard, and `/` to Guidelines through a
 same-host TLS reverse proxy. The checked-in example is
 [`../infra/nginx/mediguide.conf.example`](../infra/nginx/mediguide.conf.example).

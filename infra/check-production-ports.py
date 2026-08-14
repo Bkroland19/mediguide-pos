@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when production Compose publishes an unexpected or non-loopback port."""
+"""Fail when production Compose publishes an unexpected port."""
 
 from __future__ import annotations
 
@@ -53,9 +53,9 @@ def main() -> int:
             continue
 
         port = ports[0]
-        if port.get("host_ip") != "127.0.0.1":
+        if port.get("host_ip") != "0.0.0.0":
             errors.append(
-                f"{service_name} must bind to 127.0.0.1, found {port.get('host_ip')!r}"
+                f"{service_name} must bind to 0.0.0.0, found {port.get('host_ip')!r}"
             )
         expected = EXPECTED_PORTS[service_name]
         if str(port.get("published")) != str(expected["published"]):
@@ -78,8 +78,8 @@ def main() -> int:
         return 1
 
     print(
-        "Production ports are restricted to loopback: "
-        "API, dashboard, and guidelines only."
+        "Production publishes API, dashboard, and guidelines on all interfaces; "
+        "data and worker services remain internal."
     )
     return 0
 

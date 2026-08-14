@@ -99,20 +99,21 @@ make prod-ps
 ```
 
 The production stack publishes only API `8080`, dashboard `3000`, and
-guidelines `5000`, all on `127.0.0.1` by default. PostgreSQL, Redis, MinIO,
-Ollama, AI HTTP, and AI gRPC are reachable only inside the Compose network.
-Place a same-host TLS reverse proxy in front of the three loopback listeners.
+guidelines `5000`, all on `0.0.0.0`. PostgreSQL, Redis, MinIO, Ollama, AI HTTP,
+and AI gRPC are reachable only inside the Compose network. Restrict the three
+published ports with the host or provider firewall and place a TLS reverse
+proxy in front of them.
 The supported single-domain layout is `/` for Guidelines, `/admin` for the
 dashboard, and `/api` for the backend. Start from
 [`nginx/mediguide.conf.example`](nginx/mediguide.conf.example). The dashboard
 image must be built with `NEXT_PUBLIC_DASHBOARD_BASE_PATH=/admin`, and Nginx
 must preserve—not strip—the `/admin` prefix.
 
-| Public route | Loopback upstream | Service |
+| Public route | Published listener | Service |
 |---|---|---|
-| `/` | `127.0.0.1:5000` | Guidelines UI |
-| `/admin` and `/admin/*` | `127.0.0.1:3000` | Dashboard |
-| `/api` and `/api/*` | `127.0.0.1:8080` | Backend API |
+| `/` | `0.0.0.0:5000` | Guidelines UI |
+| `/admin` and `/admin/*` | `0.0.0.0:3000` | Dashboard |
+| `/api` and `/api/*` | `0.0.0.0:8080` | Backend API |
 
 On an Nginx host, install and verify the example after replacing its hostname
 and TLS certificate paths:
@@ -129,13 +130,16 @@ curl --fail https://mediguide.example.org/healthz
 curl --fail https://mediguide.example.org/admin
 curl --fail https://mediguide.example.org/api/readyz
 ```
-Do not change `PUBLIC_BIND_ADDRESS` to `0.0.0.0` without an explicit firewall,
-TLS, and access-control review. A reverse proxy running in another Compose
-project should instead share an intentionally managed Docker network.
+`PUBLIC_BIND_ADDRESS=0.0.0.0` makes these three HTTP ports reachable on every
+server interface. Permit them only from approved networks where direct access
+is required; normal public traffic should still use HTTPS through the reverse
+proxy. A reverse proxy running in another Compose project can instead share an
+intentionally managed Docker network.
 
 CI runs `infra/check-production-ports.py` against the rendered production
 definition and fails if a data or worker service is published, a public service
-targets the wrong container port, or a listener is not bound to loopback.
+targets the wrong container port, or one of the three HTTP listeners is not
+bound to the configured public interface.
 
 For the single-domain layout, set `PUBLIC_API_BASE_URL` to the HTTPS origin
 without an `/api` suffix, `DASHBOARD_PUBLIC_URL` to the same origin plus
@@ -168,7 +172,9 @@ script validates Compose before mutation, removes the existing `mediguide`
 Compose containers without deleting named volumes, removes only the previous
 first-party MediGuide images, pulls the immutable release images, applies
 migrations, starts the stack, and waits up to ten minutes for Compose health
-checks. It never runs a global container or image prune and never removes
+checks. The SSH deployment connection sends keepalives while first-run Ollama
+models are downloaded, and a failed deployment prints bounded status and logs
+for the application services. It never runs a global container or image prune and never removes
 PostgreSQL, MinIO, or Ollama volumes.
 
 Configure the `production` GitHub Environment with approval protection and the

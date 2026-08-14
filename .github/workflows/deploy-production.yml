@@ -136,12 +136,16 @@ jobs:
             -o BatchMode=yes
             -o IdentitiesOnly=yes
             -o StrictHostKeyChecking=yes
+            -o ServerAliveInterval=30
+            -o ServerAliveCountMax=20
+            -o TCPKeepAlive=yes
           )
 
           ssh "${ssh_options[@]}" "${target}" \
             "mkdir -p '${DEPLOY_PATH}' '${remote_stage}/docker-config'"
           scp -i "${ssh_key}" -P "${DEPLOY_PORT}" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes \
             "${RUNNER_TEMP}/mediguide-infra.tar.gz" \
             "${target}:${remote_stage}/infra.tar.gz"
 

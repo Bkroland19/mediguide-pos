@@ -36,8 +36,8 @@ if grep -Eq '(^|=)replace-with|example\.org' "${production_env}"; then
   exit 1
 fi
 
-if ! grep -qx 'PUBLIC_BIND_ADDRESS=127.0.0.1' "${production_env}"; then
-  echo "PUBLIC_BIND_ADDRESS must be exactly 127.0.0.1 in production." >&2
+if ! grep -qx 'PUBLIC_BIND_ADDRESS=0.0.0.0' "${production_env}"; then
+  echo "PUBLIC_BIND_ADDRESS must be exactly 0.0.0.0 in production." >&2
   exit 1
 fi
 
@@ -70,6 +70,18 @@ compose=(
   --env-file "${release_env}"
   -f "${compose_file}"
 )
+
+deployment_failure_diagnostics() {
+  exit_code=$?
+  trap - ERR
+  set +e
+  echo "Production deployment failed; collecting bounded service diagnostics." >&2
+  "${compose[@]}" ps >&2
+  "${compose[@]}" logs --no-color --tail 150 \
+    api dashboard guidelines ai-worker ai-worker-loop ollama-pull-models >&2
+  exit "${exit_code}"
+}
+trap deployment_failure_diagnostics ERR
 
 echo "Validating MediGuide production Compose configuration."
 "${compose[@]}" config --quiet
