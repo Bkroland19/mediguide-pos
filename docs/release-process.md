@@ -136,6 +136,7 @@ release version and revision.
 For one public domain, use these values (replace the hostname):
 
 ```dotenv
+PUBLIC_SITE_URL=https://mediguide.example.org
 PUBLIC_API_BASE_URL=https://mediguide.example.org
 ALLOWED_ORIGINS=https://mediguide.example.org
 DASHBOARD_BASE_PATH=/admin
@@ -145,6 +146,11 @@ GUIDELINES_PUBLIC_PORT=5000
 
 `PUBLIC_API_BASE_URL` intentionally has no `/api` suffix because clients append
 typed `/api/v2/...` routes. CORS origins must never contain a path.
+
+Deployment succeeds only after Compose health checks and browser-visible
+checks for `/healthz`, `/admin`, and `/api/readyz` all pass. The queue-only AI
+worker is considered live while its worker process is running; it does not use
+the HTTP health endpoint exposed by the separate AI HTTP service.
 
 Apple artifacts are currently compile-verified but unsigned. A distributable
 iOS IPA still requires an Apple Distribution certificate, provisioning profile,

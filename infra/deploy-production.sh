@@ -71,6 +71,23 @@ compose=(
   -f "${compose_file}"
 )
 
+read_env_value() {
+  local name="$1"
+  sed -n "s/^${name}=//p" "${production_env}" | tail -n 1 | tr -d '\r'
+}
+
+public_api_base_url="$(read_env_value PUBLIC_API_BASE_URL)"
+dashboard_public_url="$(read_env_value DASHBOARD_PUBLIC_URL)"
+public_site_url="$(read_env_value PUBLIC_SITE_URL)"
+public_site_url="${public_site_url:-${public_api_base_url}}"
+
+for public_url in "${public_api_base_url}" "${dashboard_public_url}" "${public_site_url}"; do
+  if [[ ! "${public_url}" =~ ^https?://[^[:space:]]+$ ]]; then
+    echo "Production public route URLs must be absolute HTTP(S) URLs." >&2
+    exit 1
+  fi
+done
+
 deployment_failure_diagnostics() {
   exit_code=$?
   trap - ERR
@@ -125,5 +142,30 @@ echo "Applying database migrations."
 echo "Starting the complete MediGuide stack and waiting for health checks."
 "${compose[@]}" up --no-build -d --remove-orphans --wait --wait-timeout 600
 "${compose[@]}" ps
+
+verify_public_route() {
+  local label="$1"
+  local url="$2"
+  local attempt
+
+  for attempt in {1..12}; do
+    if docker run --rm --network host curlimages/curl:8.14.1 \
+      --fail --silent --show-error --location --max-time 15 "${url}" >/dev/null; then
+      echo "Verified ${label}: ${url}"
+      return 0
+    fi
+    if (( attempt < 12 )); then
+      sleep 5
+    fi
+  done
+
+  echo "Public route verification failed for ${label}: ${url}" >&2
+  return 1
+}
+
+echo "Verifying browser-visible production routes through the configured origin."
+verify_public_route "Guidelines" "${public_site_url%/}/healthz"
+verify_public_route "Dashboard" "${dashboard_public_url%/}"
+verify_public_route "API" "${public_api_base_url%/}/api/readyz"
 
 echo "MediGuide ${release_version} (${release_revision}) deployed successfully."

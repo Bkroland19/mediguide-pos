@@ -248,6 +248,10 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # This container runs the queue consumer only and does not expose the
+    # ai-worker HTTP readiness endpoint baked into the shared image.
+    healthcheck:
+      disable: true
 
   dashboard:
     image: "${DASHBOARD_IMAGE:-mediguide-dashboard:production}"

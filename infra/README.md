@@ -136,6 +136,14 @@ is required; normal public traffic should still use HTTPS through the reverse
 proxy. A reverse proxy running in another Compose project can instead share an
 intentionally managed Docker network.
 
+The queue-only `ai-worker-loop` deliberately disables the shared image's HTTP
+health check because that process does not start the HTTP server. Docker still
+restarts the container if its worker process exits. After Compose reports the
+stack ready, deployment verifies the browser-visible Guidelines health route,
+Dashboard route, and API readiness route through `PUBLIC_SITE_URL`,
+`DASHBOARD_PUBLIC_URL`, and `PUBLIC_API_BASE_URL`. This separates a genuine
+public routing failure from worker-loop liveness.
+
 CI runs `infra/check-production-ports.py` against the rendered production
 definition and fails if a data or worker service is published, a public service
 targets the wrong container port, or one of the three HTTP listeners is not
@@ -143,7 +151,8 @@ bound to the configured public interface.
 
 For the single-domain layout, set `PUBLIC_API_BASE_URL` to the HTTPS origin
 without an `/api` suffix, `DASHBOARD_PUBLIC_URL` to the same origin plus
-`/admin`, and `ALLOWED_ORIGINS` to the origin only. The Guidelines startup
+`/admin`, `PUBLIC_SITE_URL` to the HTTPS origin, and `ALLOWED_ORIGINS` to the
+origin only. The Guidelines startup
 script injects `MEDIGUIDE_API_URL` at runtime, so an immutable image can move
 between environments without a rebuild. No token or secret belongs in public
 frontend configuration.
