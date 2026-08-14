@@ -17,9 +17,6 @@ import 'package:user_app/features/home/presentation/controllers/home_controller.
 import 'package:user_app/features/home/presentation/controllers/home_state.dart';
 import 'package:user_app/features/home/presentation/widgets/continue_reading_card.dart';
 
-import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
-import 'package:user_app/features/tree_selector/presentation/screens/tree_selector_page.dart';
-
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
@@ -391,88 +388,6 @@ class HomePage extends ConsumerWidget {
       // Offline/network errors should not remove it.
     }
   }
-
-  // =======================================================
-  // QUICK ACTIONS
-  // =======================================================
-
-  static Future<void> _showQuickActionsMenu(BuildContext context) async {
-    final actions = <_HomeQuickAction>[
-      _HomeQuickAction(
-        icon: LucideIcons.pill,
-        title: AppTranslationKey.drugIndex,
-        subtitle: 'Drug references',
-        color: Colors.blue,
-        onTap: () async {
-          await AppNavigator.push(AppRoutes.drugIndex);
-        },
-      ),
-      _HomeQuickAction(
-        icon: LucideIcons.calculator,
-        title: 'Clinical Tools',
-        subtitle: 'Decision support',
-        color: Colors.purple,
-        onTap: () async {
-          await AppNavigator.push(AppRoutes.tools);
-        },
-      ),
-      _HomeQuickAction(
-        icon: LucideIcons.messageCircle,
-        title: AppTranslationKey.chatWithConsultant,
-        subtitle: 'Talk to experts',
-        color: Colors.teal,
-        onTap: () async {
-          final result = await TreeSelectorPage.show(
-            config: TreeSelectorConfig(
-              title: AppTranslationKey.chatWithConsultant,
-              endpointPath: '/api/consultants/tree',
-            ),
-          );
-
-          if (result == null) {
-            return;
-          }
-
-          await AppNavigator.push(
-            AppRoutes.consultants,
-            extra: {'treeFilters': result.filters},
-          );
-        },
-      ),
-      _HomeQuickAction(
-        icon: LucideIcons.mapPin,
-        title: AppTranslationKey.healthInfrastructure,
-        subtitle: 'Find facilities',
-        color: Colors.orange,
-        onTap: () async {
-          final result = await TreeSelectorPage.show(
-            config: TreeSelectorConfig(
-              title: AppTranslationKey.healthInfrastructure,
-              endpointPath: '/api/health-facilities/tree',
-            ),
-          );
-
-          if (result == null) {
-            return;
-          }
-
-          await AppNavigator.push(
-            AppRoutes.healthInfrastructure,
-            extra: {'treeFilters': result.filters},
-          );
-        },
-      ),
-    ];
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (_) {
-        return _QuickActionsSheet(actions: actions);
-      },
-    );
-  }
 }
 
 // =========================================================
@@ -588,97 +503,6 @@ class _QuickActionGrid extends StatelessWidget {
       );
     },
   );
-}
-
-// =========================================================
-// QUICK ACTION SHEET
-// =========================================================
-
-class _QuickActionsSheet extends StatelessWidget {
-  const _QuickActionsSheet({required this.actions});
-
-  final List<_HomeQuickAction> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            context.responsiveHorizontalPadding,
-            0,
-            context.responsiveHorizontalPadding,
-            AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppTranslationKey.quickActions,
-                style: context.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              AppSpacing.sm.gap,
-
-              for (final action in actions)
-                _QuickActionMenuTile(action: action),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionMenuTile extends StatelessWidget {
-  const _QuickActionMenuTile({required this.action});
-
-  final _HomeQuickAction action;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: action.color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(action.icon, color: action.color, size: 20),
-        ),
-        title: Text(
-          action.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: context.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        subtitle: Text(
-          action.subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Icon(LucideIcons.chevronRight, color: cs.onSurfaceVariant),
-        onTap: () async {
-          Navigator.of(context).pop();
-
-          await action.onTap();
-        },
-      ),
-    );
-  }
 }
 
 // =========================================================
