@@ -14,10 +14,18 @@ function normalizeBaseUrl(value: string | undefined, fallback: string) {
   return (value?.trim() || fallback).replace(/\/+$/, "");
 }
 
+export function normalizeDashboardBaseUrl(
+  value: string | undefined,
+  fallback = defaultMediguidePosUrl,
+) {
+  const baseUrl = normalizeBaseUrl(value, fallback);
+  return baseUrl.endsWith("/admin") ? baseUrl : `${baseUrl}/admin`;
+}
+
 const runtimeConfig =
   typeof window === "undefined" ? undefined : window.__APP_CONFIG__;
 
-const mediguidePosUrl = normalizeBaseUrl(
+const mediguidePosUrl = normalizeDashboardBaseUrl(
   runtimeConfig?.mediguidePosUrl || import.meta.env.VITE_MEDIGUIDE_POS_URL,
   defaultMediguidePosUrl,
 );
@@ -28,5 +36,5 @@ export const publicApiBaseUrl = normalizeBaseUrl(
 );
 
 export const dashboardBaseUrl = mediguidePosUrl;
-export const dashboardLoginUrl = `${dashboardBaseUrl}/admin/login`;
+export const dashboardLoginUrl = `${dashboardBaseUrl}/login`;
 export const mediguidePosLoginUrl = dashboardLoginUrl;
