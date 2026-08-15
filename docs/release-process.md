@@ -149,8 +149,8 @@ typed `/api/v2/...` routes. CORS origins must never contain a path.
 
 Deployment succeeds only after Compose health checks and browser-visible
 checks for `/healthz`, `/admin`, and `/api/readyz` all pass. The queue-only AI
-worker is considered live while its worker process is running; it does not use
-the HTTP health endpoint exposed by the separate AI HTTP service.
+worker uses a process-liveness probe; it does not use the HTTP health endpoint
+exposed by the separate AI HTTP service.
 
 Apple artifacts are currently compile-verified but unsigned. A distributable
 iOS IPA still requires an Apple Distribution certificate, provisioning profile,

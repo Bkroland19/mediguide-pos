@@ -248,10 +248,14 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # This container runs the queue consumer only and does not expose the
-    # ai-worker HTTP readiness endpoint baked into the shared image.
+    # This container runs the queue consumer only, so verify process liveness
+    # instead of probing the ai-worker HTTP endpoint from the shared image.
     healthcheck:
-      disable: true
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
   dashboard:
     image: "${DASHBOARD_IMAGE:-mediguide-dashboard:production}"

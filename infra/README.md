@@ -136,13 +136,13 @@ is required; normal public traffic should still use HTTPS through the reverse
 proxy. A reverse proxy running in another Compose project can instead share an
 intentionally managed Docker network.
 
-The queue-only `ai-worker-loop` deliberately disables the shared image's HTTP
-health check because that process does not start the HTTP server. Docker still
-restarts the container if its worker process exits. After Compose reports the
-stack ready, deployment verifies the browser-visible Guidelines health route,
-Dashboard route, and API readiness route through `PUBLIC_SITE_URL`,
-`DASHBOARD_PUBLIC_URL`, and `PUBLIC_API_BASE_URL`. This separates a genuine
-public routing failure from worker-loop liveness.
+The queue-only `ai-worker-loop` uses a process-liveness health check because it
+does not start the HTTP server. Docker restarts the container if its worker
+process exits, while Compose `--wait` can still verify that it is ready. After
+Compose reports the stack ready, deployment verifies the browser-visible
+Guidelines health route, Dashboard route, and API readiness route through
+`PUBLIC_SITE_URL`, `DASHBOARD_PUBLIC_URL`, and `PUBLIC_API_BASE_URL`. This
+separates a genuine public routing failure from worker-loop liveness.
 
 CI runs `infra/check-production-ports.py` against the rendered production
 definition and fails if a data or worker service is published, a public service
