@@ -73,6 +73,9 @@ jobs:
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          DASHBOARD_PUBLIC_URL: ${{ vars.DASHBOARD_PUBLIC_URL }}
         run: |
           set -euo pipefail
           for name in \
@@ -92,14 +95,45 @@ jobs:
             echo "DEPLOY_PATH cannot be root or contain relative path components." >&2
             exit 1
           }
+          for name in PUBLIC_SITE_URL PUBLIC_API_BASE_URL DASHBOARD_PUBLIC_URL; do
+            if [ -z "${!name:-}" ]; then
+              echo "Required production GitHub variable ${name} is missing." >&2
+              exit 1
+            fi
+            if [[ ! "${!name}" =~ ^https://[^[:space:]]+$ ]]; then
+              echo "Production variable ${name} must be an absolute HTTPS URL." >&2
+              exit 1
+            fi
+          done
+          expected_dashboard_url="${PUBLIC_SITE_URL%/}/admin/login"
+          if [ "${DASHBOARD_PUBLIC_URL%/}" != "${expected_dashboard_url}" ]; then
+            echo "DASHBOARD_PUBLIC_URL must be ${expected_dashboard_url}." >&2
+            exit 1
+          fi
+          if [ "${PUBLIC_API_BASE_URL%/}" != "${PUBLIC_SITE_URL%/}" ]; then
+            echo "PUBLIC_API_BASE_URL must use the public site origin without an /api suffix." >&2
+            exit 1
+          fi
 
       - name: Prepare deployment bundle
         env:
           PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          DASHBOARD_PUBLIC_URL: ${{ vars.DASHBOARD_PUBLIC_URL }}
         run: |
           set -euo pipefail
           umask 077
           printf '%s\n' "${PRODUCTION_ENV_FILE}" > infra/production.env
+          {
+            echo
+            echo "# Canonical browser-visible URLs managed by GitHub Actions variables."
+            printf 'PUBLIC_SITE_URL=%s\n' "${PUBLIC_SITE_URL%/}"
+            printf 'PUBLIC_API_BASE_URL=%s\n' "${PUBLIC_API_BASE_URL%/}"
+            printf 'DASHBOARD_PUBLIC_URL=%s\n' "${DASHBOARD_PUBLIC_URL%/}"
+            printf 'DASHBOARD_BASE_PATH=/admin\n'
+            printf 'ALLOWED_ORIGINS=%s\n' "${PUBLIC_SITE_URL%/}"
+          } >> infra/production.env
           tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" infra
 
       - name: Configure verified SSH access

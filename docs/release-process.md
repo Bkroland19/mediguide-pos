@@ -35,9 +35,11 @@ container workflow uses its scoped `GITHUB_TOKEN` for GHCR. Set these repository
 variables to real public endpoints before tagging:
 
 ```bash
-gh variable set PUBLIC_API_BASE_URL --body 'https://mediguide.example.org'
-gh variable set MOBILE_API_BASE_URL --body 'https://mediguide.example.org'
-gh variable set DASHBOARD_BASE_PATH --body '/admin'
+gh variable set PUBLIC_API_BASE_URL --repo mohuganda/mediguide-pos --body 'https://mediguide.example.org'
+gh variable set PUBLIC_SITE_URL --repo mohuganda/mediguide-pos --body 'https://mediguide.example.org'
+gh variable set DASHBOARD_PUBLIC_URL --repo mohuganda/mediguide-pos --body 'https://mediguide.example.org/admin/login'
+gh variable set DASHBOARD_BASE_PATH --repo mohuganda/mediguide-pos --body '/admin'
+gh variable set MOBILE_API_BASE_URL --repo mohuganda/mediguide-pos --body 'https://mediguide.example.org'
 ```
 
 Create a long-lived Android upload key once, store it outside the repository,
@@ -140,7 +142,7 @@ PUBLIC_SITE_URL=https://mediguide.example.org
 PUBLIC_API_BASE_URL=https://mediguide.example.org
 ALLOWED_ORIGINS=https://mediguide.example.org
 DASHBOARD_BASE_PATH=/admin
-DASHBOARD_PUBLIC_URL=https://mediguide.example.org/admin
+DASHBOARD_PUBLIC_URL=https://mediguide.example.org/admin/login
 GUIDELINES_PUBLIC_PORT=5000
 ```
 

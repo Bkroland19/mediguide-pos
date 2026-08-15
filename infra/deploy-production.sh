@@ -86,7 +86,26 @@ for public_url in "${public_api_base_url}" "${dashboard_public_url}" "${public_s
     echo "Production public route URLs must be absolute HTTP(S) URLs." >&2
     exit 1
   fi
+  if [[ "${public_url}" =~ ^https?://(0\.0\.0\.0|127\.0\.0\.1|localhost)(:|/|$) ]]; then
+    echo "Production public route URLs cannot use a local bind/listen address: ${public_url}" >&2
+    exit 1
+  fi
 done
+
+if [[ "${public_site_url}" != https://* || "${public_api_base_url}" != https://* || "${dashboard_public_url}" != https://* ]]; then
+  echo "Production public route URLs must use HTTPS." >&2
+  exit 1
+fi
+
+if [[ "${public_api_base_url%/}" != "${public_site_url%/}" ]]; then
+  echo "PUBLIC_API_BASE_URL must equal PUBLIC_SITE_URL without an /api suffix." >&2
+  exit 1
+fi
+
+if [[ "${dashboard_public_url%/}" != "${public_site_url%/}/admin/login" ]]; then
+  echo "DASHBOARD_PUBLIC_URL must equal PUBLIC_SITE_URL plus /admin/login." >&2
+  exit 1
+fi
 
 deployment_failure_diagnostics() {
   exit_code=$?
