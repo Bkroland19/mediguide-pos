@@ -4191,6 +4191,292 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/firebase/devices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "List the current user's push installations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDevicesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Register or refresh the current user's mobile installation",
+                "parameters": [
+                    {
+                        "description": "Firebase device registration",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebaseDeviceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDeviceEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/devices/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Remove one of the current user's Firebase installations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Firebase device UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DeletedEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Update push enablement for one of the current user's installations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Firebase device UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device preference",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebaseDeviceUpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDeviceDTOEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/push/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Send or validate a Firebase push notification for a user",
+                "parameters": [
+                    {
+                        "description": "Push notification",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebasePushInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebasePushResultEnvelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/remote-config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Get the active Firebase Remote Config template",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigEnvelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Validate or publish a Firebase Remote Config template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Current Firebase template ETag",
+                        "name": "If-Match",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Remote Config update",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Get Firebase integration status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseStatusEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/test-recipients": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Search eligible test-push recipients without exposing tokens",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseTestRecipientsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-categories": {
             "get": {
                 "security": [
@@ -7705,6 +7991,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guidelines/{id}/notification-campaign": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Selects the published guideline-update template and enters the normal review and approval workflow; it never dispatches directly.",
+                "tags": [
+                    "guidelines",
+                    "notification-administration"
+                ],
+                "summary": "Create a draft notification campaign for a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline document UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Audience, schedule and priority",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineNotificationCampaignInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guidelines/{id}/versions": {
             "post": {
                 "security": [
@@ -8743,6 +9088,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/notification-campaigns/audience-estimate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Estimate eligible users and active devices for a typed campaign audience",
+                "parameters": [
+                    {
+                        "description": "Typed audience",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationAudienceEstimateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationAudienceEstimateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/notification-campaigns/{id}": {
             "get": {
                 "security": [
@@ -8810,8 +9187,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v2/notification-campaigns/{id}/status": {
-            "patch": {
+        "/api/v2/notification-campaigns/{id}/{action}": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -8820,15 +9197,29 @@ const docTemplate = `{
                 "tags": [
                     "notification-administration"
                 ],
-                "summary": "Change notification-campaign status",
+                "summary": "Apply a guarded notification-campaign workflow transition",
                 "parameters": [
                     {
-                        "description": "Status",
+                        "type": "string",
+                        "description": "Campaign UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "submit, approve, reject, schedule, pause, resume, or cancel",
+                        "name": "action",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Transition",
                         "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.NotificationStatusInput"
+                            "$ref": "#/definitions/services.NotificationCampaignTransitionInput"
                         }
                     }
                 ],
@@ -8837,6 +9228,329 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "List notification delivery lifecycle records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedNotificationDeliveriesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-deliveries/{id}/click": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Record an authenticated user's notification action click idempotently",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Client event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationDeliveryEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationDeliveryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-deliveries/{id}/open": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Record an authenticated user's notification open event idempotently",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Client event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationDeliveryEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationDeliveryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-delivery-analytics/daily": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Get daily channel delivery lifecycle aggregates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exclusive end date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationDeliveryAnalyticsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-delivery-jobs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "List notification delivery jobs without registration tokens or payload contents",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "held, pending, processing, retry, accepted, failed, cancelled",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "in-app, push, email, sms",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Campaign UUID",
+                        "name": "campaign_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedNotificationOutboxJobsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-delivery-jobs/{id}/requeue": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Requeue one terminally failed notification delivery job",
+                "parameters": [
+                    {
+                        "description": "Explicit confirmation and reason",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationOutboxRequeueInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationOutboxJobEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-preferences": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get notification preferences for the current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferencesEnvelope"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Update notification preferences for the current user",
+                "parameters": [
+                    {
+                        "description": "Preference changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationPreferencesInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferencesEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-preferences/aggregates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Get aggregate notification preference and device counts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferenceAggregatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-template-versions/{id}/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Render a notification-template version with sample variables",
+                "parameters": [
+                    {
+                        "description": "Variables",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationTemplatePreviewInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationTemplatePreviewEnvelope"
                         }
                     }
                 }
@@ -8960,6 +9674,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/notification-templates/{id}/clone": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Clone the current immutable template version into a new draft",
+                "parameters": [
+                    {
+                        "description": "Clone identity",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationTemplateCloneInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationTemplateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/notification-templates/{id}/status": {
             "patch": {
                 "security": [
@@ -8987,6 +9733,27 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationTemplateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-templates/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "List immutable versions for a notification template",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationTemplateVersionsEnvelope"
                         }
                     }
                 }
@@ -11418,6 +12185,27 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DeletedEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.DeletedResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DeletedResult": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.DocumentationEnvelope": {
             "type": "object",
             "properties": {
@@ -11579,6 +12367,155 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.FAQTag"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.FirebaseDeviceDTOEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.FirebaseDeviceDTO"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseDeviceEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.FirebaseDevice"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseDevicesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FirebaseDeviceDTO"
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebasePushResultEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.FirebasePushResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.FirebaseRemoteConfigResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigResult": {
+            "type": "object",
+            "properties": {
+                "etag": {
+                    "type": "string",
+                    "example": "etag-123"
+                },
+                "template": {
+                    "$ref": "#/definitions/handlers.JSONMap"
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "$ref": "#/definitions/handlers.JSONMap"
+                },
+                "validate_only": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseStatusEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.FirebaseStatusResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseStatusResult": {
+            "type": "object",
+            "properties": {
+                "active_device_count": {
+                    "type": "integer"
+                },
+                "delivery_reporting": {
+                    "type": "string"
+                },
+                "email_status": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "last_successful_health_check_at": {
+                    "type": "string"
+                },
+                "platforms": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "sms_status": {
+                    "type": "string"
+                },
+                "stale_device_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.FirebaseTestRecipientsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FirebaseTestRecipient"
+                    }
                 },
                 "success": {
                     "type": "boolean"
@@ -12094,11 +13031,52 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.NotificationAudienceEstimateEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationAudienceEstimate"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationAudienceEstimateInput": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                }
+            }
+        },
         "handlers.NotificationCampaignEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/models.NotificationCampaign"
+                    "$ref": "#/definitions/services.NotificationCampaignDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationDeliveryAnalyticsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationDeliveryAnalytics"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationDeliveryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationDeliveryDTO"
                 },
                 "success": {
                     "type": "boolean"
@@ -12110,6 +13088,41 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.Notification"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.NotificationOutboxJobEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationOutboxJobDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationPreferenceAggregatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationPreferenceAggregates"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.NotificationPreferencesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationPreferences"
                 },
                 "success": {
                     "type": "boolean",
@@ -12129,11 +13142,36 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/models.NotificationTemplate"
+                    "$ref": "#/definitions/services.NotificationTemplateDTO"
                 },
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.NotificationTemplatePreviewEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationTemplatePreview"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationTemplateVersionsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.NotificationTemplateVersionDTO"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -12807,7 +13845,7 @@ const docTemplate = `{
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.NotificationCampaign"
+                        "$ref": "#/definitions/services.NotificationCampaignDTO"
                     }
                 },
                 "page": {
@@ -12835,13 +13873,58 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedNotificationDeliveriesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_NotificationDeliveryDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedNotificationOutboxJobs": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.NotificationOutboxJobDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedNotificationOutboxJobsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedNotificationOutboxJobs"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedNotificationTemplates": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.NotificationTemplate"
+                        "$ref": "#/definitions/services.NotificationTemplateDTO"
                     }
                 },
                 "page": {
@@ -14444,6 +15527,38 @@ const docTemplate = `{
                 }
             }
         },
+        "models.FirebaseDevice": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "last_seen_at": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GenericPage": {
             "type": "object",
             "properties": {
@@ -15706,10 +16821,28 @@ const docTemplate = `{
         "models.Notification": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/models.NotificationAction"
+                },
                 "action_url": {
                     "type": "string"
                 },
+                "campaign_id": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "deduplication_key": {
+                    "type": "string"
+                },
+                "delivery_id": {
+                    "type": "string"
+                },
+                "expires_at": {
                     "type": "string"
                 },
                 "id": {
@@ -15722,6 +16855,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "priority": {
+                    "type": "string"
+                },
+                "publish_at": {
+                    "type": "string"
+                },
+                "published_by": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "source_type": {
                     "type": "string"
                 },
                 "title": {
@@ -15738,115 +16883,35 @@ const docTemplate = `{
                 }
             }
         },
-        "models.NotificationCampaign": {
+        "models.NotificationAction": {
             "type": "object",
             "properties": {
-                "audience_countries": {
-                    "type": "array",
-                    "items": {
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": {
                         "type": "string"
                     }
                 },
-                "audience_roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "audience_total": {
-                    "type": "integer"
-                },
-                "channels": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "created_at": {
+                "resource_id": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
-                "metrics_clicked": {
-                    "type": "integer"
-                },
-                "metrics_delivered": {
-                    "type": "integer"
-                },
-                "metrics_opened": {
-                    "type": "integer"
-                },
-                "metrics_sent": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "schedule_end": {
-                    "type": "string"
-                },
-                "schedule_start": {
-                    "type": "string"
-                },
-                "status": {
+                "route": {
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.NotificationTemplate": {
-            "type": "object",
-            "properties": {
-                "audience": {
-                    "type": "string"
-                },
-                "category": {
-                    "type": "string"
-                },
-                "clicked_count": {
-                    "type": "integer"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "last_sent": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "opened_count": {
-                    "type": "integer"
-                },
-                "sent_count": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "subject": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "variables": {
-                    "type": "object"
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "guideline",
+                        "outbreak",
+                        "situation_report",
+                        "drug",
+                        "calculator",
+                        "facility",
+                        "support_ticket",
+                        "internal_route",
+                        "approved_external_url"
+                    ]
                 }
             }
         },
@@ -17627,6 +18692,164 @@ const docTemplate = `{
                 }
             }
         },
+        "services.FirebaseDeviceDTO": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "last_seen_at": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebaseDeviceInput": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "registration_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebaseDeviceUpdateInput": {
+            "type": "object",
+            "properties": {
+                "notifications_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.FirebasePushDeviceResult": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "error_category": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "provider_message_id": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebasePushInput": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
+                "action_url": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "current_user": {
+                    "type": "boolean"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "dry_run": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebasePushResult": {
+            "type": "object",
+            "properties": {
+                "accepted": {
+                    "type": "integer"
+                },
+                "attempted": {
+                    "type": "integer"
+                },
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FirebasePushDeviceResult"
+                    }
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "validated": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.FirebaseTestRecipient": {
+            "type": "object",
+            "properties": {
+                "device_count": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "platforms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "services.GenericPageInput": {
             "type": "object",
             "properties": {
@@ -17970,6 +19193,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineNotificationCampaignInput": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "requested_channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "timezone": {
                     "type": "string"
                 }
             }
@@ -18598,40 +19847,436 @@ const docTemplate = `{
                 }
             }
         },
-        "services.NotificationCampaignInput": {
+        "services.NotificationAction": {
             "type": "object",
             "properties": {
-                "audience_countries": {
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "resource_id": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "guideline",
+                        "outbreak",
+                        "situation_report",
+                        "drug",
+                        "calculator",
+                        "facility",
+                        "support_ticket",
+                        "internal_route",
+                        "approved_external_url"
+                    ]
+                }
+            }
+        },
+        "services.NotificationAudienceDefinition": {
+            "type": "object",
+            "properties": {
+                "all_eligible": {
+                    "type": "boolean"
+                },
+                "application_versions": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "audience_roles": {
+                "countries": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "channels": {
+                "district_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "facility_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "facility_level_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "platforms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "preference_categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "professional_categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "region_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "role_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "services.NotificationAudienceEstimate": {
+            "type": "object",
+            "properties": {
+                "active_devices": {
+                    "type": "integer"
+                },
+                "eligible_users": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.NotificationCampaignDTO": {
+            "type": "object",
+            "properties": {
+                "action_snapshot": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "collapse_key": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "dispatch_snapshot": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "failure_reason": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
                 },
-                "schedule_end": {
+                "priority": {
                     "type": "string"
                 },
-                "schedule_start": {
+                "rendered_body": {
+                    "type": "string"
+                },
+                "rendered_title": {
+                    "type": "string"
+                },
+                "requested_channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "resolved_recipient_count": {
+                    "type": "integer"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "started_at": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
                 },
+                "template_version_id": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "ttl_seconds": {
+                    "type": "integer"
+                },
                 "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "variables": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "services.NotificationCampaignInput": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                },
+                "collapse_key": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "requested_channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "template_version_id": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "ttl_seconds": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "variables": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "services.NotificationCampaignTransitionInput": {
+            "type": "object",
+            "properties": {
+                "lock_version": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationDeliveryAnalytics": {
+            "type": "object",
+            "properties": {
+                "bigquery_export_note": {
+                    "type": "string"
+                },
+                "delivery_reporting": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.NotificationDeliveryDailyMetric"
+                    }
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationDeliveryDTO": {
+            "type": "object",
+            "properties": {
+                "accepted_at": {
+                    "type": "string"
+                },
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "attempted_at": {
+                    "type": "string"
+                },
+                "campaign_id": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "clicked_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "error_category": {
+                    "type": "string"
+                },
+                "expired_at": {
+                    "type": "string"
+                },
+                "failed_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notification_id": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "outbox_job_id": {
+                    "type": "string"
+                },
+                "provider_message_id": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationDeliveryDailyMetric": {
+            "type": "object",
+            "properties": {
+                "accepted": {
+                    "type": "integer"
+                },
+                "attempted": {
+                    "type": "integer"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "clicked": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "delivered": {
+                    "type": "integer"
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "opened": {
+                    "type": "integer"
+                },
+                "queued": {
+                    "type": "integer"
+                },
+                "rejected": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.NotificationDeliveryEventInput": {
+            "type": "object",
+            "properties": {
+                "event_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
                     "type": "string"
                 }
             }
@@ -18639,13 +20284,31 @@ const docTemplate = `{
         "services.NotificationInput": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
                 "action_url": {
+                    "type": "string"
+                },
+                "deduplication_key": {
+                    "type": "string"
+                },
+                "expires_at": {
                     "type": "string"
                 },
                 "message": {
                     "type": "string"
                 },
                 "priority": {
+                    "type": "string"
+                },
+                "publish_at": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "source_type": {
                     "type": "string"
                 },
                 "title": {
@@ -18659,33 +20322,346 @@ const docTemplate = `{
                 }
             }
         },
-        "services.NotificationTemplateInput": {
+        "services.NotificationOutboxJobDTO": {
             "type": "object",
             "properties": {
-                "audience": {
+                "accepted_at": {
                     "type": "string"
                 },
-                "category": {
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "campaign_id": {
                     "type": "string"
                 },
-                "content": {
+                "channel": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_error_code": {
+                    "type": "string"
+                },
+                "last_error_message": {
+                    "type": "string"
+                },
+                "max_attempts": {
+                    "type": "integer"
+                },
+                "next_attempt_at": {
+                    "type": "string"
+                },
+                "provider_message_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationOutboxRequeueInput": {
+            "type": "object",
+            "properties": {
+                "confirm": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationPreferenceAggregates": {
+            "type": "object",
+            "properties": {
+                "active_devices": {
+                    "type": "integer"
+                },
+                "category_opt_in_counts": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "devices_by_platform": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "eligible_users": {
+                    "type": "integer"
+                },
+                "in_app_enabled_users": {
+                    "type": "integer"
+                },
+                "push_enabled_devices": {
+                    "type": "integer"
+                },
+                "push_enabled_users": {
+                    "type": "integer"
+                },
+                "quiet_hours_users": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.NotificationPreferences": {
+            "type": "object",
+            "properties": {
+                "clinical_content_updates": {
+                    "type": "boolean"
+                },
+                "emergency_alerts": {
+                    "type": "boolean"
+                },
+                "in_app_enabled": {
+                    "type": "boolean"
+                },
+                "outbreak_alerts": {
+                    "type": "boolean"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "product_announcements": {
+                    "type": "boolean"
+                },
+                "push_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_end": {
+                    "type": "string"
+                },
+                "quiet_hours_start": {
+                    "type": "string"
+                },
+                "quiet_hours_timezone": {
+                    "type": "string"
+                },
+                "reminders": {
+                    "type": "boolean"
+                },
+                "system_notices": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationPreferencesInput": {
+            "type": "object",
+            "properties": {
+                "clinical_content_updates": {
+                    "type": "boolean"
+                },
+                "emergency_alerts": {
+                    "type": "boolean"
+                },
+                "in_app_enabled": {
+                    "type": "boolean"
+                },
+                "outbreak_alerts": {
+                    "type": "boolean"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "product_announcements": {
+                    "type": "boolean"
+                },
+                "push_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_end": {
+                    "type": "string"
+                },
+                "quiet_hours_start": {
+                    "type": "string"
+                },
+                "quiet_hours_timezone": {
+                    "type": "string"
+                },
+                "reminders": {
+                    "type": "boolean"
+                },
+                "system_notices": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.NotificationTemplateCloneInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "template_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationTemplateDTO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "current_version": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "locale": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
+                "reviewed_by": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
-                "subject": {
+                "template_key": {
                     "type": "string"
                 },
-                "type": {
+                "updated_at": {
                     "type": "string"
                 },
+                "version": {
+                    "$ref": "#/definitions/services.NotificationTemplateVersionDTO"
+                }
+            }
+        },
+        "services.NotificationTemplateInput": {
+            "type": "object",
+            "properties": {
+                "action_template": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
+                "body_template": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "template_key": {
+                    "type": "string"
+                },
+                "title_template": {
+                    "type": "string"
+                },
+                "variable_schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/services.TemplateVariableRule"
+                    }
+                }
+            }
+        },
+        "services.NotificationTemplatePreview": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationTemplatePreviewInput": {
+            "type": "object",
+            "properties": {
                 "variables": {
                     "type": "object",
                     "additionalProperties": {}
+                }
+            }
+        },
+        "services.NotificationTemplateVersionDTO": {
+            "type": "object",
+            "properties": {
+                "action_template": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
+                "body_template": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "title_template": {
+                    "type": "string"
+                },
+                "variable_schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/services.TemplateVariableRule"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -19133,6 +21109,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.MessageView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_NotificationDeliveryDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.NotificationDeliveryDTO"
                     }
                 },
                 "page": {
@@ -19840,6 +21839,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.TemplateVariableRule": {
+            "type": "object",
+            "properties": {
+                "required": {
+                    "type": "boolean"
+                },
+                "sample_value": {},
+                "type": {
                     "type": "string"
                 }
             }

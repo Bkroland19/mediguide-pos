@@ -1,0 +1,237 @@
+require "fileutils"
+
+opt_out_usage
+default_platform(:android)
+
+def require_environment!(*names)
+  missing = names.select { |name| ENV[name].to_s.strip.empty? }
+  UI.user_error!("Missing required environment variables: #{missing.join(', ')}") unless missing.empty?
+end
+
+def release_notes
+  explicit = ENV["RELEASE_NOTES"].to_s.strip
+  return explicit unless explicit.empty?
+
+  tag = ENV.fetch("GITHUB_REF_NAME", "local build")
+  revision = ENV.fetch("GITHUB_SHA", "unknown")[0, 12]
+  "MediGuide #{tag} (#{revision})"
+end
+
+def flutter_defines
+  defines = [
+    "--dart-define=MEDIGUIDE_API_BASE_URL=#{ENV.fetch('MOBILE_API_BASE_URL')}",
+    "--dart-define=MEDIGUIDE_FLAVOR=#{mobile_flavor}",
+    "--dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=#{mobile_flavor != 'production'}"
+  ]
+  config_file = ENV["FIREBASE_DART_DEFINES_FILE"].to_s.strip
+  defines << "--dart-define-from-file=#{config_file}" unless config_file.empty?
+  defines
+end
+
+def mobile_flavor
+  ENV.fetch("MOBILE_FLAVOR", "production")
+end
+
+def flutter_target
+  "lib/main_#{mobile_flavor}.dart"
+end
+
+def flutter_version_args
+  build_name = ENV["MOBILE_BUILD_NAME"].to_s.strip
+  build_number = ENV["MOBILE_BUILD_NUMBER"].to_s.strip
+  unless build_number.empty? || build_number.match?(/\A[1-9][0-9]*\z/)
+    UI.user_error!("MOBILE_BUILD_NUMBER must be a positive integer")
+  end
+
+  args = []
+  args << "--build-name=#{build_name}" unless build_name.empty?
+  args << "--build-number=#{build_number}" unless build_number.empty?
+  args
+end
+
+def firebase_distribution(binary:, app_id:)
+  require_environment!("GOOGLE_APPLICATION_CREDENTIALS")
+
+  firebase_app_distribution(
+    app: app_id,
+    firebase_cli_token: nil,
+    service_credentials_file: ENV.fetch("GOOGLE_APPLICATION_CREDENTIALS"),
+    groups: ENV.fetch("FIREBASE_TESTER_GROUPS", "mediguide-testers"),
+    testers: ENV["FIREBASE_TESTERS"],
+    release_notes: release_notes,
+    android_artifact_path: binary.end_with?(".apk", ".aab") ? binary : nil,
+    ipa_path: binary.end_with?(".ipa") ? binary : nil
+  )
+end
+
+def app_store_api_key
+  require_environment!(
+    "APP_STORE_CONNECT_KEY_ID",
+    "APP_STORE_CONNECT_ISSUER_ID",
+    "APP_STORE_CONNECT_KEY_FILE"
+  )
+  app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key_filepath: ENV.fetch("APP_STORE_CONNECT_KEY_FILE"),
+    duration: 1_200,
+    in_house: false
+  )
+end
+
+platform :android do
+  desc "Build a signed Android APK and AAB"
+  lane :build_release do
+    require_environment!("MOBILE_API_BASE_URL")
+    sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
+    sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
+    sh("flutter", "build", "appbundle", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
+  end
+
+  desc "Upload an existing signed Android APK to Firebase App Distribution"
+  lane :firebase do |options|
+    require_environment!("FIREBASE_ANDROID_APP_ID")
+    apk = options[:apk] || ENV.fetch("ANDROID_APK_PATH", "build/app/outputs/flutter-apk/app-#{mobile_flavor}-release.apk")
+    UI.user_error!("Android APK not found at #{apk}") unless File.file?(apk)
+    firebase_distribution(binary: apk, app_id: ENV.fetch("FIREBASE_ANDROID_APP_ID"))
+  end
+
+  desc "Build Android and upload the APK to Firebase App Distribution"
+  lane :firebase_release do
+    build_release
+    firebase
+  end
+
+  desc "Upload an existing Android App Bundle as a draft production release"
+  lane :play_store do |options|
+    require_environment!("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE")
+    aab = options[:aab] || ENV["ANDROID_AAB_PATH"] || "build/app/outputs/bundle/#{mobile_flavor}Release/app-#{mobile_flavor}-release.aab"
+    UI.user_error!("Android App Bundle not found at #{aab}") unless File.file?(aab)
+
+    upload_to_play_store(
+      json_key: ENV.fetch("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE"),
+      package_name: ENV.fetch("ANDROID_PACKAGE_NAME", "com.mediguide.ug"),
+      aab: aab,
+      track: "production",
+      release_status: "draft",
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Build Android and upload a draft production release to Google Play"
+  lane :play_store_release do
+    build_release
+    play_store
+  end
+end
+
+platform :ios do
+  private_lane :build_ipa do |options|
+    require_environment!("MOBILE_API_BASE_URL")
+    export_options = options[:export_options]
+    output_directory = options[:output_directory]
+    require_environment!("APPLE_TEAM_ID")
+    UI.user_error!("Export options plist not found at #{export_options}") unless File.file?(export_options)
+
+    sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
+    FileUtils.rm_rf("build/ios/ipa")
+    sh(
+      "flutter", "build", "ipa", "--release",
+      "--flavor", mobile_flavor,
+      "--target", flutter_target,
+      "--export-options-plist=#{File.expand_path(export_options)}",
+      "--build-number=#{ENV.fetch('MOBILE_BUILD_NUMBER')}",
+      *flutter_defines
+    )
+
+    ipa = Dir["build/ios/ipa/*.ipa"].first
+    UI.user_error!("Flutter did not produce an IPA") unless ipa
+    FileUtils.mkdir_p(output_directory)
+    destination = File.join(output_directory, File.basename(ipa))
+    FileUtils.cp(ipa, destination)
+    destination
+  end
+
+  desc "Build an Ad Hoc IPA for Firebase App Distribution"
+  lane :build_firebase do
+    require_environment!("IOS_FIREBASE_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    build_ipa(
+      export_options: ENV.fetch("IOS_FIREBASE_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/firebase"
+    )
+  end
+
+  desc "Upload an existing Ad Hoc IPA to Firebase App Distribution"
+  lane :firebase do |options|
+    require_environment!("FIREBASE_IOS_APP_ID")
+    ipa = options[:ipa] || ENV["IOS_FIREBASE_IPA_PATH"] || Dir["build/ios/firebase/*.ipa"].first
+    UI.user_error!("No Firebase iOS IPA was provided or built") unless ipa && File.file?(ipa)
+    firebase_distribution(binary: ipa, app_id: ENV.fetch("FIREBASE_IOS_APP_ID"))
+  end
+
+  desc "Build and distribute an Ad Hoc IPA with Firebase App Distribution"
+  lane :firebase_release do
+    ipa = build_firebase
+    firebase(ipa: ipa)
+  end
+
+  desc "Build an App Store IPA for TestFlight"
+  lane :build_testflight do
+    require_environment!("IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    build_ipa(
+      export_options: ENV.fetch("IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/testflight"
+    )
+  end
+
+  desc "Upload an existing App Store IPA to TestFlight"
+  lane :upload_testflight do |options|
+    ipa = options[:ipa] || ENV["IOS_TESTFLIGHT_IPA_PATH"] || Dir["build/ios/testflight/*.ipa"].first
+    UI.user_error!("No TestFlight IPA was provided or built") unless ipa && File.file?(ipa)
+
+    upload_to_testflight(
+      api_key: app_store_api_key,
+      ipa: ipa,
+      changelog: release_notes,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Build and upload an App Store IPA to TestFlight"
+  lane :testflight_release do
+    ipa = build_testflight
+    upload_testflight(ipa: ipa)
+  end
+
+
+  desc "Upload an existing IPA to App Store Connect without public release"
+  lane :app_store do |options|
+    ipa = options[:ipa] || ENV["IOS_APP_STORE_IPA_PATH"] || Dir["build/ios/app-store/*.ipa"].first
+    UI.user_error!("No App Store IPA was provided or built") unless ipa && File.file?(ipa)
+
+    upload_to_app_store(
+      api_key: app_store_api_key,
+      ipa: ipa,
+      app_identifier: ENV.fetch("IOS_BUNDLE_IDENTIFIER", "com.omarsoft.mediguide"),
+      submit_for_review: false,
+      automatic_release: false,
+      skip_metadata: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+
+  desc "Build and upload an App Store production candidate"
+  lane :app_store_release do
+    require_environment!("IOS_APP_STORE_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    ipa = build_ipa(
+      export_options: ENV.fetch("IOS_APP_STORE_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/app-store"
+    )
+    app_store(ipa: ipa)
+  end
+end

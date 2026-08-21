@@ -49,10 +49,12 @@ abstract final class AppRoutes {
   // General application pages
   static const String allActions = '/all-actions';
   static const String notifications = '/notifications';
+  static const String notificationPreferences = '/notification-preferences';
   static const String termsAndConditions = '/terms-and-conditions';
   static const String aboutUs = '/about-us';
   static const String helpCenter = '/help-center';
   static const String faq = '/faq';
+  static const String editProfile = '/profile/edit';
 
   // Parameterized route templates
   static const String guidelineDetails = '/guidelines/:guidelineId';

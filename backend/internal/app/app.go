@@ -133,7 +133,7 @@ func New(cfg config.Config) (*App, error) {
 	drugSvc := services.DrugService{DB: database}
 	drugReferenceSvc := services.DrugReferenceService{DB: database, Cache: cacheStore}
 	userSvc := services.UserService{DB: database}
-	notificationSvc := services.NotificationService{DB: database}
+	notificationSvc := services.NotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts, DeviceStaleAfter: time.Duration(cfg.FirebaseDeviceStaleDays) * 24 * time.Hour}
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
@@ -142,6 +142,10 @@ func New(cfg config.Config) (*App, error) {
 	consultantSvc := services.ConsultantService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database, Cache: cacheStore}
 	facilitySvc := services.FacilityService{DB: database, Cache: cacheStore}
+	firebaseSvc, err := services.NewFirebaseService(database, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -156,7 +160,7 @@ func New(cfg config.Config) (*App, error) {
 	drugH := handlers.DrugHandler{Service: drugSvc}
 	drugReferenceH := handlers.DrugReferenceHandler{Service: drugReferenceSvc}
 	userH := handlers.UserHandler{Service: userSvc}
-	notificationH := handlers.NotificationHandler{Service: notificationSvc}
+	notificationH := handlers.NotificationHandler{Service: notificationSvc, Outbox: services.NotificationOutboxService{DB: database}}
 	supportH := handlers.SupportHandler{Service: supportSvc}
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
@@ -168,6 +172,7 @@ func New(cfg config.Config) (*App, error) {
 	consultantH := handlers.ConsultantHandler{Service: consultantSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
+	firebaseH := handlers.FirebaseHandler{Service: firebaseSvc}
 
 	legacyV1 := r.Group("/api/v1")
 	legacyV1.GET("/stats", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.Stats)
@@ -271,25 +276,54 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.GetRolePermissions)
 		protected.PUT("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.SetRolePermissions)
 
-		protected.GET("/notifications", notificationH.List)
-		protected.GET("/notifications/:id", notificationH.Get)
-		protected.POST("/notifications", middleware.RequirePermission("admin.all"), notificationH.Create)
-		protected.POST("/notifications/read-all", notificationH.MarkAllRead)
-		protected.POST("/notifications/:id/read", notificationH.MarkRead)
-		protected.POST("/notifications/:id/unread", notificationH.MarkUnread)
+		protected.GET("/notifications", middleware.RequirePermission("notification.read"), notificationH.List)
+		protected.GET("/notifications/:id", middleware.RequirePermission("notification.read"), notificationH.Get)
+		protected.POST("/notifications", middleware.RequirePermission("notification.publish"), notificationH.Create)
+		protected.POST("/notifications/read-all", middleware.RequirePermission("notification.read"), notificationH.MarkAllRead)
+		protected.POST("/notifications/:id/read", middleware.RequirePermission("notification.read"), notificationH.MarkRead)
+		protected.POST("/notifications/:id/unread", middleware.RequirePermission("notification.read"), notificationH.MarkUnread)
+		protected.POST("/notification-deliveries/:id/open", middleware.RequirePermission("notification.read"), rateLimiter.Limit(middleware.Policy("notification-delivery-event", 120, time.Hour, 10), middleware.UserIdentity), notificationH.RecordDeliveryOpen)
+		protected.POST("/notification-deliveries/:id/click", middleware.RequirePermission("notification.read"), rateLimiter.Limit(middleware.Policy("notification-delivery-event", 120, time.Hour, 10), middleware.UserIdentity), notificationH.RecordDeliveryClick)
+		protected.GET("/firebase/status", middleware.RequirePermission("firebase.status.read"), firebaseH.Status)
+		protected.GET("/firebase/devices", firebaseH.ListDevices)
+		protected.POST("/firebase/devices", firebaseH.RegisterDevice)
+		protected.PATCH("/firebase/devices/:id", firebaseH.UpdateDevice)
+		protected.DELETE("/firebase/devices/:id", firebaseH.DeleteDevice)
+		protected.POST("/firebase/push/test", middleware.RequirePermission("firebase.push.test"), rateLimiter.Limit(middleware.Policy("firebase-test-push", 10, time.Hour, 0), middleware.UserIdentity), firebaseH.SendTestPush)
+		protected.GET("/firebase/test-recipients", middleware.RequirePermission("firebase.push.test"), firebaseH.SearchTestRecipients)
+		protected.GET("/firebase/remote-config", middleware.RequirePermission("firebase.config.manage"), firebaseH.GetRemoteConfig)
+		protected.PUT("/firebase/remote-config", middleware.RequirePermission("firebase.config.manage"), rateLimiter.Limit(middleware.Policy("firebase-remote-config-write", 10, time.Hour, 0), middleware.UserIdentity), firebaseH.PutRemoteConfig)
+		protected.GET("/notification-preferences", notificationH.GetPreferences)
+		protected.PATCH("/notification-preferences", rateLimiter.Limit(middleware.Policy("notification-preference-write", 30, time.Hour, 0), middleware.UserIdentity), notificationH.UpdatePreferences)
+		protected.GET("/notification-preferences/aggregates", middleware.RequirePermission("notification.analytics.read"), notificationH.PreferenceAggregates)
 
-		protected.GET("/notification-templates", middleware.RequirePermission("admin.all"), notificationH.ListTemplates)
-		protected.GET("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.GetTemplate)
-		protected.POST("/notification-templates", middleware.RequirePermission("admin.all"), notificationH.CreateTemplate)
-		protected.PATCH("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.UpdateTemplate)
-		protected.PATCH("/notification-templates/:id/status", middleware.RequirePermission("admin.all"), notificationH.UpdateTemplateStatus)
-		protected.DELETE("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteTemplate)
-		protected.GET("/notification-campaigns", middleware.RequirePermission("admin.all"), notificationH.ListCampaigns)
-		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.GetCampaign)
-		protected.POST("/notification-campaigns", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
-		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.UpdateCampaign)
-		protected.PATCH("/notification-campaigns/:id/status", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.UpdateCampaignStatus)
-		protected.DELETE("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteCampaign)
+		protected.GET("/notification-templates", middleware.RequirePermission("notification.template.read"), notificationH.ListTemplates)
+		protected.GET("/notification-templates/:id", middleware.RequirePermission("notification.template.read"), notificationH.GetTemplate)
+		protected.POST("/notification-templates", middleware.RequirePermission("notification.template.manage"), notificationH.CreateTemplate)
+		protected.PATCH("/notification-templates/:id", middleware.RequirePermission("notification.template.manage"), notificationH.UpdateTemplate)
+		protected.PATCH("/notification-templates/:id/status", middleware.RequirePermission("notification.template.manage"), notificationH.UpdateTemplateStatus)
+		protected.GET("/notification-templates/:id/versions", middleware.RequirePermission("notification.template.read"), notificationH.ListTemplateVersions)
+		protected.POST("/notification-template-versions/:id/preview", middleware.RequirePermission("notification.template.read"), notificationH.PreviewTemplateVersion)
+		protected.POST("/notification-templates/:id/clone", middleware.RequirePermission("notification.template.manage"), notificationH.CloneTemplate)
+		protected.DELETE("/notification-templates/:id", middleware.RequirePermission("notification.template.manage"), notificationH.DeleteTemplate)
+		protected.GET("/notification-campaigns", middleware.RequirePermission("notification.campaign.read"), notificationH.ListCampaigns)
+		protected.POST("/notification-campaigns/audience-estimate", middleware.RequirePermission("notification.campaign.manage"), notificationH.EstimateAudience)
+		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.read"), notificationH.GetCampaign)
+		protected.POST("/notification-campaigns", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
+		protected.POST("/guidelines/:id/notification-campaign", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateGuidelineCampaign)
+		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.UpdateCampaign)
+		protected.POST("/notification-campaigns/:id/submit", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/approve", middleware.RequirePermission("notification.campaign.approve"), rateLimiter.Limit(middleware.Policy("notification-campaign-approval", 20, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/reject", middleware.RequirePermission("notification.campaign.approve"), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/schedule", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/cancel", middleware.RequirePermission("notification.campaign.manage"), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/pause", middleware.RequirePermission("notification.campaign.manage"), notificationH.TransitionCampaign)
+		protected.POST("/notification-campaigns/:id/resume", middleware.RequirePermission("notification.campaign.manage"), notificationH.TransitionCampaign)
+		protected.DELETE("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.DeleteCampaign)
+		protected.GET("/notification-delivery-jobs", middleware.RequirePermission("notification.analytics.read"), notificationH.ListDeliveryJobs)
+		protected.GET("/notification-deliveries", middleware.RequirePermission("notification.analytics.read"), notificationH.ListDeliveries)
+		protected.GET("/notification-delivery-analytics/daily", middleware.RequirePermission("notification.analytics.read"), notificationH.DeliveryAnalytics)
+		protected.POST("/notification-delivery-jobs/:id/requeue", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-delivery-requeue", 20, time.Hour, 0), middleware.UserIdentity), notificationH.RequeueDeliveryJob)
 
 		protected.GET("/support/tickets", supportH.ListTickets)
 		protected.GET("/support/tickets/:id", supportH.GetTicket)

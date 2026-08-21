@@ -117,6 +117,89 @@ type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 }
 
+type FirebaseStatusResult struct {
+	services.FirebaseStatus
+}
+
+type FirebaseTestRecipientsEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    []services.FirebaseTestRecipient `json:"data"`
+}
+
+type FirebaseStatusEnvelope struct {
+	Success bool                 `json:"success" example:"true"`
+	Data    FirebaseStatusResult `json:"data"`
+}
+
+type FirebaseDeviceEnvelope struct {
+	Success bool                  `json:"success" example:"true"`
+	Data    models.FirebaseDevice `json:"data"`
+}
+
+type FirebaseDeviceDTOEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    services.FirebaseDeviceDTO `json:"data"`
+}
+
+type FirebaseDevicesEnvelope struct {
+	Success bool                         `json:"success" example:"true"`
+	Data    []services.FirebaseDeviceDTO `json:"data"`
+}
+
+type NotificationPreferencesEnvelope struct {
+	Success bool                             `json:"success" example:"true"`
+	Data    services.NotificationPreferences `json:"data"`
+}
+
+type NotificationPreferenceAggregatesEnvelope struct {
+	Success bool                                      `json:"success" example:"true"`
+	Data    services.NotificationPreferenceAggregates `json:"data"`
+}
+
+type DeletedResult struct {
+	Deleted bool `json:"deleted" example:"true"`
+}
+
+type DeletedEnvelope struct {
+	Success bool          `json:"success" example:"true"`
+	Data    DeletedResult `json:"data"`
+}
+
+type FirebasePushResultEnvelope struct {
+	Success bool                        `json:"success" example:"true"`
+	Data    services.FirebasePushResult `json:"data"`
+}
+
+type NotificationDeliveryEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    services.NotificationDeliveryDTO `json:"data"`
+}
+
+type PaginatedNotificationDeliveriesEnvelope struct {
+	Success bool                                                  `json:"success"`
+	Data    services.PageResult[services.NotificationDeliveryDTO] `json:"data"`
+}
+
+type NotificationDeliveryAnalyticsEnvelope struct {
+	Success bool                                   `json:"success"`
+	Data    services.NotificationDeliveryAnalytics `json:"data"`
+}
+
+type FirebaseRemoteConfigResult struct {
+	Template JSONMap `json:"template"`
+	ETag     string  `json:"etag" example:"etag-123"`
+}
+
+type FirebaseRemoteConfigEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    FirebaseRemoteConfigResult `json:"data"`
+}
+
+type FirebaseRemoteConfigUpdateRequest struct {
+	Template     JSONMap `json:"template"`
+	ValidateOnly bool    `json:"validate_only" example:"true"`
+}
+
 type SupportTicketEnvelope struct {
 	Success bool                 `json:"success"`
 	Data    models.SupportTicket `json:"data"`
@@ -622,34 +705,63 @@ type PaginatedNotificationsEnvelope struct {
 }
 
 type NotificationTemplateEnvelope struct {
-	Success bool                        `json:"success" example:"true"`
-	Data    models.NotificationTemplate `json:"data"`
+	Success bool                             `json:"success" example:"true"`
+	Data    services.NotificationTemplateDTO `json:"data"`
 }
 type PaginatedNotificationTemplates struct {
-	Items      []models.NotificationTemplate `json:"items"`
-	Page       int                           `json:"page"`
-	PerPage    int                           `json:"per_page"`
-	TotalItems int64                         `json:"total_items"`
-	TotalPages int                           `json:"total_pages"`
+	Items      []services.NotificationTemplateDTO `json:"items"`
+	Page       int                                `json:"page"`
+	PerPage    int                                `json:"per_page"`
+	TotalItems int64                              `json:"total_items"`
+	TotalPages int                                `json:"total_pages"`
 }
 type PaginatedNotificationTemplatesEnvelope struct {
 	Success bool                           `json:"success"`
 	Data    PaginatedNotificationTemplates `json:"data"`
 }
 type NotificationCampaignEnvelope struct {
-	Success bool                        `json:"success"`
-	Data    models.NotificationCampaign `json:"data"`
+	Success bool                             `json:"success"`
+	Data    services.NotificationCampaignDTO `json:"data"`
+}
+type NotificationAudienceEstimateEnvelope struct {
+	Success bool                                  `json:"success"`
+	Data    services.NotificationAudienceEstimate `json:"data"`
+}
+type NotificationOutboxJobEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.NotificationOutboxJobDTO `json:"data"`
+}
+type PaginatedNotificationOutboxJobs struct {
+	Items      []services.NotificationOutboxJobDTO `json:"items"`
+	Page       int                                 `json:"page"`
+	PerPage    int                                 `json:"per_page"`
+	TotalItems int64                               `json:"total_items"`
+	TotalPages int                                 `json:"total_pages"`
+}
+type PaginatedNotificationOutboxJobsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    PaginatedNotificationOutboxJobs `json:"data"`
 }
 type PaginatedNotificationCampaigns struct {
-	Items      []models.NotificationCampaign `json:"items"`
-	Page       int                           `json:"page"`
-	PerPage    int                           `json:"per_page"`
-	TotalItems int64                         `json:"total_items"`
-	TotalPages int                           `json:"total_pages"`
+	Items      []services.NotificationCampaignDTO `json:"items"`
+	Page       int                                `json:"page"`
+	PerPage    int                                `json:"per_page"`
+	TotalItems int64                              `json:"total_items"`
+	TotalPages int                                `json:"total_pages"`
 }
 type PaginatedNotificationCampaignsEnvelope struct {
 	Success bool                           `json:"success"`
 	Data    PaginatedNotificationCampaigns `json:"data"`
+}
+
+type NotificationTemplateVersionsEnvelope struct {
+	Success bool                                      `json:"success"`
+	Data    []services.NotificationTemplateVersionDTO `json:"data"`
+}
+
+type NotificationTemplatePreviewEnvelope struct {
+	Success bool                                 `json:"success"`
+	Data    services.NotificationTemplatePreview `json:"data"`
 }
 
 type LegacyTreeNode = services.TreeNode

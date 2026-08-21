@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
@@ -39,6 +40,8 @@ import 'package:user_app/core/storage/local_cache_service.dart';
 import 'package:user_app/core/services/download_service.dart';
 import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/ministry_directory_local_repository.dart';
+import 'package:user_app/core/services/firebase_service.dart';
+import 'package:user_app/core/debug/network_inspector.dart';
 
 /// Core dependency graph. Runtime services are constructed once during
 /// bootstrap and injected through ProviderScope overrides.
@@ -57,6 +60,31 @@ final authServiceProvider = Provider<AuthService>(
 final aiContextServiceProvider = Provider<AiContextService>(
   (ref) => throw StateError('AiContextService must be overridden at startup'),
 );
+
+final firebaseServiceProvider = Provider<MediGuideFirebaseService>(
+  (ref) => throw StateError('Firebase service must be overridden at startup'),
+);
+
+final networkInspectorProvider = Provider<NetworkInspectorStore>(
+  (ref) => throw StateError('Network inspector must be overridden at startup'),
+);
+
+final firebaseOpenedMessageProvider = StreamProvider<RemoteMessage>(
+  (ref) => ref.watch(firebaseServiceProvider).openedMessages,
+);
+
+final firebaseForegroundMessageProvider = StreamProvider<RemoteMessage>(
+  (ref) => ref.watch(firebaseServiceProvider).foregroundMessages,
+);
+
+final notificationPermissionProvider =
+    StreamProvider<AppNotificationPermissionState>((ref) async* {
+      final service = ref.watch(firebaseServiceProvider);
+      yield service.permissionState;
+      yield* service.permissionStates;
+    });
+
+final notificationInboxRefreshProvider = StateProvider<int>((ref) => 0);
 
 final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
   (ref) => RagRepository(
@@ -149,6 +177,18 @@ final notificationRepositoryProvider = Provider<NotificationRepository>(
     userId: ref.watch(authServiceProvider).currentUser.value?.id ?? '',
   ),
 );
+
+final notificationUnreadCountProvider = StreamProvider.autoDispose<int>((
+  ref,
+) async* {
+  final repository = ref.watch(notificationRepositoryProvider);
+  if (repository.userId.trim().isEmpty) {
+    yield 0;
+    return;
+  }
+  yield await repository.unreadCount();
+  yield* repository.watchUnreadCount();
+});
 
 final genericPageRepositoryProvider = Provider<GenericPageRepository>(
   (ref) => GenericPageRepository(

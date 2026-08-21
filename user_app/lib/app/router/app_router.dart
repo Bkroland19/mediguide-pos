@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/route_guards.dart';
 import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/features/profile/presentation/screens/edit_profile_page.dart';
 
 import 'package:user_app/shared/models/models.dart';
 
@@ -42,6 +43,7 @@ import 'package:user_app/features/navigation/presentation/screens/guest_more_pag
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
+import 'package:user_app/features/notifications/presentation/screens/notification_preferences_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
 import 'package:user_app/features/downloads/presentation/screens/offline_content_page.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
@@ -76,6 +78,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (_, _) => const ForgotPasswordPage(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.editProfile,
+        name: 'edit-profile',
+        builder: (context, state) {
+          return const EditProfilePage();
+        },
       ),
 
       // Main navigation
@@ -346,6 +356,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.notifications,
         builder: (_, _) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationPreferences,
+        builder: (_, _) => const NotificationPreferencesPage(),
       ),
       GoRoute(
         path: AppRoutes.termsAndConditions,

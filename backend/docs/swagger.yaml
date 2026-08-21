@@ -46,6 +46,20 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.DeletedEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.DeletedResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DeletedResult:
+    properties:
+      deleted:
+        example: true
+        type: boolean
+    type: object
   handlers.DocumentationEnvelope:
     properties:
       data:
@@ -153,6 +167,105 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.FAQTag'
+      success:
+        type: boolean
+    type: object
+  handlers.FirebaseDeviceDTOEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.FirebaseDeviceDTO'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseDeviceEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.FirebaseDevice'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseDevicesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.FirebaseDeviceDTO'
+        type: array
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebasePushResultEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.FirebasePushResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseRemoteConfigEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.FirebaseRemoteConfigResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseRemoteConfigResult:
+    properties:
+      etag:
+        example: etag-123
+        type: string
+      template:
+        $ref: '#/definitions/handlers.JSONMap'
+    type: object
+  handlers.FirebaseRemoteConfigUpdateRequest:
+    properties:
+      template:
+        $ref: '#/definitions/handlers.JSONMap'
+      validate_only:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseStatusEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.FirebaseStatusResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseStatusResult:
+    properties:
+      active_device_count:
+        type: integer
+      delivery_reporting:
+        type: string
+      email_status:
+        type: string
+      enabled:
+        type: boolean
+      last_successful_health_check_at:
+        type: string
+      platforms:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      project_id:
+        type: string
+      sms_status:
+        type: string
+      stale_device_count:
+        type: integer
+    type: object
+  handlers.FirebaseTestRecipientsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.FirebaseTestRecipient'
+        type: array
       success:
         type: boolean
     type: object
@@ -494,10 +607,36 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.NotificationAudienceEstimateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationAudienceEstimate'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationAudienceEstimateInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+    type: object
   handlers.NotificationCampaignEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.NotificationCampaign'
+        $ref: '#/definitions/services.NotificationCampaignDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationDeliveryAnalyticsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationDeliveryAnalytics'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationDeliveryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationDeliveryDTO'
       success:
         type: boolean
     type: object
@@ -505,6 +644,29 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.Notification'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.NotificationOutboxJobEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationOutboxJobDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationPreferenceAggregatesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationPreferenceAggregates'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.NotificationPreferencesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationPreferences'
       success:
         example: true
         type: boolean
@@ -517,9 +679,25 @@ definitions:
   handlers.NotificationTemplateEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.NotificationTemplate'
+        $ref: '#/definitions/services.NotificationTemplateDTO'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.NotificationTemplatePreviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationTemplatePreview'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationTemplateVersionsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.NotificationTemplateVersionDTO'
+        type: array
+      success:
         type: boolean
     type: object
   handlers.OutbreakEnvelope:
@@ -969,7 +1147,7 @@ definitions:
     properties:
       items:
         items:
-          $ref: '#/definitions/models.NotificationCampaign'
+          $ref: '#/definitions/services.NotificationCampaignDTO'
         type: array
       page:
         type: integer
@@ -987,11 +1165,40 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.PaginatedNotificationDeliveriesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_NotificationDeliveryDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedNotificationOutboxJobs:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationOutboxJobDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedNotificationOutboxJobsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedNotificationOutboxJobs'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedNotificationTemplates:
     properties:
       items:
         items:
-          $ref: '#/definitions/models.NotificationTemplate'
+          $ref: '#/definitions/services.NotificationTemplateDTO'
         type: array
       page:
         type: integer
@@ -2050,6 +2257,27 @@ definitions:
       user_id:
         type: string
     type: object
+  models.FirebaseDevice:
+    properties:
+      app_version:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      installation_id:
+        type: string
+      last_seen_at:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.GenericPage:
     properties:
       content:
@@ -2904,9 +3132,21 @@ definitions:
     type: object
   models.Notification:
     properties:
+      action:
+        $ref: '#/definitions/models.NotificationAction'
       action_url:
         type: string
+      campaign_id:
+        type: string
       created_at:
+        type: string
+      created_by:
+        type: string
+      deduplication_key:
+        type: string
+      delivery_id:
+        type: string
+      expires_at:
         type: string
       id:
         type: string
@@ -2915,6 +3155,14 @@ definitions:
       message:
         type: string
       priority:
+        type: string
+      publish_at:
+        type: string
+      published_by:
+        type: string
+      source_id:
+        type: string
+      source_type:
         type: string
       title:
         type: string
@@ -2925,79 +3173,29 @@ definitions:
       user_id:
         type: string
     type: object
-  models.NotificationCampaign:
+  models.NotificationAction:
     properties:
-      audience_countries:
-        items:
+      parameters:
+        additionalProperties:
           type: string
-        type: array
-      audience_roles:
-        items:
-          type: string
-        type: array
-      audience_total:
-        type: integer
-      channels:
-        items:
-          type: string
-        type: array
-      created_at:
-        type: string
-      id:
-        type: string
-      metrics_clicked:
-        type: integer
-      metrics_delivered:
-        type: integer
-      metrics_opened:
-        type: integer
-      metrics_sent:
-        type: integer
-      name:
-        type: string
-      schedule_end:
-        type: string
-      schedule_start:
-        type: string
-      status:
-        type: string
-      type:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  models.NotificationTemplate:
-    properties:
-      audience:
-        type: string
-      category:
-        type: string
-      clicked_count:
-        type: integer
-      content:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
-      last_sent:
-        type: string
-      name:
-        type: string
-      opened_count:
-        type: integer
-      sent_count:
-        type: integer
-      status:
-        type: string
-      subject:
-        type: string
-      type:
-        type: string
-      updated_at:
-        type: string
-      variables:
         type: object
+      resource_id:
+        type: string
+      route:
+        type: string
+      type:
+        enum:
+        - none
+        - guideline
+        - outbreak
+        - situation_report
+        - drug
+        - calculator
+        - facility
+        - support_ticket
+        - internal_route
+        - approved_external_url
+        type: string
     type: object
   models.Outbreak:
     properties:
@@ -4167,6 +4365,109 @@ definitions:
       session_end:
         type: string
     type: object
+  services.FirebaseDeviceDTO:
+    properties:
+      app_version:
+        type: string
+      id:
+        type: string
+      installation_id:
+        type: string
+      last_seen_at:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
+        type: string
+    type: object
+  services.FirebaseDeviceInput:
+    properties:
+      app_version:
+        type: string
+      installation_id:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
+        type: string
+      registration_token:
+        type: string
+    type: object
+  services.FirebaseDeviceUpdateInput:
+    properties:
+      notifications_enabled:
+        type: boolean
+    type: object
+  services.FirebasePushDeviceResult:
+    properties:
+      app_version:
+        type: string
+      device_id:
+        type: string
+      error_category:
+        type: string
+      platform:
+        type: string
+      provider_message_id:
+        type: string
+      state:
+        type: string
+    type: object
+  services.FirebasePushInput:
+    properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
+      action_url:
+        type: string
+      body:
+        type: string
+      current_user:
+        type: boolean
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      dry_run:
+        type: boolean
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
+  services.FirebasePushResult:
+    properties:
+      accepted:
+        type: integer
+      attempted:
+        type: integer
+      devices:
+        items:
+          $ref: '#/definitions/services.FirebasePushDeviceResult'
+        type: array
+      failed:
+        type: integer
+      validated:
+        type: integer
+    type: object
+  services.FirebaseTestRecipient:
+    properties:
+      device_count:
+        type: integer
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      platforms:
+        items:
+          type: string
+        type: array
+    type: object
   services.GenericPageInput:
     properties:
       content:
@@ -4392,6 +4693,23 @@ definitions:
       sort_order:
         type: integer
       title:
+        type: string
+    type: object
+  services.GuidelineNotificationCampaignInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      idempotency_key:
+        type: string
+      priority:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      scheduled_at:
+        type: string
+      timezone:
         type: string
     type: object
   services.GuidelinePreview:
@@ -4802,38 +5120,315 @@ definitions:
       title:
         type: string
     type: object
-  services.NotificationCampaignInput:
+  services.NotificationAction:
     properties:
-      audience_countries:
+      parameters:
+        additionalProperties:
+          type: string
+        type: object
+      resource_id:
+        type: string
+      route:
+        type: string
+      type:
+        enum:
+        - none
+        - guideline
+        - outbreak
+        - situation_report
+        - drug
+        - calculator
+        - facility
+        - support_ticket
+        - internal_route
+        - approved_external_url
+        type: string
+    type: object
+  services.NotificationAudienceDefinition:
+    properties:
+      all_eligible:
+        type: boolean
+      application_versions:
         items:
           type: string
         type: array
-      audience_roles:
+      countries:
         items:
           type: string
         type: array
-      channels:
+      district_ids:
         items:
           type: string
         type: array
+      facility_ids:
+        items:
+          type: string
+        type: array
+      facility_level_ids:
+        items:
+          type: string
+        type: array
+      languages:
+        items:
+          type: string
+        type: array
+      platforms:
+        items:
+          type: string
+        type: array
+      preference_categories:
+        items:
+          type: string
+        type: array
+      professional_categories:
+        items:
+          type: string
+        type: array
+      region_ids:
+        items:
+          type: string
+        type: array
+      role_ids:
+        items:
+          type: string
+        type: array
+      user_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  services.NotificationAudienceEstimate:
+    properties:
+      active_devices:
+        type: integer
+      eligible_users:
+        type: integer
+    type: object
+  services.NotificationCampaignDTO:
+    properties:
+      action_snapshot:
+        $ref: '#/definitions/services.NotificationAction'
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      cancelled_at:
+        type: string
+      collapse_key:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dispatch_snapshot:
+        additionalProperties: {}
+        type: object
+      expires_at:
+        type: string
+      failure_reason:
+        type: string
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      lock_version:
+        type: integer
       name:
         type: string
-      schedule_end:
+      priority:
         type: string
-      schedule_start:
+      rendered_body:
+        type: string
+      rendered_title:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      resolved_recipient_count:
+        type: integer
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      scheduled_at:
+        type: string
+      started_at:
         type: string
       status:
         type: string
+      template_version_id:
+        type: string
+      timezone:
+        type: string
+      ttl_seconds:
+        type: integer
       type:
+        type: string
+      updated_at:
+        type: string
+      variables:
+        additionalProperties: {}
+        type: object
+    type: object
+  services.NotificationCampaignInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      collapse_key:
+        type: string
+      expires_at:
+        type: string
+      idempotency_key:
+        type: string
+      lock_version:
+        type: integer
+      name:
+        type: string
+      priority:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      scheduled_at:
+        type: string
+      template_version_id:
+        type: string
+      timezone:
+        type: string
+      ttl_seconds:
+        type: integer
+      type:
+        type: string
+      variables:
+        additionalProperties: {}
+        type: object
+    type: object
+  services.NotificationCampaignTransitionInput:
+    properties:
+      lock_version:
+        type: integer
+      reason:
+        type: string
+      scheduled_at:
+        type: string
+      timezone:
+        type: string
+    type: object
+  services.NotificationDeliveryAnalytics:
+    properties:
+      bigquery_export_note:
+        type: string
+      delivery_reporting:
+        additionalProperties:
+          type: string
+        type: object
+      from:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationDeliveryDailyMetric'
+        type: array
+      to:
+        type: string
+    type: object
+  services.NotificationDeliveryDTO:
+    properties:
+      accepted_at:
+        type: string
+      attempt_count:
+        type: integer
+      attempted_at:
+        type: string
+      campaign_id:
+        type: string
+      channel:
+        type: string
+      clicked_at:
+        type: string
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      device_id:
+        type: string
+      error_category:
+        type: string
+      expired_at:
+        type: string
+      failed_at:
+        type: string
+      id:
+        type: string
+      notification_id:
+        type: string
+      opened_at:
+        type: string
+      outbox_job_id:
+        type: string
+      provider_message_id:
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  services.NotificationDeliveryDailyMetric:
+    properties:
+      accepted:
+        type: integer
+      attempted:
+        type: integer
+      channel:
+        type: string
+      clicked:
+        type: integer
+      date:
+        type: string
+      delivered:
+        type: integer
+      expired:
+        type: integer
+      opened:
+        type: integer
+      queued:
+        type: integer
+      rejected:
+        type: integer
+    type: object
+  services.NotificationDeliveryEventInput:
+    properties:
+      event_id:
+        type: string
+      occurred_at:
         type: string
     type: object
   services.NotificationInput:
     properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
       action_url:
+        type: string
+      deduplication_key:
+        type: string
+      expires_at:
         type: string
       message:
         type: string
       priority:
+        type: string
+      publish_at:
+        type: string
+      source_id:
+        type: string
+      source_type:
         type: string
       title:
         type: string
@@ -4842,25 +5437,231 @@ definitions:
       user_id:
         type: string
     type: object
-  services.NotificationTemplateInput:
+  services.NotificationOutboxJobDTO:
     properties:
-      audience:
+      accepted_at:
         type: string
-      category:
+      attempt_count:
+        type: integer
+      campaign_id:
         type: string
-      content:
+      channel:
         type: string
-      name:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_error_code:
+        type: string
+      last_error_message:
+        type: string
+      max_attempts:
+        type: integer
+      next_attempt_at:
+        type: string
+      provider_message_id:
         type: string
       status:
         type: string
-      subject:
+    type: object
+  services.NotificationOutboxRequeueInput:
+    properties:
+      confirm:
+        type: boolean
+      reason:
         type: string
-      type:
+    type: object
+  services.NotificationPreferenceAggregates:
+    properties:
+      active_devices:
+        type: integer
+      category_opt_in_counts:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      devices_by_platform:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      eligible_users:
+        type: integer
+      in_app_enabled_users:
+        type: integer
+      push_enabled_devices:
+        type: integer
+      push_enabled_users:
+        type: integer
+      quiet_hours_users:
+        type: integer
+    type: object
+  services.NotificationPreferences:
+    properties:
+      clinical_content_updates:
+        type: boolean
+      emergency_alerts:
+        type: boolean
+      in_app_enabled:
+        type: boolean
+      outbreak_alerts:
+        type: boolean
+      preferred_language:
         type: string
+      product_announcements:
+        type: boolean
+      push_enabled:
+        type: boolean
+      quiet_hours_enabled:
+        type: boolean
+      quiet_hours_end:
+        type: string
+      quiet_hours_start:
+        type: string
+      quiet_hours_timezone:
+        type: string
+      reminders:
+        type: boolean
+      system_notices:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  services.NotificationPreferencesInput:
+    properties:
+      clinical_content_updates:
+        type: boolean
+      emergency_alerts:
+        type: boolean
+      in_app_enabled:
+        type: boolean
+      outbreak_alerts:
+        type: boolean
+      preferred_language:
+        type: string
+      product_announcements:
+        type: boolean
+      push_enabled:
+        type: boolean
+      quiet_hours_enabled:
+        type: boolean
+      quiet_hours_end:
+        type: string
+      quiet_hours_start:
+        type: string
+      quiet_hours_timezone:
+        type: string
+      reminders:
+        type: boolean
+      system_notices:
+        type: boolean
+    type: object
+  services.NotificationTemplateCloneInput:
+    properties:
+      name:
+        type: string
+      template_key:
+        type: string
+    type: object
+  services.NotificationTemplateDTO:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_version:
+        type: integer
+      id:
+        type: string
+      locale:
+        type: string
+      name:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      template_key:
+        type: string
+      updated_at:
+        type: string
+      version:
+        $ref: '#/definitions/services.NotificationTemplateVersionDTO'
+    type: object
+  services.NotificationTemplateInput:
+    properties:
+      action_template:
+        $ref: '#/definitions/services.NotificationAction'
+      body_template:
+        type: string
+      category:
+        type: string
+      channel:
+        type: string
+      locale:
+        type: string
+      name:
+        type: string
+      template_key:
+        type: string
+      title_template:
+        type: string
+      variable_schema:
+        additionalProperties:
+          $ref: '#/definitions/services.TemplateVariableRule'
+        type: object
+    type: object
+  services.NotificationTemplatePreview:
+    properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
+      body:
+        type: string
+      title:
+        type: string
+    type: object
+  services.NotificationTemplatePreviewInput:
+    properties:
       variables:
         additionalProperties: {}
         type: object
+    type: object
+  services.NotificationTemplateVersionDTO:
+    properties:
+      action_template:
+        $ref: '#/definitions/services.NotificationAction'
+      body_template:
+        type: string
+      category:
+        type: string
+      channel:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      locale:
+        type: string
+      published_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      template_id:
+        type: string
+      title_template:
+        type: string
+      variable_schema:
+        additionalProperties:
+          $ref: '#/definitions/services.TemplateVariableRule'
+        type: object
+      version:
+        type: integer
     type: object
   services.PageResult-models_Abbreviation:
     properties:
@@ -5152,6 +5953,21 @@ definitions:
       items:
         items:
           $ref: '#/definitions/services.MessageView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_NotificationDeliveryDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationDeliveryDTO'
         type: array
       page:
         type: integer
@@ -5615,6 +6431,14 @@ definitions:
       status:
         type: string
       subject:
+        type: string
+    type: object
+  services.TemplateVariableRule:
+    properties:
+      required:
+        type: boolean
+      sample_value: {}
+      type:
         type: string
     type: object
   services.TreeNode:
@@ -8496,6 +9320,179 @@ paths:
       summary: Replace editable FAQ fields
       tags:
       - help-content
+  /api/v2/firebase/devices:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDevicesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the current user's push installations
+      tags:
+      - firebase
+    post:
+      parameters:
+      - description: Firebase device registration
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebaseDeviceInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDeviceEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register or refresh the current user's mobile installation
+      tags:
+      - firebase
+  /api/v2/firebase/devices/{id}:
+    delete:
+      parameters:
+      - description: Firebase device UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DeletedEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove one of the current user's Firebase installations
+      tags:
+      - firebase
+    patch:
+      parameters:
+      - description: Firebase device UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device preference
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebaseDeviceUpdateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDeviceDTOEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update push enablement for one of the current user's installations
+      tags:
+      - firebase
+  /api/v2/firebase/push/test:
+    post:
+      parameters:
+      - description: Push notification
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebasePushInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebasePushResultEnvelope'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send or validate a Firebase push notification for a user
+      tags:
+      - firebase-administration
+  /api/v2/firebase/remote-config:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseRemoteConfigEnvelope'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the active Firebase Remote Config template
+      tags:
+      - firebase-administration
+    put:
+      parameters:
+      - description: Current Firebase template ETag
+        in: header
+        name: If-Match
+        required: true
+        type: string
+      - description: Remote Config update
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FirebaseRemoteConfigUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseRemoteConfigEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Validate or publish a Firebase Remote Config template
+      tags:
+      - firebase-administration
+  /api/v2/firebase/status:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseStatusEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get Firebase integration status
+      tags:
+      - firebase
+  /api/v2/firebase/test-recipients:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseTestRecipientsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Search eligible test-push recipients without exposing tokens
+      tags:
+      - firebase-administration
   /api/v2/guideline-categories:
     get:
       parameters:
@@ -10736,6 +11733,45 @@ paths:
       summary: Update a guideline document
       tags:
       - guidelines
+  /api/v2/guidelines/{id}/notification-campaign:
+    post:
+      description: Selects the published guideline-update template and enters the
+        normal review and approval workflow; it never dispatches directly.
+      parameters:
+      - description: Guideline document UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Audience, schedule and priority
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineNotificationCampaignInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a draft notification campaign for a published guideline
+      tags:
+      - guidelines
+      - notification-administration
   /api/v2/guidelines/{id}/versions:
     post:
       consumes:
@@ -11411,23 +12447,247 @@ paths:
       summary: Replace editable notification-campaign fields
       tags:
       - notification-administration
-  /api/v2/notification-campaigns/{id}/status:
-    patch:
+  /api/v2/notification-campaigns/{id}/{action}:
+    post:
       parameters:
-      - description: Status
+      - description: Campaign UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: submit, approve, reject, schedule, pause, resume, or cancel
+        in: path
+        name: action
+        required: true
+        type: string
+      - description: Transition
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/handlers.NotificationStatusInput'
+          $ref: '#/definitions/services.NotificationCampaignTransitionInput'
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Change notification-campaign status
+      summary: Apply a guarded notification-campaign workflow transition
+      tags:
+      - notification-administration
+  /api/v2/notification-campaigns/audience-estimate:
+    post:
+      parameters:
+      - description: Typed audience
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.NotificationAudienceEstimateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationAudienceEstimateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Estimate eligible users and active devices for a typed campaign audience
+      tags:
+      - notification-administration
+  /api/v2/notification-deliveries:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationDeliveriesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification delivery lifecycle records
+      tags:
+      - notification-administration
+  /api/v2/notification-deliveries/{id}/click:
+    post:
+      parameters:
+      - description: Delivery UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationDeliveryEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record an authenticated user's notification action click idempotently
+      tags:
+      - notifications
+  /api/v2/notification-deliveries/{id}/open:
+    post:
+      parameters:
+      - description: Delivery UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationDeliveryEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record an authenticated user's notification open event idempotently
+      tags:
+      - notifications
+  /api/v2/notification-delivery-analytics/daily:
+    get:
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Exclusive end date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryAnalyticsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get daily channel delivery lifecycle aggregates
+      tags:
+      - notification-administration
+  /api/v2/notification-delivery-jobs:
+    get:
+      parameters:
+      - description: held, pending, processing, retry, accepted, failed, cancelled
+        in: query
+        name: status
+        type: string
+      - description: in-app, push, email, sms
+        in: query
+        name: channel
+        type: string
+      - description: Campaign UUID
+        in: query
+        name: campaign_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationOutboxJobsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification delivery jobs without registration tokens or payload
+        contents
+      tags:
+      - notification-administration
+  /api/v2/notification-delivery-jobs/{id}/requeue:
+    post:
+      parameters:
+      - description: Explicit confirmation and reason
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationOutboxRequeueInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationOutboxJobEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Requeue one terminally failed notification delivery job
+      tags:
+      - notification-administration
+  /api/v2/notification-preferences:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferencesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get notification preferences for the current user
+      tags:
+      - notifications
+    patch:
+      parameters:
+      - description: Preference changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationPreferencesInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferencesEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update notification preferences for the current user
+      tags:
+      - notifications
+  /api/v2/notification-preferences/aggregates:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferenceAggregatesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get aggregate notification preference and device counts
+      tags:
+      - notification-administration
+  /api/v2/notification-template-versions/{id}/preview:
+    post:
+      parameters:
+      - description: Variables
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplatePreviewInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplatePreviewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Render a notification-template version with sample variables
       tags:
       - notification-administration
   /api/v2/notification-templates:
@@ -11499,6 +12759,25 @@ paths:
       summary: Replace editable notification-template fields
       tags:
       - notification-administration
+  /api/v2/notification-templates/{id}/clone:
+    post:
+      parameters:
+      - description: Clone identity
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplateCloneInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Clone the current immutable template version into a new draft
+      tags:
+      - notification-administration
   /api/v2/notification-templates/{id}/status:
     patch:
       parameters:
@@ -11516,6 +12795,18 @@ paths:
       security:
       - BearerAuth: []
       summary: Change notification-template status
+      tags:
+      - notification-administration
+  /api/v2/notification-templates/{id}/versions:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateVersionsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List immutable versions for a notification template
       tags:
       - notification-administration
   /api/v2/notifications:

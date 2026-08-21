@@ -15,9 +15,8 @@ import 'package:user_app/features/calculators/presentation/controllers/tools_con
 import 'package:user_app/features/calculators/presentation/widgets/calculator_card.dart';
 
 import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key, this.arguments});
@@ -53,7 +52,14 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
   @override
   void initState() {
     super.initState();
+
     _routeArguments = widget.arguments;
+  }
+
+  bool get _isHub {
+    final arguments = _routeArguments;
+
+    return arguments is! Map || arguments['initialTab'] is! int;
   }
 
   @override
@@ -65,97 +71,133 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     return _buildCatalogue(context);
   }
 
-  bool get _isHub {
-    final arguments = _routeArguments;
-    return arguments is! Map || arguments['initialTab'] is! int;
-  }
+  // ==========================================================================
+  // HUB
+  // ==========================================================================
 
   Widget _buildHub(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: AppSpacing.md,
-        title: Text(
-          'Tools'.tr,
-          style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tools'.tr,
+              style: context.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              'Clinical tools and references',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
             tooltip: 'Search',
-            onPressed: () => AppNavigator.push(AppRoutes.search),
+            onPressed: () {
+              AppNavigator.push(AppRoutes.search);
+            },
             icon: const Icon(LucideIcons.search),
           ),
-          AppSpacing.hGapSm,
+          AppSpacing.xs.gap,
         ],
       ),
       body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.sm,
+          AppSpacing.md,
           AppSpacing.md,
           AppSpacing.xxxl,
         ),
         children: const [
+          // ------------------------------------------------------------------
+          // CLINICAL TOOLS
+          // ------------------------------------------------------------------
           _DestinationGroup(
-            title: 'Clinical Tools',
+            title: 'Clinical tools',
+            description:
+                'Interactive calculators and clinical decision support.',
             items: [
               _Destination(
                 icon: LucideIcons.calculator,
                 title: 'Calculators',
-                description: 'Doses, scores, conversions',
+                description: 'Scores, doses, conversions and assessments',
                 route: AppRoutes.tools,
                 arguments: {'initialTab': 1},
               ),
               _Destination(
                 icon: LucideIcons.gitBranch,
                 title: 'Decision Tools',
-                description: 'Algorithms & decision support',
+                description: 'Algorithms and structured decision support',
                 route: AppRoutes.tools,
                 arguments: {'initialTab': 2},
               ),
               _Destination(
                 icon: LucideIcons.listChecks,
                 title: 'Checklists',
-                description: 'Clinical & procedural checklists',
+                description: 'Clinical and procedural checklists',
                 route: AppRoutes.tools,
                 arguments: {'initialTab': 3},
               ),
             ],
           ),
-          AppSpacing.gapLg,
+
+          AppSpacing.gapXl,
+
+          // ------------------------------------------------------------------
+          // REFERENCES
+          // ------------------------------------------------------------------
           _DestinationGroup(
             title: 'References',
+            description: 'Quick access to commonly used clinical references.',
             items: [
               _Destination(
                 icon: LucideIcons.pill,
                 title: 'Drug Index',
-                description: 'WHO essential medicines',
+                description: 'Reviewed medicine information',
                 route: AppRoutes.drugIndex,
               ),
               _Destination(
                 icon: LucideIcons.wholeWord,
                 title: 'Abbreviations',
-                description: 'Medical terms & abbreviations',
+                description: 'Medical terms and abbreviations',
                 route: AppRoutes.abbreviations,
+              ),
+              _Destination(
+                icon: LucideIcons.workflow,
+                title: 'Clinical algorithms',
+                description: 'Reviewed algorithms from published guidelines',
+                route: AppRoutes.publicGuidelines,
               ),
             ],
           ),
-          AppSpacing.gapLg,
+
+          AppSpacing.gapXl,
+
+          // ------------------------------------------------------------------
+          // DIRECTORIES
+          // ------------------------------------------------------------------
           _DestinationGroup(
-            title: 'Other',
+            title: 'Directories',
+            description: 'Find health services and official contacts.',
             items: [
               _Destination(
                 icon: LucideIcons.hospital,
                 title: 'Health Facilities',
-                description: 'Find facilities & services',
+                description: 'Find facilities and available services',
                 route: AppRoutes.healthFacilities,
               ),
               _Destination(
                 icon: LucideIcons.landmark,
                 title: 'Ministry Directory',
-                description: 'Contacts & departments',
+                description: 'Official contacts and departments',
                 route: AppRoutes.ministryDirectory,
               ),
             ],
@@ -165,30 +207,60 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     );
   }
 
-  Widget _buildCatalogue(BuildContext context) {
-    final state = ref.watch(toolsControllerProvider(_routeArguments));
+  // ==========================================================================
+  // CATALOGUE
+  // ==========================================================================
 
-    final controller = ref.read(
-      toolsControllerProvider(_routeArguments).notifier,
-    );
+  Widget _buildCatalogue(BuildContext context) {
+    final provider = toolsControllerProvider(_routeArguments);
+
+    final state = ref.watch(provider);
+
+    final controller = ref.read(provider.notifier);
+
+    final colors = context.theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: colors.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        title: Text(
-          _catalogueTitle(state.selectedTabIndex),
-          style: context.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _catalogueTitle(state.selectedTabIndex),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              _catalogueSubtitle(state.selectedTabIndex),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
         actions: [
-          FilterButton(
-            hasActiveFilters: state.hasActiveFilters,
+          IconButton(
+            tooltip: 'Search tools',
             onPressed: () {
-              controller.showFilterModal(context);
+              AppNavigator.push(AppRoutes.search);
             },
-            onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
+            icon: const Icon(LucideIcons.search),
           ),
+
+          // FilterButton(
+          //   hasActiveFilters: state.hasActiveFilters,
+          //   onPressed: () {
+          //     controller.showFilterModal(context);
+          //   },
+          //   onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
+          // ),
           AppSpacing.xs.gap,
         ],
       ),
@@ -198,7 +270,54 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
+            // ==============================================================
+            // TOOL TYPE FILTERS
+            // ==============================================================
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _ToolsFilterHeaderDelegate(
+                child: Material(
+                  color: colors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                    ),
+                    child: _ToolTypeFilterBar(
+                      filters: _toolFilters,
+                      selectedIndex: state.selectedTabIndex,
+                      onChanged: controller.onTabChanged,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ==============================================================
+            // ACTIVE FILTERS
+            // ==============================================================
+            if (state.hasActiveFilters)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _ActiveFilterBanner(
+                    onClear: controller.clearAllFilters,
+                  ),
+                ),
+              ),
+
+            // ==============================================================
+            // CURRENT CATALOGUE CONTEXT
+            // ==============================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -207,30 +326,23 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Clinical tools',
-                      style: context.textTheme.titleMedium,
-                    ),
-                    AppSpacing.gapSm,
-                    _ToolTypeFilterBar(
-                      filters: _toolFilters,
-                      selectedIndex: state.selectedTabIndex,
-                      onChanged: controller.onTabChanged,
-                    ),
-                  ],
+                child: _CatalogueHeaderCard(
+                  icon: _catalogueIcon(state.selectedTabIndex),
+                  title: _catalogueTitle(state.selectedTabIndex),
+                  description: _catalogueDescription(state.selectedTabIndex),
                 ),
               ),
             ),
 
+            // ==============================================================
+            // PAGINATED TOOLS
+            // ==============================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
-                AppSpacing.md,
+                AppSpacing.xxxl,
               ),
               sliver: PagingListener<int, Calculator>(
                 controller: controller.pagingController,
@@ -238,155 +350,132 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                   return PagedSliverList<int, Calculator>.separated(
                     state: pagingState,
                     fetchNextPage: fetchNextPage,
-                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Calculator>(
+                      // ====================================================
+                      // ITEM
+                      // ====================================================
                       itemBuilder: (context, calculator, index) {
                         return _ToolCardShell(
-                          child: CalculatorTile(
-                            calculator: calculator,
-                            onTap: () {
-                              AppNavigator.push(
-                                AppRoutes.calculator(calculator.id),
-                                extra: calculator,
-                              );
-                            },
-                            showDivider: false,
+                          onTap: () {
+                            AppNavigator.push(
+                              AppRoutes.calculator(calculator.id),
+                              extra: calculator,
+                            );
+                          },
+                          child: IgnorePointer(
+                            child: CalculatorTile(
+                              calculator: calculator,
+                              onTap: () {},
+                              showDivider: false,
+                            ),
                           ),
                         );
                       },
 
-                      // =====================
+                      // ====================================================
                       // FIRST PAGE LOADING
-                      // =====================
+                      // ====================================================
                       firstPageProgressIndicatorBuilder: (_) {
-                        return const AppLoadingView(
-                          message: 'Loading clinical tools...',
+                        return AppLoadingView(
+                          message: _loadingMessage(state.selectedTabIndex),
                         );
                       },
 
-                      // =====================
+                      // ====================================================
                       // NEXT PAGE LOADING
-                      // =====================
+                      // ====================================================
                       newPageProgressIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageProgress();
                       },
 
-                      // =====================
+                      // ====================================================
                       // FIRST PAGE ERROR
-                      // =====================
+                      // ====================================================
                       firstPageErrorIndicatorBuilder: (_) {
                         return AppErrorView(
-                          error: pagingState.error ?? 'Unable to load tools',
-                          title: 'Failed to load tools',
+                          error:
+                              pagingState.error ??
+                              'Unable to load '
+                                  '${_catalogueTitle(state.selectedTabIndex).toLowerCase()}',
+                          title:
+                              'Failed to load '
+                              '${_catalogueTitle(state.selectedTabIndex).toLowerCase()}',
                           message:
                               'Please check your connection and try again.',
                           onRetry: fetchNextPage,
                         );
                       },
 
-                      // =====================
+                      // ====================================================
                       // NEXT PAGE ERROR
-                      // =====================
+                      // ====================================================
                       newPageErrorIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageError(
                           onRetry: fetchNextPage,
-                          title: 'Failed to load more tools',
-                          icon: LucideIcons.calculator,
+                          title:
+                              'Failed to load more '
+                              '${_catalogueTitle(state.selectedTabIndex).toLowerCase()}',
+                          icon: _catalogueIcon(state.selectedTabIndex),
                         );
                       },
 
-                      // =====================
+                      // ====================================================
                       // EMPTY
-                      // =====================
+                      // ====================================================
                       noItemsFoundIndicatorBuilder: (_) {
+                        final title = _catalogueTitle(state.selectedTabIndex);
+
                         if (state.hasActiveFilters) {
                           return EmptyState.noResults(
-                            title: 'No tools match filters',
+                            title: 'No $title match filters',
                             description:
-                                'Try adjusting your search or filters.',
+                                'Try adjusting or clearing the active filters.',
                             actionLabel: 'Clear Filters',
                             onAction: controller.clearAllFilters,
                           );
                         }
 
                         return EmptyState.noData(
-                          title: 'No tools found',
-                          description: 'Tools will appear here when available.',
+                          title: 'No ${title.toLowerCase()} found',
+                          description: _emptyDescription(
+                            state.selectedTabIndex,
+                          ),
                         );
                       },
 
-                      // =====================
+                      // ====================================================
                       // END
-                      // =====================
+                      // ====================================================
                       noMoreItemsIndicatorBuilder: (_) {
-                        return PaginationIndicators.noMoreItems();
+                        return Padding(
+                          padding: AppSpacing.vPaddingMd,
+                          child: PaginationIndicators.noMoreItems(),
+                        );
                       },
                     ),
                   );
                 },
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                0,
-                AppSpacing.md,
-                AppSpacing.xxxl,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _DestinationGroup(
-                      title: 'References',
-                      items: [
-                        _Destination(
-                          icon: LucideIcons.pill,
-                          title: 'Drug Index',
-                          description: 'Reviewed medicine references',
-                          route: AppRoutes.drugIndex,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.wholeWord,
-                          title: 'Abbreviations',
-                          description: 'Medical abbreviations and meanings',
-                          route: AppRoutes.abbreviations,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.workflow,
-                          title: 'Clinical algorithms',
-                          description: 'Reviewed guideline algorithms',
-                          route: AppRoutes.publicGuidelines,
-                        ),
-                      ],
-                    ),
-                    AppSpacing.gapMd,
-                    _DestinationGroup(
-                      title: 'Other',
-                      items: [
-                        _Destination(
-                          icon: LucideIcons.hospital,
-                          title: 'Health Facilities',
-                          description: 'Find facilities and services',
-                          route: AppRoutes.healthFacilities,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.landmark,
-                          title: 'Ministry Directory',
-                          description: 'Official contacts and departments',
-                          route: AppRoutes.ministryDirectory,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+
+            //
+            // IMPORTANT:
+            //
+            // No Related References section here.
+            // No Directories section here.
+            //
+            // Those remain only on the main Tools hub.
+            //
           ],
         ),
       ),
     );
   }
+
+  // ==========================================================================
+  // CATALOGUE METADATA
+  // ==========================================================================
 
   String _catalogueTitle(int tabIndex) => switch (tabIndex) {
     1 => 'Calculators',
@@ -394,7 +483,54 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     3 => 'Checklists',
     _ => 'Clinical Tools',
   };
+
+  String _catalogueSubtitle(int tabIndex) => switch (tabIndex) {
+    1 => 'Clinical scores, doses and calculations',
+    2 => 'Structured clinical decision support',
+    3 => 'Clinical and procedural checklists',
+    _ => 'Clinical calculators and decision support',
+  };
+
+  String _catalogueDescription(int tabIndex) => switch (tabIndex) {
+    1 =>
+      'Use reviewed calculators for clinical scores, '
+          'dose calculations, conversions and assessments.',
+    2 =>
+      'Use structured tools that support clinical '
+          'assessment and decision-making.',
+    3 =>
+      'Follow structured clinical and procedural '
+          'checklists at the point of care.',
+    _ =>
+      'Browse available clinical calculators, '
+          'decision tools and checklists.',
+  };
+
+  String _loadingMessage(int tabIndex) => switch (tabIndex) {
+    1 => 'Loading calculators...',
+    2 => 'Loading decision tools...',
+    3 => 'Loading checklists...',
+    _ => 'Loading clinical tools...',
+  };
+
+  String _emptyDescription(int tabIndex) => switch (tabIndex) {
+    1 => 'Clinical calculators will appear here when available.',
+    2 => 'Decision support tools will appear here when available.',
+    3 => 'Clinical checklists will appear here when available.',
+    _ => 'Clinical tools will appear here when available.',
+  };
+
+  IconData _catalogueIcon(int tabIndex) => switch (tabIndex) {
+    1 => LucideIcons.calculator,
+    2 => LucideIcons.gitBranch,
+    3 => LucideIcons.listChecks,
+    _ => LucideIcons.layoutGrid,
+  };
 }
+
+// ============================================================================
+// DESTINATION MODEL
+// ============================================================================
 
 class _Destination {
   const _Destination({
@@ -404,6 +540,7 @@ class _Destination {
     required this.route,
     this.arguments,
   });
+
   final IconData icon;
   final String title;
   final String description;
@@ -411,76 +548,225 @@ class _Destination {
   final Object? arguments;
 }
 
+// ============================================================================
+// DESTINATION GROUP
+// ============================================================================
+
 class _DestinationGroup extends StatelessWidget {
-  const _DestinationGroup({required this.title, required this.items});
+  const _DestinationGroup({
+    required this.title,
+    required this.items,
+    this.description,
+  });
+
   final String title;
+  final String? description;
   final List<_Destination> items;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.only(left: AppSpacing.xs),
-        child: Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ),
-      AppSpacing.gapSm,
-      Card(
-        margin: EdgeInsets.zero,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.6),
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+
+              if (description?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 3),
+                Text(
+                  description!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (var index = 0; index < items.length; index++) ...[
-              ListTile(
-                minTileHeight: 68,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                leading: ClinicalIconTile(icon: items[index].icon),
-                title: Text(
-                  items[index].title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  items[index].description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                onTap: () => AppNavigator.push(
-                  items[index].route,
-                  extra: items[index].arguments,
+
+        AppSpacing.gapSm,
+
+        Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: colors.outlineVariant),
+          ),
+          child: Column(
+            children: [
+              for (var index = 0; index < items.length; index++) ...[
+                _DestinationTile(destination: items[index]),
+
+                if (index < items.length - 1)
+                  const Divider(height: 1, indent: 68),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// DESTINATION TILE
+// ============================================================================
+
+class _DestinationTile extends StatelessWidget {
+  const _DestinationTile({required this.destination});
+
+  final _Destination destination;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Semantics(
+      button: true,
+      label:
+          '${destination.title}. '
+          '${destination.description}',
+      child: InkWell(
+        onTap: () {
+          AppNavigator.push(destination.route, extra: destination.arguments);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              ClinicalIconTile(icon: destination.icon),
+
+              AppSpacing.hGapMd,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      destination.title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      destination.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (index < items.length - 1)
-                const Divider(
-                  height: 1,
-                  indent: AppSpacing.md + 40 + AppSpacing.md,
-                ),
+
+              AppSpacing.hGapSm,
+
+              Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: colors.onSurfaceVariant,
+              ),
             ],
-          ],
+          ),
         ),
       ),
-    ],
-  );
+    );
+  }
 }
+
+// ============================================================================
+// CATALOGUE HEADER
+// ============================================================================
+
+class _CatalogueHeaderCard extends StatelessWidget {
+  const _CatalogueHeaderCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.30),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(icon, color: colors.primary, size: 23),
+          ),
+
+          AppSpacing.hGapMd,
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// TOOL FILTER BAR
+// ============================================================================
 
 class _ToolTypeFilterBar extends StatelessWidget {
   const _ToolTypeFilterBar({
@@ -490,7 +776,9 @@ class _ToolTypeFilterBar extends StatelessWidget {
   });
 
   final List<_ToolTypeFilter> filters;
+
   final int selectedIndex;
+
   final ValueChanged<int> onChanged;
 
   @override
@@ -524,6 +812,10 @@ class _ToolTypeFilterBar extends StatelessWidget {
   }
 }
 
+// ============================================================================
+// TOOL FILTER CHIP
+// ============================================================================
+
 class _ToolTypeChip extends StatelessWidget {
   const _ToolTypeChip({
     required this.label,
@@ -539,49 +831,36 @@ class _ToolTypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return ChoiceChip(
       selected: selected,
-      onSelected: (_) => onTap(),
-      avatar: Icon(icon, size: 16, color: selected ? cs.onPrimary : cs.primary),
+      onSelected: (_) {
+        onTap();
+      },
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: selected ? colors.onPrimary : colors.primary,
+      ),
       label: Text(label),
       labelStyle: context.textTheme.labelMedium?.copyWith(
-        color: selected ? cs.onPrimary : cs.onSurface,
+        color: selected ? colors.onPrimary : colors.onSurface,
         fontWeight: FontWeight.w700,
       ),
-      selectedColor: cs.primary,
-      backgroundColor: cs.surfaceContainerLowest,
+      selectedColor: colors.primary,
+      backgroundColor: colors.surfaceContainerLowest,
       side: BorderSide(
-        color: selected
-            ? cs.primary
-            : cs.outlineVariant.withValues(alpha: 0.45),
+        color: selected ? colors.primary : colors.outlineVariant,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }
 }
 
-class _ToolCardShell extends StatelessWidget {
-  const _ToolCardShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: child,
-    );
-  }
-}
+// ============================================================================
+// TOOL FILTER MODEL
+// ============================================================================
 
 class _ToolTypeFilter {
   const _ToolTypeFilter({
@@ -593,4 +872,115 @@ class _ToolTypeFilter {
   final String label;
   final IconData icon;
   final int tabIndex;
+}
+
+// ============================================================================
+// TOOL CARD SHELL
+// ============================================================================
+
+class _ToolCardShell extends StatelessWidget {
+  const _ToolCardShell({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// ACTIVE FILTER BANNER
+// ============================================================================
+
+class _ActiveFilterBanner extends StatelessWidget {
+  const _ActiveFilterBanner({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            LucideIcons.listFilter,
+            size: 18,
+            color: colors.onSecondaryContainer,
+          ),
+
+          AppSpacing.hGapSm,
+
+          Expanded(
+            child: Text(
+              'Filters are applied',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          TextButton(onPressed: onClear, child: const Text('Clear')),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// PINNED FILTER HEADER
+// ============================================================================
+
+class _ToolsFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _ToolsFilterHeaderDelegate({required this.child});
+
+  final Widget child;
+
+  @override
+  double get minExtent => 58;
+
+  @override
+  double get maxExtent => 58;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _ToolsFilterHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
+  }
 }

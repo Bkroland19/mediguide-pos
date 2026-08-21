@@ -45,6 +45,10 @@ class NotificationsController extends _$NotificationsController {
       pagingController.dispose();
     });
 
+    ref.listen(notificationInboxRefreshProvider, (previous, next) {
+      if (previous != null && next != previous) pagingController.refresh();
+    });
+
     return const NotificationsState();
   }
 
@@ -87,9 +91,28 @@ class NotificationsController extends _$NotificationsController {
       await _repository.markRead(notification.id);
 
       pagingController.refresh();
+      ref.invalidate(notificationUnreadCountProvider);
     } catch (error) {
       _showError('Failed to mark notification as read: $error');
     }
+  }
+
+  Future<void> recordOpen(MyNotification notification) async {
+    final deliveryId = notification.deliveryId?.trim();
+    if (deliveryId == null || deliveryId.isEmpty) return;
+    await _repository.recordOpen(
+      deliveryId,
+      eventId: 'in-app-open-${notification.id}',
+    );
+  }
+
+  Future<void> recordClick(MyNotification notification) async {
+    final deliveryId = notification.deliveryId?.trim();
+    if (deliveryId == null || deliveryId.isEmpty) return;
+    await _repository.recordClick(
+      deliveryId,
+      eventId: 'in-app-click-${notification.id}',
+    );
   }
 
   // ======================================================
