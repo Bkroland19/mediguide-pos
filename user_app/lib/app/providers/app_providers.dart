@@ -77,6 +77,15 @@ final firebaseForegroundMessageProvider = StreamProvider<RemoteMessage>(
   (ref) => ref.watch(firebaseServiceProvider).foregroundMessages,
 );
 
+final outbreakBannerEnabledProvider = StreamProvider<bool>((ref) {
+  return ref.watch(firebaseServiceProvider).outbreakBannerStates;
+});
+
+final outbreakFeatureEnabledProvider = Provider<bool>((ref) {
+  return ref.watch(outbreakBannerEnabledProvider).valueOrNull ??
+      ref.watch(firebaseServiceProvider).outbreakBannerEnabled;
+});
+
 final notificationPermissionProvider =
     StreamProvider<AppNotificationPermissionState>((ref) async* {
       final service = ref.watch(firebaseServiceProvider);
@@ -230,6 +239,7 @@ final outbreakRepositoryProvider = Provider<OutbreakRepository>(
   (ref) => OutbreakRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(localCacheServiceProvider),
+    recordMetric: ref.watch(firebaseServiceProvider).recordOperationalEvent,
   ),
 );
 
