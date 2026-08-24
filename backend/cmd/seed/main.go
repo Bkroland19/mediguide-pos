@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"mediguide/internal/clinicaltools"
 	"mediguide/internal/config"
 	"mediguide/internal/db"
 	"mediguide/internal/models"
@@ -98,6 +99,19 @@ func main() {
 
 	scope := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_SCOPE")))
 	switch scope {
+	case "clinical-tools-rehearsal":
+		if err := clinicaltools.ValidateRehearsalTarget(cfg.DatabaseURL, cfg.AppEnv, os.Getenv("COMPOSE_PROJECT_NAME"), os.Getenv("CLINICAL_TOOLS_REHEARSAL")); err != nil {
+			log.Fatal().Err(err).Msg("unsafe clinical-tool rehearsal seed target")
+		}
+		admin, _, err := seedSecurity(database)
+		if err != nil {
+			log.Fatal().Err(err).Msg("seed rehearsal actors failed")
+		}
+		if err = database.Transaction(func(tx *gorm.DB) error { return seedDemoCalculators(tx, admin.ID) }); err != nil {
+			log.Fatal().Err(err).Msg("seed rehearsal calculators failed")
+		}
+		log.Info().Msg("clinical-tool rehearsal seed completed")
+		return
 	case "admin":
 		input, err := productionAdminInputFromEnv()
 		if err != nil {
@@ -238,6 +252,11 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 		{Code: "protocol.read", Name: "Read protocols"},
 		{Code: "protocol.write", Name: "Create/update protocols"},
 		{Code: "chat.ask", Name: "Ask RAG chatbot"},
+		{Code: "calculator.read", Name: "Read clinical tools"},
+		{Code: "calculator.write", Name: "Author clinical tools"},
+		{Code: "calculator.review", Name: "Review clinical tools"},
+		{Code: "calculator.publish", Name: "Publish clinical tools"},
+		{Code: "calculator.withdraw", Name: "Withdraw clinical tools"},
 		{Code: "sync.read", Name: "Read sync packages"},
 		{Code: "notification.read", Name: "Read own and global notifications"},
 		{Code: "notification.compose", Name: "Compose notification drafts"},
@@ -477,6 +496,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		return []string{
 			"admin.all",
 			"chat.ask",
+			"calculator.read", "calculator.write", "calculator.review", "calculator.publish", "calculator.withdraw",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -495,6 +515,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 	case "content_manager":
 		return []string{
 			"chat.ask",
+			"calculator.read", "calculator.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -511,7 +532,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		}
 	case "reviewer":
 		return []string{
-			"chat.ask", "guideline.publish", "guideline.read", "guideline.markdown.read",
+			"chat.ask", "calculator.read", "calculator.review", "guideline.publish", "guideline.read", "guideline.markdown.read",
 			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
 			"notification.read", "notification.template.read", "notification.campaign.read",
 			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
@@ -519,6 +540,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 	case "healthcare_provider":
 		return []string{
 			"chat.ask",
+			"calculator.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -526,6 +548,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		}
 	case "observer":
 		return []string{
+			"calculator.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -1202,7 +1225,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "blood-pressure-assessment.html",
 			Name:            "Blood Pressure Risk Assessment",
 			Description:     "Assess elevated blood pressure readings and clinical risk response.",
-			Type:            "decision_tool",
+			Type:            "calculator",
 			Icon:            "heart-pulse",
 			Color:           "#dc2626",
 			BackgroundColor: "#fee2e2",
@@ -1214,7 +1237,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "cardiac-risk-assessment.html",
 			Name:            "Cardiac Risk Assessment Tool",
 			Description:     "Decision support for identifying cardiovascular risk factors and escalation needs.",
-			Type:            "decision_tool",
+			Type:            "calculator",
 			Icon:            "heart",
 			Color:           "#b91c1c",
 			BackgroundColor: "#fee2e2",
@@ -1226,7 +1249,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "dehydration-assessment.html",
 			Name:            "Dehydration Assessment Tool",
 			Description:     "Structured dehydration severity assessment to guide fluid management decisions.",
-			Type:            "decision_tool",
+			Type:            "calculator",
 			Icon:            "droplet",
 			Color:           "#0369a1",
 			BackgroundColor: "#e0f2fe",
@@ -1250,7 +1273,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "glasgow-coma-scale.html",
 			Name:            "Glasgow Coma Scale Assessment",
 			Description:     "Neurologic assessment support using the standard Glasgow Coma Scale.",
-			Type:            "decision_tool",
+			Type:            "calculator",
 			Icon:            "brain",
 			Color:           "#4f46e5",
 			BackgroundColor: "#e0e7ff",
@@ -1262,7 +1285,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "pain-assessment-scale.html",
 			Name:            "Comprehensive Pain Assessment Scale",
 			Description:     "Structured pain scoring support for symptom assessment and monitoring.",
-			Type:            "decision_tool",
+			Type:            "calculator",
 			Icon:            "badge-alert",
 			Color:           "#c2410c",
 			BackgroundColor: "#ffedd5",
@@ -1298,7 +1321,7 @@ func seededCalculatorSamples() []calculatorSampleSeed {
 			FileName:        "immunization-schedule-checker.html",
 			Name:            "Immunization Schedule Checker",
 			Description:     "Checklist support for reviewing immunization status and schedule completeness.",
-			Type:            "checklist",
+			Type:            "decision_tool",
 			Icon:            "list-checks",
 			Color:           "#0891b2",
 			BackgroundColor: "#cffafe",
@@ -1342,6 +1365,12 @@ func upsertByID(database *gorm.DB, table string, row map[string]any) error {
 		if requestedID != uuid.Nil && requestedID != existingID {
 			seedIDAliases[requestedID] = existingID
 		}
+		// Published notification template versions are immutable by database
+		// trigger. Their natural key is (template_id, version), so an existing
+		// row is already the idempotent seed result and must not be updated.
+		if table == "notification_template_versions" {
+			return nil
+		}
 	}
 
 	assignments := map[string]any{}
@@ -1384,6 +1413,23 @@ func lookupExistingSeedRowID(database *gorm.DB, table string, row map[string]any
 		return lookupRowIDByColumn(database, table, "code", row["code"])
 	case "faq_tags":
 		return lookupRowIDByColumn(database, table, "slug", row["slug"])
+	case "notification_template_versions":
+		type versionRow struct {
+			ID uuid.UUID `gorm:"column:id"`
+		}
+		var found versionRow
+		err := database.Table(table).
+			Select("id").
+			Where("deleted_at IS NULL").
+			Where("template_id = ? AND version = ?", row["template_id"], row["version"]).
+			Take(&found).Error
+		if err == nil {
+			return found.ID, true, nil
+		}
+		if err == gorm.ErrRecordNotFound {
+			return uuid.Nil, false, nil
+		}
+		return uuid.Nil, false, err
 	case "ownership_types", "facility_levels":
 		return lookupRowIDByCodeOrName(
 			database,

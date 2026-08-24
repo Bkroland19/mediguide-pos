@@ -10,6 +10,188 @@
  * ---------------------------------------------------------------
  */
 
+export interface ClinicaltoolsAction {
+  message_key?: string;
+  target?: string;
+  type?: string;
+  value?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsCalculation {
+  expression?: ClinicaltoolsExpression;
+  key?: string;
+  precision?: number;
+  rounding_mode?: string;
+  unit?: string;
+}
+
+export interface ClinicaltoolsCitation {
+  accessed_at?: string;
+  key?: string;
+  organization?: string;
+  published_at?: string;
+  title?: string;
+  url?: string;
+}
+
+export interface ClinicaltoolsCompletion {
+  allow_resume?: boolean;
+  expression?: ClinicaltoolsExpression;
+  mode?: string;
+  require_review?: boolean;
+  reset_confirmation?: boolean;
+  show_percentage?: boolean;
+}
+
+export interface ClinicaltoolsDefinition {
+  calculation?: ClinicaltoolsCalculation[];
+  citations?: ClinicaltoolsCitation[];
+  clinical_owner?: string;
+  clinical_reviewer?: string;
+  completion?: ClinicaltoolsCompletion;
+  description?: string;
+  effective_at?: string;
+  exclusions?: string[];
+  inputs?: ClinicaltoolsInput[];
+  interpretations?: ClinicaltoolsInterpretation[];
+  locale?: string;
+  minimum_app_version?: string;
+  outputs?: ClinicaltoolsOutput[];
+  review_at?: string;
+  rules?: ClinicaltoolsRule[];
+  schema_version?: string;
+  sections?: ClinicaltoolsSection[];
+  supported_population?: string[];
+  test_cases?: ClinicaltoolsTestCase[];
+  title?: string;
+  tool_type?: string;
+  version?: string;
+  warnings?: ClinicaltoolsMessage[];
+}
+
+export interface ClinicaltoolsEvaluationError {
+  code?: string;
+  message?: string;
+  path?: string;
+}
+
+export interface ClinicaltoolsExpression {
+  args?: ClinicaltoolsExpression[];
+  date_unit?: string;
+  field?: string;
+  from_unit?: string;
+  op?: string;
+  precision?: number;
+  rounding_mode?: string;
+  to_unit?: string;
+  value?: object;
+}
+
+export interface ClinicaltoolsInput {
+  accessibility_label?: string;
+  allow_note?: boolean;
+  allowed_units?: string[];
+  checklist_kind?: string;
+  clinical_warning?: string;
+  critical?: boolean;
+  default?: object;
+  default_unit?: string;
+  depends_on?: string[];
+  description?: string;
+  escalation_message_keys?: string[];
+  help_text?: string;
+  key?: string;
+  label?: string;
+  maximum?: number;
+  minimum?: number;
+  options?: ClinicaltoolsOption[];
+  required?: boolean;
+  section_key?: string;
+  step?: number;
+  stop_when?: ClinicaltoolsExpression;
+  type?: string;
+  visible_when?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsInterpretation {
+  description?: string;
+  key?: string;
+  label?: string;
+  order?: number;
+  recommendations?: string[];
+  severity?: string;
+  when?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsMessage {
+  key?: string;
+  severity?: string;
+  text?: string;
+  when?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsOption {
+  description?: string;
+  label?: string;
+  score?: number;
+  value?: object;
+}
+
+export interface ClinicaltoolsOutput {
+  accessibility_label?: string;
+  key?: string;
+  label?: string;
+  precision?: number;
+  rounding_mode?: string;
+  unit?: string;
+  value?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsRule {
+  actions?: ClinicaltoolsAction[];
+  key?: string;
+  order?: number;
+  stop?: boolean;
+  when?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsSection {
+  description?: string;
+  key?: string;
+  order?: number;
+  review_before_completion?: boolean;
+  title?: string;
+  visible_when?: ClinicaltoolsExpression;
+}
+
+export interface ClinicaltoolsTestCase {
+  description?: string;
+  expected?: object;
+  fixed_now?: string;
+  inputs?: object;
+  key?: string;
+  numeric_tolerance?: number;
+}
+
+export interface ClinicaltoolsTestCaseResult {
+  actual?: Record<string, any>;
+  errors?: ClinicaltoolsEvaluationError[];
+  expected?: Record<string, any>;
+  key?: string;
+  passed?: boolean;
+}
+
+export interface ClinicaltoolsTestReport {
+  cases?: ClinicaltoolsTestCaseResult[];
+  passed?: boolean;
+}
+
+export interface ClinicaltoolsValidationError {
+  code?: string;
+  message?: string;
+  path?: string;
+}
+
 export interface HandlersAbbreviationEnvelope {
   data?: ModelsAbbreviation;
   success?: boolean;
@@ -21,15 +203,60 @@ export interface HandlersAskEnvelope {
   success?: boolean;
 }
 
+export interface HandlersCalculatorDefinitionEnvelope {
+  data?: ServicesCalculatorDefinitionDTO;
+  success?: boolean;
+}
+
 export interface HandlersCalculatorEnvelope {
   data?: ModelsCalculator;
   /** @example true */
   success?: boolean;
 }
 
+export interface HandlersCalculatorReviewQueueEnvelope {
+  data?: ServicesPageResultServicesCalculatorReviewQueueItem;
+  success?: boolean;
+}
+
 export interface HandlersCalculatorUsageEnvelope {
   data?: ModelsCalculatorUsageLog;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionAuditEnvelope {
+  data?: ServicesCalculatorVersionAuditDTO[];
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionEnvelope {
+  data?: ServicesCalculatorVersionDTO;
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionLockRequest {
+  /** @min 1 */
+  lock_version: number;
+}
+
+export interface HandlersCalculatorVersionPreviewEnvelope {
+  data?: ServicesCalculatorVersionPreviewDTO;
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionTestEnvelope {
+  data?: ServicesCalculatorVersionTestDTO;
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionValidationEnvelope {
+  data?: ServicesCalculatorVersionValidationDTO;
+  success?: boolean;
+}
+
+export interface HandlersCalculatorVersionsEnvelope {
+  data?: ServicesCalculatorVersionDTO[];
   success?: boolean;
 }
 
@@ -1280,11 +1507,13 @@ export interface ModelsCalculator {
   background_color?: string;
   color?: string;
   created_at?: string;
+  current_version_id?: string;
   description?: string;
   featured?: boolean;
   icon?: string;
   id?: string;
   name?: string;
+  runtime_type?: string;
   status?: string;
   type?: string;
   updated_at?: string;
@@ -1295,6 +1524,7 @@ export interface ModelsCalculator {
 export interface ModelsCalculatorUsageLog {
   calculator_id?: string;
   calculator_type?: string;
+  calculator_version_id?: string;
   created_at?: string;
   id?: string;
   session_end?: string;
@@ -2139,6 +2369,115 @@ export interface ServicesAssignGuidelineReviewerInput {
   reviewer_id: string;
 }
 
+export interface ServicesCalculatorDefinitionDTO {
+  calculator_id?: string;
+  definition?: ClinicaltoolsDefinition;
+  definition_checksum?: string;
+  runtime_type?: string;
+  semantic_version?: string;
+  version_id?: string;
+}
+
+export interface ServicesCalculatorFixtureReviewDTO {
+  description?: string;
+  expected?: Record<string, any>;
+  input?: Record<string, any>;
+  key?: string;
+  last_passed?: boolean;
+  last_result?: Record<string, any>;
+  last_run_at?: string;
+  numeric_tolerance?: number;
+}
+
+export interface ServicesCalculatorReviewQueueItem {
+  author_id?: string;
+  calculator_id?: string;
+  clinical_owner?: string;
+  clinical_reviewer?: string;
+  created_at?: string;
+  definition_checksum?: string;
+  fixture_count?: number;
+  fixture_passed_count?: number;
+  last_audit_action?: string;
+  last_audit_at?: string;
+  lock_version?: number;
+  review_evidence_status?: string;
+  reviewer_id?: string;
+  semantic_version?: string;
+  tests_passed?: boolean;
+  tool_name?: string;
+  tool_status?: string;
+  tool_type?: string;
+  updated_at?: string;
+  validation_passed?: boolean;
+  version_id?: string;
+  version_status?: string;
+}
+
+export interface ServicesCalculatorVersionAuditDTO {
+  action?: string;
+  actor_id?: string;
+  calculator_id?: string;
+  calculator_version_id?: string;
+  created_at?: string;
+  from_status?: string;
+  id?: string;
+  metadata?: Record<string, any>;
+  to_status?: string;
+}
+
+export interface ServicesCalculatorVersionDTO {
+  approved_at?: string;
+  approved_by?: string;
+  calculator_id?: string;
+  change_summary?: string;
+  created_at?: string;
+  created_by?: string;
+  definition?: ClinicaltoolsDefinition;
+  definition_checksum?: string;
+  effective_at?: string;
+  id?: string;
+  lock_version?: number;
+  published_at?: string;
+  published_by?: string;
+  review_at?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  schema_version?: string;
+  semantic_version?: string;
+  status?: string;
+  tests_passed?: boolean;
+  updated_at?: string;
+  validation_passed?: boolean;
+}
+
+export interface ServicesCalculatorVersionPreviewDTO {
+  audit?: ServicesCalculatorVersionAuditDTO[];
+  fixtures?: ServicesCalculatorFixtureReviewDTO[];
+  review_evidence_status?: string;
+  runtime_type?: string;
+  tool_name?: string;
+  tool_status?: string;
+  tool_type?: string;
+  version?: ServicesCalculatorVersionDTO;
+}
+
+export interface ServicesCalculatorVersionReviewCommentInput {
+  /** @maxLength 4000 */
+  comment: string;
+}
+
+export interface ServicesCalculatorVersionTestDTO {
+  lock_version?: number;
+  report?: ClinicaltoolsTestReport;
+}
+
+export interface ServicesCalculatorVersionValidationDTO {
+  errors?: ClinicaltoolsValidationError[];
+  lock_version?: number;
+  valid?: boolean;
+}
+
 export interface ServicesChildContentInput {
   asset_url?: string;
   lock_version?: number;
@@ -2284,6 +2623,11 @@ export interface ServicesCreateCalculatorInput {
   version?: string;
 }
 
+export interface ServicesCreateCalculatorVersionInput {
+  change_summary?: string;
+  definition?: object;
+}
+
 export interface ServicesCreateGuidelineBlockInput {
   content: object;
   section_id?: string;
@@ -2411,6 +2755,11 @@ export interface ServicesDrugTagInput {
   sort_order?: number;
   status?: string;
   tag_category?: string;
+}
+
+export interface ServicesDuplicateCalculatorVersionInput {
+  change_summary?: string;
+  semantic_version: string;
 }
 
 export interface ServicesDuplicateMarkdownVersionInput {
@@ -3532,6 +3881,14 @@ export interface ServicesPageResultModelsSupportTicketReply {
   total_pages?: number;
 }
 
+export interface ServicesPageResultServicesCalculatorReviewQueueItem {
+  items?: ServicesCalculatorReviewQueueItem[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultServicesConversationView {
   items?: ServicesConversationView[];
   page?: number;
@@ -4053,6 +4410,12 @@ export interface ServicesUpdateCalculatorInput {
   status?: string;
   type?: string;
   version?: string;
+}
+
+export interface ServicesUpdateCalculatorVersionInput {
+  change_summary?: string;
+  definition?: object;
+  lock_version?: number;
 }
 
 export interface ServicesUpdateGuidelineBlockInput {

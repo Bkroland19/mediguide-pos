@@ -73,6 +73,44 @@ type UpdatedResult struct {
 	Updated bool `json:"updated" example:"true"`
 }
 
+type CalculatorDefinitionEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    services.CalculatorDefinitionDTO `json:"data"`
+}
+
+type CalculatorVersionEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    services.CalculatorVersionDTO `json:"data"`
+}
+
+type CalculatorVersionsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    []services.CalculatorVersionDTO `json:"data"`
+}
+
+type CalculatorReviewQueueEnvelope struct {
+	Success bool                                                    `json:"success"`
+	Data    services.PageResult[services.CalculatorReviewQueueItem] `json:"data"`
+}
+
+type CalculatorVersionPreviewEnvelope struct {
+	Success bool                                 `json:"success"`
+	Data    services.CalculatorVersionPreviewDTO `json:"data"`
+}
+
+type CalculatorVersionValidationEnvelope struct {
+	Success bool                                    `json:"success"`
+	Data    services.CalculatorVersionValidationDTO `json:"data"`
+}
+type CalculatorVersionTestEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.CalculatorVersionTestDTO `json:"data"`
+}
+type CalculatorVersionAuditEnvelope struct {
+	Success bool                                 `json:"success"`
+	Data    []services.CalculatorVersionAuditDTO `json:"data"`
+}
+
 type MarkdownUpdateResult struct {
 	Updated bool      `json:"updated" example:"true"`
 	Queued  bool      `json:"queued" example:"true"`

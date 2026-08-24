@@ -1,10 +1,13 @@
 package services
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"mediguide/internal/models"
@@ -21,7 +24,7 @@ func TestCalculatorServiceCRUDAndFilters(t *testing.T) {
 	created, err := service.Create(userID, CreateCalculatorInput{
 		Name:        "Emergency Triage",
 		Description: "Urgency assessment",
-		AppFileJSON: json.RawMessage(`{"path":"triage.html"}`),
+		AppFileJSON: json.RawMessage(`{"path":"emergency-triage-assessment.html"}`),
 		Version:     "1.0.0",
 		Type:        "decision_tool",
 		Status:      "active",
@@ -64,30 +67,59 @@ func TestCalculatorServiceCRUDAndFilters(t *testing.T) {
 	}
 }
 
-func TestCalculatorArtifactSupportsEmbeddedAndSafeStaticHTML(t *testing.T) {
+func TestCalculatorArtifactContainsReviewedStaticHTML(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "triage.html"), []byte("<h1>Triage</h1>"), 0o600); err != nil {
+	content := reviewedLegacyFixture(t, "bmi-calculator.html")
+	if err := os.WriteFile(filepath.Join(root, "bmi-calculator.html"), content, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	artifact, err := resolveCalculatorArtifact([]byte(`{"path":"triage.html"}`), root)
+	artifact, err := resolveCalculatorArtifact([]byte(`{"path":"bmi-calculator.html"}`), root)
 	if err != nil {
 		t.Fatalf("resolve static artifact: %v", err)
 	}
-	if string(artifact.Content) != "<h1>Triage</h1>" || artifact.ContentType != "text/html; charset=utf-8" {
+	if !strings.Contains(string(artifact.Content), "Content-Security-Policy") || artifact.ContentType != "text/html; charset=utf-8" || artifact.Checksum == "" {
 		t.Fatalf("unexpected static artifact: %#v", artifact)
 	}
 
-	embedded, err := resolveCalculatorArtifact([]byte(`{"name":"custom.html","html":"<h1>Custom</h1>"}`), root)
-	if err != nil {
-		t.Fatalf("resolve embedded artifact: %v", err)
-	}
-	if string(embedded.Content) != "<h1>Custom</h1>" {
-		t.Fatalf("unexpected embedded content: %q", embedded.Content)
+	if _, err := resolveCalculatorArtifact([]byte(`{"name":"custom.html","html":"<html><head></head><body>Custom</body></html>"}`), root); !errors.Is(err, ErrCalculatorArtifactUnsafe) {
+		t.Fatalf("expected embedded HTML rejection, got %v", err)
 	}
 
 	if _, err := resolveCalculatorArtifact([]byte(`{"path":"../secret.html"}`), root); !errors.Is(err, ErrCalculatorArtifactUnsafe) {
 		t.Fatalf("expected path traversal rejection, got %v", err)
+	}
+}
+
+func TestLegacyCalculatorArtifactRejectsDriftRemoteDependenciesAndOversize(t *testing.T) {
+	if _, err := verifyLegacyCalculatorArtifact("bmi-calculator.html", []byte("changed")); !errors.Is(err, ErrCalculatorArtifactChecksum) {
+		t.Fatalf("expected checksum rejection, got %v", err)
+	}
+	original := reviewedLegacyCalculatorChecksums["bmi-calculator.html"]
+	content := []byte(`<html><head><script src="https://example.org/x.js"></script></head></html>`)
+	digest := sha256.Sum256(content)
+	reviewedLegacyCalculatorChecksums["bmi-calculator.html"] = hex.EncodeToString(digest[:])
+	t.Cleanup(func() { reviewedLegacyCalculatorChecksums["bmi-calculator.html"] = original })
+	if _, err := verifyLegacyCalculatorArtifact("bmi-calculator.html", content); !errors.Is(err, ErrCalculatorArtifactDependency) {
+		t.Fatalf("expected remote dependency rejection, got %v", err)
+	}
+	if _, err := verifyLegacyCalculatorArtifact("bmi-calculator.html", make([]byte, maxLegacyCalculatorArtifactBytes+1)); !errors.Is(err, ErrCalculatorArtifactUnsafe) {
+		t.Fatalf("expected size rejection, got %v", err)
+	}
+}
+
+func TestEveryReviewedLegacyCalculatorArtifactPassesContainment(t *testing.T) {
+	if len(reviewedLegacyCalculatorChecksums) != 14 {
+		t.Fatalf("reviewed artifact allowlist has %d entries, want 14", len(reviewedLegacyCalculatorChecksums))
+	}
+	for filename := range reviewedLegacyCalculatorChecksums {
+		content := reviewedLegacyFixture(t, filename)
+		if _, err := verifyLegacyCalculatorArtifact(filename, content); err != nil {
+			t.Fatalf("%s failed containment: %v", filename, err)
+		}
+		if _, err := containLegacyCalculatorHTML(content); err != nil {
+			t.Fatalf("%s cannot receive CSP containment: %v", filename, err)
+		}
 	}
 }
 
@@ -96,12 +128,16 @@ func TestCalculatorUsageIsOwnedByAuthenticatedUser(t *testing.T) {
 	userID := uuid.New()
 	calculator, err := service.Create(userID, CreateCalculatorInput{
 		Name:        "BMI",
-		AppFileJSON: json.RawMessage(`{"html":"<h1>BMI</h1>"}`),
+		AppFileJSON: json.RawMessage(`{"path":"bmi-calculator.html"}`),
 		Version:     "1",
 		Type:        "calculator",
 		Status:      "active",
 	})
 	if err != nil {
+		t.Fatal(err)
+	}
+	versionID := uuid.New()
+	if err := service.DB.Model(&models.Calculator{}).Where("id = ?", calculator.ID).Update("current_version_id", versionID).Error; err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,6 +147,9 @@ func TestCalculatorUsageIsOwnedByAuthenticatedUser(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("start usage: %v", err)
+	}
+	if usage.CalculatorVersionID == nil || *usage.CalculatorVersionID != versionID {
+		t.Fatalf("usage did not retain the active immutable version: %#v", usage)
 	}
 
 	if _, err := service.FinishUsage(uuid.New(), usage.ID, FinishCalculatorUsageInput{
@@ -123,6 +162,15 @@ func TestCalculatorUsageIsOwnedByAuthenticatedUser(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("finish owned usage: %v", err)
 	}
+}
+
+func reviewedLegacyFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "dashboard", "samples", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return content
 }
 
 func TestCalculatorValidationRejectsUnknownEnumsAndEmptyArtifacts(t *testing.T) {
@@ -143,5 +191,5 @@ func testCalculatorService(t *testing.T) CalculatorService {
 	if err := database.AutoMigrate(&models.Calculator{}, &models.CalculatorUsageLog{}); err != nil {
 		t.Fatal(err)
 	}
-	return CalculatorService{DB: database, StaticSamplesDir: t.TempDir()}
+	return CalculatorService{DB: database, LegacyClinicalToolsDir: t.TempDir()}
 }

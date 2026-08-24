@@ -1,8 +1,9 @@
-import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/core/network/contracts/generated/backend_contracts.dart';
 
 import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
+import 'package:user_app/features/calculators/data/models/clinical_tool_definition.dart';
 
 // ===========================================================
 // CALCULATORS
@@ -84,25 +85,48 @@ final class CalculatorRepository {
     }
   }
 
-  // =========================================================
-  // CONTENT
-  // =========================================================
-  //
-  // HTML persistence is already handled by
-  // FileCalculatorContentLoader, so this remains remote.
-  // =========================================================
-
-  Future<String> content(String id) {
-    return _api.requestText(
-      '/api/v2/calculators/${Uri.encodeComponent(id)}/content',
-    );
+  Future<ClinicalToolDefinitionEnvelope> definition(String id) async {
+    try {
+      final response = await _api.requestJson(
+        '/api/v2/calculators/${Uri.encodeComponent(id)}/definition',
+        method: 'GET',
+      );
+      final generated = ServicesCalculatorDefinitionDTO.fromJson(
+        _itemData(response),
+      );
+      final value = ClinicalToolDefinitionEnvelope.fromJson(generated.toJson());
+      await _local.saveDefinition(value);
+      return value;
+    } catch (_) {
+      final cached = await _local.getDefinition(id);
+      if (cached != null) return cached;
+      rethrow;
+    }
   }
 
-  String contentUrl(String id) {
-    return '$mediguideApiBaseUrl'
-        '/api/v2/calculators/'
-        '${Uri.encodeComponent(id)}/content';
-  }
+  Future<Map<String, Object?>> workflow({
+    required String calculatorId,
+    required String userId,
+    required ClinicalToolDefinitionEnvelope definition,
+  }) => _local.getWorkflow(
+    calculatorId: calculatorId,
+    userId: userId,
+    versionId: definition.versionId,
+    checksum: definition.definitionChecksum,
+  );
+
+  Future<void> saveWorkflow({
+    required String calculatorId,
+    required String userId,
+    required ClinicalToolDefinitionEnvelope definition,
+    required Map<String, Object?> responses,
+  }) => _local.saveWorkflow(
+    calculatorId: calculatorId,
+    userId: userId,
+    versionId: definition.versionId,
+    checksum: definition.definitionChecksum,
+    responses: responses,
+  );
 
   // =========================================================
   // GET

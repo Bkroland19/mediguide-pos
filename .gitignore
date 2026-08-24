@@ -13,6 +13,9 @@
 !docs/mobile-alpha-release.md
 !docs/notification-templates-and-campaigns.md
 !docs/outbreak-operations.md
+!docs/clinical-tool-phase-1-inventory.md
+!docs/clinical-tool-runtime.md
+!docs/clinical-tool-validation-status.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local
@@ -27,6 +30,7 @@ __pycache__/
 infra/production.env
 infra/release.env
 infra/backups/
+artifacts/clinical-tools-retirement-rehearsal/
 user_app/.env
 user_app/firebase-dart-defines.json
 user_app/fastlane/report.xml
