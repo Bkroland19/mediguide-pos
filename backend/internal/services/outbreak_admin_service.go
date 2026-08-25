@@ -29,9 +29,10 @@ type OutbreakActor struct {
 }
 
 type OutbreakAdminService struct {
-	DB                   *gorm.DB
-	Store                storage.ObjectStore
-	AllowedExternalHosts []string
+	DB                    *gorm.DB
+	Store                 storage.ObjectStore
+	AllowedExternalHosts  []string
+	DocumentNotifications *OutbreakDocumentNotificationService
 }
 
 type OutbreakAdminQuery struct {
@@ -224,7 +225,7 @@ type OutbreakAuditDTO struct {
 }
 
 func (s OutbreakAdminService) ListAudit(entityType string, id uuid.UUID, page PageInput) (*PageResult[OutbreakAuditDTO], error) {
-	if !validOutbreakValue(entityType, "outbreak", "situation_report") {
+	if !validOutbreakValue(entityType, "outbreak", "situation_report", "outbreak_document") {
 		return nil, ErrOutbreakInvalid
 	}
 	page = page.Normalize(20, 100)
@@ -248,12 +249,14 @@ func (s OutbreakAdminService) ListAudit(entityType string, id uuid.UUID, page Pa
 
 func (s OutbreakAdminService) AddReviewComment(actor OutbreakActor, entityType string, id uuid.UUID, comment string) error {
 	comment = strings.TrimSpace(comment)
-	if !validOutbreakValue(entityType, "outbreak", "situation_report") || comment == "" || len(comment) > 4000 {
+	if !validOutbreakValue(entityType, "outbreak", "situation_report", "outbreak_document") || comment == "" || len(comment) > 4000 {
 		return ErrOutbreakInvalid
 	}
 	model := any(&models.Outbreak{})
 	if entityType == "situation_report" {
 		model = &models.SituationReport{}
+	} else if entityType == "outbreak_document" {
+		model = &models.OutbreakResource{}
 	}
 	var count int64
 	if err := s.DB.Model(model).Where("id = ?", id).Count(&count).Error; err != nil {
@@ -1256,6 +1259,10 @@ func (s OutbreakAdminService) deleteChild(a OutbreakActor, parent, id uuid.UUID,
 	})
 }
 func (s OutbreakAdminService) transitionChild(a OutbreakActor, parent, id uuid.UUID, action string, in TransitionInput, kind string, model any) error {
+	return s.transitionChildWithHook(a, parent, id, action, in, kind, model, nil)
+}
+
+func (s OutbreakAdminService) transitionChildWithHook(a OutbreakActor, parent, id uuid.UUID, action string, in TransitionInput, kind string, model any, hook func(*gorm.DB) error) error {
 	var row struct {
 		Status      string
 		AuthorID    *uuid.UUID
@@ -1311,6 +1318,12 @@ func (s OutbreakAdminService) transitionChild(a OutbreakActor, parent, id uuid.U
 		if r.RowsAffected == 0 {
 			return ErrOutbreakConflict
 		}
-		return auditOutbreak(tx, a, kind+"."+action, kind, id, map[string]any{"reason": in.Reason})
+		if err := auditOutbreak(tx, a, kind+"."+action, kind, id, map[string]any{"reason": in.Reason}); err != nil {
+			return err
+		}
+		if hook != nil {
+			return hook(tx)
+		}
+		return nil
 	})
 }

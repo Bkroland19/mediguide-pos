@@ -49,3 +49,45 @@ Withdrawal is the immediate public rollback mechanism. It preserves audit histor
 5. Verify the audit trail, notification state, public endpoint, cache behaviour, and metrics before resolving the incident.
 
 Database rollback is not a content-withdrawal mechanism. Use database restore only for infrastructure disaster recovery, following backups and migration compatibility checks.
+
+## Managed outbreak documents
+
+Outbreak records can carry governed supporting material such as SOPs, response plans, checklists, forms, situation-report annexes and training material. Create and manage these records in the outbreak editor. Public readers only receive a document when its status is `published`, its effective date has arrived and it has not expired.
+
+The managed upload endpoint accepts PDF, DOCX, XLSX, Markdown and UTF-8 text files up to `MAX_UPLOAD_MB` (25 MB by default). The API validates the actual PDF or OOXML structure rather than trusting the filename or browser MIME type, rejects unsafe archives, stores a SHA-256 checksum and writes the object under an immutable content-addressed key. Replacing a draft file advances its optimistic lock and deletes the previous object only when no document version still references it.
+
+Use this lifecycle:
+
+1. A user with `outbreak.manage` creates a draft, completes authority, document number, version, language, audience and effective/review metadata, then uploads the file.
+2. The author submits the draft for review. Submission fails when required governance metadata or the file is missing, or the document is already expired.
+3. A different user with `outbreak.review` records review comments and approves with a required clinical rationale. Authors cannot approve their own work.
+4. A third user with `outbreak.publish` publishes the approved version. The publisher cannot be its author or clinical approver.
+5. A user with `outbreak.withdraw` may withdraw a published version with a reason. Published records are immutable; content changes must start through the correction endpoint and complete the full review cycle again.
+
+The document audit endpoint records uploads, comments and every lifecycle transition. Never overwrite an object or directly update a published database row. Malware scanning is an infrastructure concern in addition to the API's structural validation; configure object-storage scanning/quarantine before accepting files from untrusted external contributors.
+
+Public clients load governed documents from `GET /api/public/outbreaks/:id/documents`; they do not infer them from legacy resource links. The API returns only current published, effective and non-expired versions and exposes downloads through the scoped redirect endpoint. Mobile provides searchable/filterable document list and detail screens, an embedded PDF reader, a Markdown preview, controlled operating-system handling for other approved formats, progress/cancel/retry states and explicit storage removal.
+
+Metadata and files use the `public` cache scope only. A completed unfiltered sync reconciles the canonical document set: withdrawn/revoked downloads are deleted, newer versions are marked as updates, and a failed replacement download preserves the previous checksum-verified file. Downloads use managed app storage, SHA-256 verification and `.part`/staged/backup atomic replacement. Never cache an admin draft or use an authenticated user's scope as a public document source.
+
+## Document discovery and notifications
+
+PostgreSQL performs all document filtering, sorting and pagination. Search covers title, description, document number, authority, kind, audience and the parent outbreak name. Weighted full-text ranking places exact title and document-number matches ahead of authority/outbreak matches and body text. Expression GIN and trigram indexes are installed by migration `00043`; client sort fields remain allowlisted. Public queries apply publication/effective/expiry visibility before returning results, while admin search remains permission protected.
+
+Document transitions create typed, idempotent notifications in the same database transaction as the audit and state transition:
+
+- submission/review request goes to active users with `outbreak.review` (or `admin.all`);
+- clinician approval goes to active users with `outbreak.publish` (or `admin.all`);
+- publication and replacement publication use a public `outbreak_document` deep link;
+- withdrawal links to the still-public outbreak rather than the withdrawn document;
+- review-date and expiry reminders go only to reviewers.
+
+The notification worker scans reminders every six hours and on startup. Deduplication keys include document, event/due state, due date and recipient, so repeated scans are safe. Staff actions include the dashboard route `/outbreaks/:id?document=:documentId`; mobile discards that staff-only parameter. Public mobile deep links are resolved from typed IDs and never trust a caller-supplied route. Templates for the lifecycle catalogue are installed by migration `00044`.
+
+## Demo and staging document seed
+
+The standard `SEED_SCOPE=demo` seed publishes six deterministic Markdown fixtures for the Bundibugyo virus disease demonstration outbreak: a case-management SOP, IPC protocol, laboratory specimen-handling protocol, contact-tracing guide, frontline checklist and risk-communication guide. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
+
+Rerunning the seed is safe: document UUIDs, document numbers, versions and storage keys are stable; object contents are replaced from the repository fixture; and SHA-256 checksum and size metadata are recalculated. The fixtures are clearly marked as demonstration content and are not clinician-approved operational guidance.
+
+Demo seeding is blocked when `APP_ENV=production` unless an operator explicitly sets `SEED_ALLOW_DEMO=true`. That override is intended only for a controlled demo/staging server whose environment happens to use the production Compose profile. Real production deployments should seed only approved scopes such as `SEED_SCOPE=admin` or `SEED_SCOPE=facilities`, then publish clinician-approved documents through the governed dashboard workflow.
