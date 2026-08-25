@@ -9,8 +9,8 @@ COPY backend/ .
 COPY dashboard/samples/*.html /out/legacy-tools/
 COPY clinical-tools /out/clinical-tools
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags "-X mediguide/internal/buildinfo.Version=${BUILD_VERSION} -X mediguide/internal/buildinfo.Revision=${BUILD_REVISION}" \
-    -o /out/api ./cmd/api
+  -ldflags "-X mediguide/internal/buildinfo.Version=${BUILD_VERSION} -X mediguide/internal/buildinfo.Revision=${BUILD_REVISION}" \
+  -o /out/api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notification-worker ./cmd/notification-worker
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-migrate ./cmd/clinicaltool-migrate
@@ -18,20 +18,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-rehearsal ./cmd/clini
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-development-activate ./cmd/clinicaltool-development-activate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
 
-FROM build AS development-build
 
 FROM alpine:3.23 AS production
 ARG BUILD_VERSION=development
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="MediGuide Backend API" \
-      org.opencontainers.image.version="${BUILD_VERSION}" \
-      org.opencontainers.image.revision="${BUILD_REVISION}"
+  org.opencontainers.image.version="${BUILD_VERSION}" \
+  org.opencontainers.image.revision="${BUILD_REVISION}"
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata curl && \
-    addgroup -S -g 10001 mediguide && \
-    adduser -S -D -H -u 10001 -G mediguide mediguide && \
-    mkdir -p /app/legacy-tools && \
-    chown -R mediguide:mediguide /app
+  addgroup -S -g 10001 mediguide && \
+  adduser -S -D -H -u 10001 -G mediguide mediguide && \
+  mkdir -p /app/legacy-tools && \
+  chown -R mediguide:mediguide /app
 COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
 COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
@@ -56,13 +55,13 @@ FROM alpine:3.23 AS schema-only
 ARG BUILD_VERSION=development
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="MediGuide Backend API (schema-only rehearsal)" \
-      org.opencontainers.image.version="${BUILD_VERSION}" \
-      org.opencontainers.image.revision="${BUILD_REVISION}"
+  org.opencontainers.image.version="${BUILD_VERSION}" \
+  org.opencontainers.image.revision="${BUILD_REVISION}"
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata curl && \
-    addgroup -S -g 10001 mediguide && \
-    adduser -S -D -H -u 10001 -G mediguide mediguide && \
-    chown -R mediguide:mediguide /app
+  addgroup -S -g 10001 mediguide && \
+  adduser -S -D -H -u 10001 -G mediguide mediguide && \
+  chown -R mediguide:mediguide /app
 COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
 COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
@@ -78,7 +77,20 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
   CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
 CMD ["/app/api"]
 
-FROM production AS development
+FROM build AS development
+ARG AIR_VERSION=v1.66.1
+RUN apk add --no-cache curl && \
+  go install github.com/air-verse/air@${AIR_VERSION} && \
+  mkdir -p /app/legacy-tools /app/clinical-tools && \
+  cp /out/migrate /app/migrate && \
+  cp /out/seed /app/seed && \
+  cp -R /out/legacy-tools/. /app/legacy-tools/ && \
+  cp -R /out/clinical-tools/. /app/clinical-tools/
+WORKDIR /src
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=6 \
+  CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
+CMD ["air", "-c", ".air.toml"]
 
 # Persistent local-development variant with no executable calculator HTML.
 # Use only after the guarded development activation command has published all
