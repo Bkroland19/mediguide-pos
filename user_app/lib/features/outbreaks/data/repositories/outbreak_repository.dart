@@ -104,28 +104,42 @@ final class SituationReportQuery {
 final class OutbreakDocumentQuery {
   const OutbreakDocumentQuery({
     this.search = '',
+    this.outbreakId = '',
     this.documentKind = '',
     this.authority = '',
     this.language = '',
     this.audience = '',
+    this.mimeType = '',
+    this.effectiveFrom,
+    this.effectiveTo,
     this.sort = 'sort_order',
     this.order = 'asc',
   });
 
   final String search;
+  final String outbreakId;
   final String documentKind;
   final String authority;
   final String language;
   final String audience;
+  final String mimeType;
+  final DateTime? effectiveFrom;
+  final DateTime? effectiveTo;
   final String sort;
   final String order;
 
   Map<String, String> toQuery() => {
     if (search.trim().isNotEmpty) 'search': search.trim(),
+    if (outbreakId.trim().isNotEmpty) 'outbreak_id': outbreakId.trim(),
     if (documentKind.trim().isNotEmpty) 'document_kind': documentKind.trim(),
     if (authority.trim().isNotEmpty) 'issuing_authority': authority.trim(),
     if (language.trim().isNotEmpty) 'language': language.trim(),
     if (audience.trim().isNotEmpty) 'audience': audience.trim(),
+    if (mimeType.trim().isNotEmpty) 'mime_type': mimeType.trim(),
+    if (effectiveFrom != null)
+      'effective_from': effectiveFrom!.toUtc().toIso8601String(),
+    if (effectiveTo != null)
+      'effective_to': effectiveTo!.toUtc().toIso8601String(),
     'sort': sort,
     'order': order,
   };
@@ -144,9 +158,10 @@ final class OutbreakDocumentQuery {
   bool matches(PublicOutbreakDocument item) {
     final needle = search.trim().toLowerCase();
     final searchable =
-        '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience}'
+        '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience} ${item.outbreakTitle} ${item.outbreakDisease} ${item.outbreakArea} ${item.searchSnippet}'
             .toLowerCase();
     return (needle.isEmpty || searchable.contains(needle)) &&
+        (outbreakId.trim().isEmpty || item.outbreakId == outbreakId.trim()) &&
         (documentKind.trim().isEmpty ||
             item.documentKind == documentKind.trim()) &&
         (authority.trim().isEmpty ||
@@ -155,7 +170,15 @@ final class OutbreakDocumentQuery {
         (language.trim().isEmpty ||
             item.language.toLowerCase() == language.trim().toLowerCase()) &&
         (audience.trim().isEmpty ||
-            item.audience.toLowerCase() == audience.trim().toLowerCase());
+            item.audience.toLowerCase() == audience.trim().toLowerCase()) &&
+        (mimeType.trim().isEmpty ||
+            item.mimeType.toLowerCase() == mimeType.trim().toLowerCase()) &&
+        (effectiveFrom == null ||
+            (item.effectiveDate != null &&
+                !item.effectiveDate!.isBefore(effectiveFrom!))) &&
+        (effectiveTo == null ||
+            (item.effectiveDate != null &&
+                !item.effectiveDate!.isAfter(effectiveTo!)));
   }
 }
 
@@ -178,7 +201,9 @@ final class OutbreakRepository {
   static const _reportSnapshotType = 'public_situation_report_snapshot';
   static const _documentType = 'public_outbreak_document';
   static const _documentSnapshotType = 'public_outbreak_document_snapshot';
+  static const _documentContentType = 'public_outbreak_document_content';
   static const _ttl = Duration(hours: 6);
+  static const _offlineRetention = Duration(days: 7);
   static const _pageSize = 20;
 
   final BackendApiService _api;
@@ -238,6 +263,222 @@ final class OutbreakRepository {
     }
   }
 
+  /// Discovers documents across every public outbreak. Successful responses
+  /// enrich the same cache used by nested outbreak screens, so global search
+  /// remains useful offline without duplicating document records.
+  Future<PublicPage<PublicOutbreakDocument>> searchDocuments({
+    int page = 1,
+    int perPage = 10,
+    OutbreakDocumentQuery query = const OutbreakDocumentQuery(),
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 50);
+    try {
+      final response = await _public(
+        '/api/public/outbreak-documents',
+        query: {
+          'page': '$safePage',
+          'per_page': '$safePerPage',
+          ...query.toQuery(),
+        },
+      );
+      final data = _data(response);
+      final items = _maps(data['items']).map(_parseDocument).toList();
+      await _bestEffortCache(
+        () => _cache.putMany(
+          type: _documentType,
+          scope: _scope,
+          ttl: _ttl,
+          entities: items.map(_documentCacheInput),
+        ),
+      );
+      return PublicPage(
+        items: items,
+        page: _integer(data['page'], safePage),
+        perPage: _integer(data['per_page'], safePerPage),
+        totalItems: _integer(data['total_items'], items.length),
+        totalPages: _integer(data['total_pages'], items.isEmpty ? 0 : 1),
+        cache: const PublicCacheMetadata.online(),
+      );
+    } catch (error) {
+      if (!_canUseCache(error)) rethrow;
+      return searchCachedDocuments(
+        page: safePage,
+        perPage: safePerPage,
+        query: query,
+      );
+    }
+  }
+
+  /// Searches only published quick resources with a backend-validated target.
+  /// Managed clinical documents remain in [searchDocuments] so external links
+  /// can never be mistaken for reviewed in-app clinical content.
+  Future<PublicPage<PublicOutbreakResource>> quickResources({
+    int page = 1,
+    int perPage = 10,
+    String search = '',
+    String targetType = '',
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 50);
+    final response = await _public(
+      '/api/public/outbreak-resources',
+      query: {
+        'page': '$safePage',
+        'per_page': '$safePerPage',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (targetType.trim().isNotEmpty) 'target_type': targetType.trim(),
+      },
+    );
+    final data = _data(response);
+    final items = _maps(
+      data['items'],
+    ).map(PublicOutbreakResource.fromJson).toList(growable: false);
+    return PublicPage(
+      items: items,
+      page: _integer(data['page'], safePage),
+      perPage: _integer(data['per_page'], safePerPage),
+      totalItems: _integer(data['total_items'], items.length),
+      totalPages: _integer(data['total_pages'], items.isEmpty ? 0 : 1),
+      cache: const PublicCacheMetadata.online(),
+    );
+  }
+
+  /// Searches approved public outbreak documents already held in the local
+  /// cache. Cache-only fields are never deserialized into the public model or
+  /// sent back to the API.
+  Future<PublicPage<PublicOutbreakDocument>> searchCachedDocuments({
+    int page = 1,
+    int perPage = 10,
+    OutbreakDocumentQuery query = const OutbreakDocumentQuery(),
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 50);
+    final now = _clock().toUtc();
+    final cached = await _cache.list(
+      type: _documentType,
+      scope: _scope,
+      limit: 1000,
+    );
+    final ranked = <({PublicOutbreakDocument item, double score})>[];
+    for (final data in cached) {
+      final verifiedAt = DateTime.tryParse(
+        data['_cache_verified_at']?.toString() ?? '',
+      );
+      if (verifiedAt == null ||
+          now.difference(verifiedAt.toUtc()) > _offlineRetention) {
+        continue;
+      }
+      final item = PublicOutbreakDocument.fromJson(data);
+      if (item.expiresAt != null && !item.expiresAt!.isAfter(now)) continue;
+      if (!_matchesCachedDocument(data, item, query)) continue;
+      ranked.add((
+        item: item,
+        score: _cachedDocumentScore(data, item, query.search),
+      ));
+    }
+    ranked.sort((left, right) {
+      final relevance = right.score.compareTo(left.score);
+      if (relevance != 0) return relevance;
+      final title = left.item.title.toLowerCase().compareTo(
+        right.item.title.toLowerCase(),
+      );
+      return title != 0 ? title : left.item.id.compareTo(right.item.id);
+    });
+    final offset = (safePage - 1) * safePerPage;
+    final items = offset >= ranked.length
+        ? const <PublicOutbreakDocument>[]
+        : ranked
+              .skip(offset)
+              .take(safePerPage)
+              .map((entry) => entry.item)
+              .toList(growable: false);
+    return PublicPage(
+      items: items,
+      page: safePage,
+      perPage: safePerPage,
+      totalItems: ranked.length,
+      totalPages: ranked.isEmpty ? 0 : (ranked.length / safePerPage).ceil(),
+      cache: PublicCacheMetadata(
+        cachedAt: now,
+        lastVerifiedAt: null,
+        isStale: true,
+        isWithdrawn: false,
+        isOffline: true,
+      ),
+    );
+  }
+
+  Future<PublicContent<OutbreakDocumentContent>> documentContent(
+    String documentId,
+  ) async {
+    final id = _id(documentId);
+    try {
+      final value = OutbreakDocumentContent.fromJson(
+        _data(await _public('/api/public/outbreak-documents/$id/content')),
+      );
+      await _bestEffortCache(
+        () => _cache.put(
+          type: _documentContentType,
+          id: id,
+          scope: _scope,
+          ttl: _ttl,
+          data: value.toJson(),
+          searchableText: value.content,
+          version: value.checksumSha256,
+        ),
+      );
+      await _bestEffortCache(() => _enrichDocumentSearchCache(value));
+      return PublicContent(
+        value: value,
+        cache: const PublicCacheMetadata.online(),
+      );
+    } catch (error) {
+      if (error is BackendApiException && error.statusCode == 404) {
+        await _bestEffortCache(() async {
+          await _cache.tombstone(type: _documentType, id: id, scope: _scope);
+          await _cache.tombstone(
+            type: _documentContentType,
+            id: id,
+            scope: _scope,
+          );
+        });
+        throw const PublicContentUnavailableException(
+          'This document was withdrawn, expired, or is no longer public.',
+          isWithdrawn: true,
+        );
+      }
+      if (!_canUseCache(error)) rethrow;
+      final cached = await _cache.getEntry(
+        type: _documentContentType,
+        id: id,
+        scope: _scope,
+      );
+      if (cached == null || cached.isDeleted) rethrow;
+      final value = OutbreakDocumentContent.fromJson(cached.data);
+      final now = _clock().toUtc();
+      if ((value.expiresAt != null && !value.expiresAt!.isAfter(now)) ||
+          now.difference(cached.cachedAt.toUtc()) > _offlineRetention) {
+        await _bestEffortCache(() async {
+          await _cache.tombstone(
+            type: _documentContentType,
+            id: id,
+            scope: _scope,
+          );
+          await _cache.tombstone(type: _documentType, id: id, scope: _scope);
+        });
+        throw const PublicContentUnavailableException(
+          'This cached document can no longer be verified for clinical use.',
+          isWithdrawn: true,
+        );
+      }
+      return PublicContent(
+        value: value,
+        cache: _cacheMetadata(cached, maxAge: _ttl),
+      );
+    }
+  }
+
   Future<PublicPage<PublicOutbreakDocument>> refreshDocuments(
     String outbreakId, {
     OutbreakDocumentQuery query = const OutbreakDocumentQuery(),
@@ -259,10 +500,17 @@ final class OutbreakRepository {
       scope: _scope,
       ttl: _ttl,
       entities: all.map(_documentCacheInput),
-      reconcileMissing:
-          query.identity == const OutbreakDocumentQuery().identity,
+      reconcileMissing: false,
     );
     if (query.identity == const OutbreakDocumentQuery().identity) {
+      await _reconcileDocumentMetadata(
+        outbreakId: parent,
+        activeIds: all.map((document) => document.id).toSet(),
+      );
+      await _reconcileDocumentContent(
+        outbreakId: parent,
+        activeIds: all.map((document) => document.id).toSet(),
+      );
       await _reconcileDocumentDownloads?.call({
         for (final document in all) document.id: document.version,
       });
@@ -281,15 +529,16 @@ final class OutbreakRepository {
         '/api/public/outbreaks/$parent/documents/$id',
       );
       final value = _parseDocument(_data(response));
+      final cacheInput = _documentCacheInput(value);
       await _bestEffortCache(
         () => _cache.put(
           type: _documentType,
           id: id,
           scope: _scope,
           ttl: _ttl,
-          data: value.toJson(),
-          searchableText: _documentSearchText(value),
-          remoteUpdatedAt: value.publishedAt,
+          data: cacheInput.data,
+          searchableText: cacheInput.searchableText,
+          remoteUpdatedAt: cacheInput.remoteUpdatedAt,
         ),
       );
       return PublicContent(
@@ -298,9 +547,14 @@ final class OutbreakRepository {
       );
     } catch (error, stackTrace) {
       if (error is BackendApiException && error.statusCode == 404) {
-        await _bestEffortCache(
-          () => _cache.tombstone(type: _documentType, id: id, scope: _scope),
-        );
+        await _bestEffortCache(() async {
+          await _cache.tombstone(type: _documentType, id: id, scope: _scope);
+          await _cache.tombstone(
+            type: _documentContentType,
+            id: id,
+            scope: _scope,
+          );
+        });
         throw const PublicContentUnavailableException(
           'This document was withdrawn, expired, or is no longer public.',
           isWithdrawn: true,
@@ -317,6 +571,22 @@ final class OutbreakRepository {
       );
       if (cached == null || cached.isDeleted) rethrow;
       final value = PublicOutbreakDocument.fromJson(cached.data);
+      final now = _clock().toUtc();
+      if ((value.expiresAt != null && !value.expiresAt!.isAfter(now)) ||
+          now.difference(cached.cachedAt.toUtc()) > _offlineRetention) {
+        await _bestEffortCache(() async {
+          await _cache.tombstone(type: _documentType, id: id, scope: _scope);
+          await _cache.tombstone(
+            type: _documentContentType,
+            id: id,
+            scope: _scope,
+          );
+        });
+        throw const PublicContentUnavailableException(
+          'This cached document can no longer be verified for clinical use.',
+          isWithdrawn: true,
+        );
+      }
       return PublicContent(
         value: value,
         cache: _cacheMetadata(cached, maxAge: _ttl),
@@ -486,7 +756,19 @@ final class OutbreakRepository {
           scope: _scope,
           ttl: _ttl,
           entities: documents.map(_documentCacheInput),
-          reconcileMissing: true,
+          reconcileMissing: false,
+        ),
+      );
+      await _bestEffortCache(
+        () => _reconcileDocumentMetadata(
+          outbreakId: normalized,
+          activeIds: documents.map((document) => document.id).toSet(),
+        ),
+      );
+      await _bestEffortCache(
+        () => _reconcileDocumentContent(
+          outbreakId: normalized,
+          activeIds: documents.map((document) => document.id).toSet(),
         ),
       );
       await _bestEffortCache(() async {
@@ -1010,13 +1292,166 @@ final class OutbreakRepository {
   CachedEntityInput _documentCacheInput(PublicOutbreakDocument item) =>
       CachedEntityInput(
         id: item.id,
-        data: item.toJson(),
+        data: {
+          ...item.toJson(),
+          '_cache_verified_at': _clock().toUtc().toIso8601String(),
+          '_cache_metadata_text': _documentSearchText(item),
+        },
         searchableText: _documentSearchText(item),
         remoteUpdatedAt: item.publishedAt,
       );
 
-  String _documentSearchText(PublicOutbreakDocument item) =>
-      '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience}';
+  String _documentSearchText(
+    PublicOutbreakDocument item,
+  ) => _normalizeSearchText(
+    '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience} ${item.outbreakTitle} ${item.outbreakDisease} ${item.outbreakArea} ${item.searchSnippet} ${item.matchingHeading}',
+  );
+
+  Future<void> _enrichDocumentSearchCache(
+    OutbreakDocumentContent content,
+  ) async {
+    final existing = await _cache.getEntry(
+      type: _documentType,
+      id: content.documentId,
+      scope: _scope,
+    );
+    if (existing == null || existing.isDeleted) return;
+    final headings = content.sections
+        .map((section) => section.heading.trim())
+        .where((heading) => heading.isNotEmpty)
+        .toList(growable: false);
+    final body = _normalizeSearchText(
+      '${content.content} ${content.sections.map((section) => section.text).join(' ')}',
+    );
+    final data = <String, dynamic>{
+      ...existing.data,
+      '_cache_verified_at': _clock().toUtc().toIso8601String(),
+      '_cache_headings': headings,
+      '_cache_body_text': body,
+    };
+    await _cache.put(
+      type: _documentType,
+      id: content.documentId,
+      scope: _scope,
+      ttl: _ttl,
+      data: data,
+      searchableText:
+          '${data['_cache_metadata_text'] ?? ''} ${headings.join(' ')} $body',
+      version: content.checksumSha256,
+      remoteUpdatedAt: content.publishedAt,
+    );
+  }
+
+  Future<void> _reconcileDocumentContent({
+    required String outbreakId,
+    required Set<String> activeIds,
+  }) async {
+    final cached = await _cache.list(
+      type: _documentContentType,
+      scope: _scope,
+      limit: 1000,
+    );
+    for (final data in cached) {
+      final content = OutbreakDocumentContent.fromJson(data);
+      if (content.outbreakId == outbreakId &&
+          !activeIds.contains(content.documentId)) {
+        await _cache.tombstone(
+          type: _documentContentType,
+          id: content.documentId,
+          scope: _scope,
+        );
+      }
+    }
+  }
+
+  Future<void> _reconcileDocumentMetadata({
+    required String outbreakId,
+    required Set<String> activeIds,
+  }) async {
+    final cached = await _cache.list(
+      type: _documentType,
+      scope: _scope,
+      limit: 1000,
+    );
+    for (final data in cached) {
+      final document = PublicOutbreakDocument.fromJson(data);
+      if (document.outbreakId == outbreakId &&
+          !activeIds.contains(document.id)) {
+        await _cache.tombstone(
+          type: _documentType,
+          id: document.id,
+          scope: _scope,
+        );
+      }
+    }
+  }
+
+  bool _matchesCachedDocument(
+    Map<String, dynamic> data,
+    PublicOutbreakDocument item,
+    OutbreakDocumentQuery query,
+  ) {
+    final withoutSearch = OutbreakDocumentQuery(
+      outbreakId: query.outbreakId,
+      documentKind: query.documentKind,
+      authority: query.authority,
+      language: query.language,
+      audience: query.audience,
+      mimeType: query.mimeType,
+      effectiveFrom: query.effectiveFrom,
+      effectiveTo: query.effectiveTo,
+      sort: query.sort,
+      order: query.order,
+    );
+    if (!withoutSearch.matches(item)) return false;
+    final needle = _normalizeSearchText(query.search);
+    if (needle.isEmpty) return true;
+    return _cachedSearchText(data, item).contains(needle);
+  }
+
+  double _cachedDocumentScore(
+    Map<String, dynamic> data,
+    PublicOutbreakDocument item,
+    String search,
+  ) {
+    final needle = _normalizeSearchText(search);
+    if (needle.isEmpty) return item.searchRelevanceScore;
+    final title = _normalizeSearchText(item.title);
+    final headings = _normalizeSearchText(
+      (data['_cache_headings'] as List? ?? const <Object>[]).join(' '),
+    );
+    final metadata = _normalizeSearchText(
+      data['_cache_metadata_text']?.toString() ?? _documentSearchText(item),
+    );
+    final body = _normalizeSearchText(
+      data['_cache_body_text']?.toString() ?? '',
+    );
+    var score = item.searchRelevanceScore;
+    if (title == needle) {
+      score += 400;
+    } else if (title.startsWith(needle)) {
+      score += 300;
+    } else if (title.contains(needle)) {
+      score += 250;
+    }
+    if (headings.contains(needle)) score += 175;
+    if (metadata.contains(needle)) score += 100;
+    if (body.contains(needle)) score += 50;
+    return score;
+  }
+
+  String _cachedSearchText(
+    Map<String, dynamic> data,
+    PublicOutbreakDocument item,
+  ) => _normalizeSearchText(
+    '${data['_cache_metadata_text'] ?? _documentSearchText(item)} ${(data['_cache_headings'] as List? ?? const <Object>[]).join(' ')} ${data['_cache_body_text'] ?? ''}',
+  );
+
+  String _normalizeSearchText(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
 
   PublicOutbreak _parseOutbreak(Map<String, dynamic> value) =>
       PublicOutbreak.fromJson(
@@ -1031,9 +1466,7 @@ final class OutbreakRepository {
       );
 
   PublicOutbreakDocument _parseDocument(Map<String, dynamic> value) =>
-      PublicOutbreakDocument.fromJson(
-        ServicesPublicOutbreakDocument.fromJson(value).toJson(),
-      );
+      PublicOutbreakDocument.fromJson(value);
 
   PublicOutbreakDetail _detailFromCache(Map<String, dynamic> cached) =>
       PublicOutbreakDetail(

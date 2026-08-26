@@ -712,8 +712,24 @@ export interface HandlersNotificationTemplateVersionsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersOutbreakDocumentContentEnvelope {
+  data?: ServicesPublicOutbreakDocumentContent;
+  success?: boolean;
+}
+
 export interface HandlersOutbreakDocumentEnvelope {
   data?: ServicesPublicOutbreakDocument;
+  success?: boolean;
+}
+
+export interface HandlersOutbreakDocumentInlineError {
+  code?: string;
+  message?: string;
+}
+
+export interface HandlersOutbreakDocumentInlineUnsupportedEnvelope {
+  data?: ServicesPublicOutbreakDocumentContent;
+  error?: HandlersOutbreakDocumentInlineError;
   success?: boolean;
 }
 
@@ -2211,6 +2227,7 @@ export type ModelsNotificationActionTypeEnum =
   | "none"
   | "guideline"
   | "outbreak"
+  | "outbreak_document"
   | "situation_report"
   | "drug"
   | "calculator"
@@ -2490,6 +2507,8 @@ export interface ServicesCalculatorVersionValidationDTO {
 
 export interface ServicesChildContentInput {
   asset_url?: string;
+  description?: string;
+  issuing_organization?: string;
   lock_version?: number;
   resource_type?: string;
   sort_order?: number;
@@ -3357,6 +3376,7 @@ export type ServicesNotificationActionTypeEnum =
   | "none"
   | "guideline"
   | "outbreak"
+  | "outbreak_document"
   | "situation_report"
   | "drug"
   | "calculator"
@@ -3683,14 +3703,21 @@ export interface ServicesOutbreakDocumentAdminDTO {
   asset_url?: string;
   audience?: string;
   author_id?: string;
+  content_format?: string;
   created_at?: string;
+  derived_content_checksum?: string;
   description?: string;
   document_kind?: string;
   document_number?: string;
   effective_date?: string;
   expires_at?: string;
+  extracted_at?: string;
+  extraction_error?: string;
+  extraction_source_checksum?: string;
+  extraction_status?: string;
   file_size?: number;
   id?: string;
+  indexed_at?: string;
   issuing_authority?: string;
   language?: string;
   lock_version?: number;
@@ -3703,9 +3730,12 @@ export interface ServicesOutbreakDocumentAdminDTO {
   review_date?: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  search_index_status?: string;
+  search_schema_version?: number;
   sort_order?: number;
   status?: string;
   supersedes_id?: string;
+  supports_preview?: boolean;
   title?: string;
   updated_at?: string;
   version?: string;
@@ -3729,6 +3759,18 @@ export interface ServicesOutbreakDocumentInput {
   sort_order?: number;
   title?: string;
   version?: string;
+}
+
+export interface ServicesOutbreakDocumentSearchPreview {
+  document_id?: string;
+  indexed_at?: string;
+  matching_heading?: string;
+  matching_pdf_page?: number;
+  matching_section_id?: string;
+  query?: string;
+  search_index_status?: string;
+  searchable?: boolean;
+  snippet?: string;
 }
 
 export interface ServicesOutbreakInput {
@@ -3792,7 +3834,9 @@ export interface ServicesOutbreakResourceAdminDTO {
   asset_url?: string;
   author_id?: string;
   created_at?: string;
+  description?: string;
   id?: string;
+  issuing_organization?: string;
   lock_version?: number;
   outbreak_id?: string;
   published_at?: string;
@@ -4229,6 +4273,8 @@ export interface ServicesPublicOutbreak {
 export interface ServicesPublicOutbreakDocument {
   checksum_sha256?: string;
   audience?: string;
+  content_format?: string;
+  content_url?: string;
   description?: string;
   document_kind?: string;
   document_number?: string;
@@ -4239,23 +4285,68 @@ export interface ServicesPublicOutbreakDocument {
   id?: string;
   issuing_authority?: string;
   language?: string;
+  matching_heading?: string;
+  matching_pdf_page?: number;
+  matching_section_id?: string;
   mime_type?: string;
   original_filename?: string;
+  outbreak_area?: string;
+  outbreak_disease?: string;
   outbreak_id?: string;
+  outbreak_title?: string;
   page_count?: number;
   published_at?: string;
+  reader_url?: string;
   review_date?: string;
+  search_relevance_score?: number;
+  search_snippet?: string;
+  supports_inline?: boolean;
+  supports_offline_download?: boolean;
   title?: string;
   version?: string;
 }
 
-export interface ServicesPublicOutbreakResource {
-  asset_url?: string;
-  id?: string;
+export interface ServicesPublicOutbreakDocumentContent {
+  checksum_sha256?: string;
+  can_read_inline?: boolean;
+  content?: string;
+  document_id?: string;
+  download_url?: string;
+  effective_date?: string;
+  expires_at?: string;
+  format?: string;
+  mime_type?: string;
+  original_available?: boolean;
   outbreak_id?: string;
   published_at?: string;
+  review_date?: string;
+  sections?: ServicesPublicOutbreakDocumentSection[];
+  title?: string;
+}
+
+export interface ServicesPublicOutbreakDocumentSection {
+  heading?: string;
+  id?: string;
+  level?: number;
+  page?: number;
+  text?: string;
+}
+
+export interface ServicesPublicOutbreakResource {
+  asset_url?: string;
+  description?: string;
+  download_capability?: boolean;
+  id?: string;
+  issuing_organization?: string;
+  outbreak_id?: string;
+  outbreak_title?: string;
+  publication_date?: string;
+  published_at?: string;
+  reader_capability?: string;
   resource_type?: string;
   sort_order?: number;
+  target_type?: string;
+  target_url?: string;
   title?: string;
   url?: string;
 }

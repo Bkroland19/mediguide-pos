@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
@@ -604,19 +605,19 @@ class _SearchGroupHeader extends StatelessWidget {
   }
 }
 
-class _SearchResultTile extends StatelessWidget {
+class _SearchResultTile extends ConsumerWidget {
   const _SearchResultTile({required this.result, required this.query});
 
   final SearchResult result;
   final String query;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    final description = result.subtitle ?? result.description;
-
-    final canOpen = result.route?.trim().isNotEmpty == true;
+    final canOpen =
+        result.route?.trim().isNotEmpty == true ||
+        result.externalUrl?.trim().isNotEmpty == true;
 
     return Semantics(
       button: canOpen,
@@ -628,7 +629,40 @@ class _SearchResultTile extends StatelessWidget {
         child: InkWell(
           onTap: !canOpen
               ? null
-              : () {
+              : () async {
+                  await ref
+                      .read(globalSearchControllerProvider.notifier)
+                      .recordSelection(result);
+                  if (!context.mounted) return;
+                  if (result.externalUrl case final String value) {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Open external official resource?'),
+                        content: Text(
+                          'You are leaving MediGuide and opening:\n$value',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(dialogContext, true),
+                            child: const Text('Open website'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      await launchUrl(
+                        Uri.parse(value),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                    return;
+                  }
                   context.push(result.route!, extra: result.item);
                 },
           child: Padding(
@@ -658,18 +692,38 @@ class _SearchResultTile extends StatelessWidget {
 
                       _SearchCategoryLabel(category: result.category),
 
-                      if (description?.trim().isNotEmpty == true) ...[
+                      if (result.subtitle?.trim().isNotEmpty == true) ...[
                         const SizedBox(height: 7),
 
                         _HighlightedText(
-                          text: description!,
+                          text: result.subtitle!,
                           query: query,
-                          maxLines: 3,
+                          maxLines: 2,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: colors.onSurfaceVariant,
                                 height: 1.35,
                               ),
+                        ),
+                      ],
+
+                      if (result.description?.trim().isNotEmpty == true) ...[
+                        const SizedBox(height: 7),
+                        _HighlightedText(
+                          text: result.description!,
+                          query: query,
+                          maxLines: 3,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(height: 1.35),
+                        ),
+                      ],
+
+                      if (result.isOffline || result.isStale) ...[
+                        const SizedBox(height: 8),
+                        _SearchAvailabilityBadge(
+                          offline: result.isOffline,
+                          stale: result.isStale,
                         ),
                       ],
                     ],
@@ -705,10 +759,45 @@ class _SearchResultTile extends StatelessWidget {
       SearchCategory.abbreviations => LucideIcons.languages,
       SearchCategory.faq => LucideIcons.circleHelp,
       SearchCategory.outbreaks => LucideIcons.siren,
+      SearchCategory.outbreakDocuments => LucideIcons.files,
+      SearchCategory.outbreakResources => LucideIcons.externalLink,
       SearchCategory.situationReports => LucideIcons.fileChartColumn,
       SearchCategory.tools => LucideIcons.calculator,
       SearchCategory.all => LucideIcons.search,
     };
+  }
+}
+
+class _SearchAvailabilityBadge extends StatelessWidget {
+  const _SearchAvailabilityBadge({required this.offline, required this.stale});
+
+  final bool offline;
+  final bool stale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          offline ? LucideIcons.cloudOff : LucideIcons.clock3,
+          size: 13,
+          color: colors.onSurfaceVariant,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          offline
+              ? (stale
+                    ? 'Offline cached result · may be stale'
+                    : 'Offline cached result')
+              : 'Cached result · verify online',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
+    );
   }
 }
 

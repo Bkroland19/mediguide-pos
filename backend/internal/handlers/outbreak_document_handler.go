@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/services"
@@ -161,6 +162,71 @@ func (h OutbreakAdminHandler) UploadDocument(c *gin.Context) {
 	h.result(c, http.StatusOK, result, err)
 }
 
+// AdminDocumentContent godoc
+// @Summary Preview server-derived Markdown or plain text for an outbreak document
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentContentEnvelope
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/content [get]
+func (h OutbreakAdminHandler) AdminDocumentContent(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentContent(id, documentID)
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) || errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"success": false,
+			"error":   gin.H{"code": outbreakDocumentContentErrorCode(err), "message": err.Error()},
+			"data":    result,
+		})
+		return
+	}
+	h.result(c, http.StatusOK, result, err)
+}
+
+// DocumentSearchPreview godoc
+// @Summary Preview how a query matches server-derived outbreak document content
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Param query query string true "Search phrase (2-200 characters)"
+// @Success 200 {object} services.OutbreakDocumentSearchPreview
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/search-preview [get]
+func (h OutbreakAdminHandler) DocumentSearchPreview(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentSearchPreview(id, documentID, c.Query("query"))
+	h.result(c, http.StatusOK, result, err)
+}
+
+// ReprocessDocument godoc
+// @Summary Rebuild safe search and preview content from the immutable managed file
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Param payload body services.TransitionInput true "Current optimistic lock version"
+// @Success 200 {object} services.OutbreakDocumentAdminDTO
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/reprocess [post]
+func (h OutbreakAdminHandler) ReprocessDocument(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	input, ok := bindTransition(c)
+	if !ok {
+		return
+	}
+	result, err := h.Service.ReprocessDocument(c.Request.Context(), outbreakActor(c), id, documentID, input.LockVersion)
+	h.result(c, http.StatusOK, result, err)
+}
+
 // TransitionDocument godoc
 // @Summary Submit, approve, publish, or withdraw an outbreak document
 // @Tags outbreak-document-administration
@@ -295,6 +361,126 @@ func (h OutbreakHandler) Documents(c *gin.Context) {
 	}
 	result, err := h.Service.Documents(id, services.OutbreakDocumentQuery{Page: page, Search: c.Query("search"), DocumentKind: c.Query("document_kind"), Authority: c.Query("issuing_authority"), Language: c.Query("language"), Audience: c.Query("audience"), EffectiveFrom: from, EffectiveTo: to, Sort: c.Query("sort"), Order: c.Query("order")})
 	h.result(c, result, err)
+}
+
+// SearchDocuments godoc
+// @Summary Search published effective outbreak documents across all outbreaks
+// @Tags public-outbreaks
+// @Param search query string false "Title, metadata, outbreak or extracted-content search"
+// @Param outbreak_id query string false "Parent outbreak UUID"
+// @Param document_kind query string false "Document classification"
+// @Param issuing_authority query string false "Issuing authority"
+// @Param language query string false "Language code"
+// @Param audience query string false "Intended audience"
+// @Param mime_type query string false "Exact MIME type (charset parameters are ignored)"
+// @Param effective_from query string false "Effective at or after"
+// @Param effective_to query string false "Effective at or before"
+// @Param sort query string false "Allowlisted sort field"
+// @Param order query string false "asc or desc"
+// @Success 200 {object} handlers.PaginatedOutbreakDocumentsEnvelope
+// @Router /api/public/outbreak-documents [get]
+func (h OutbreakHandler) SearchDocuments(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	from, to, ok := outbreakDateRange(c, "effective_from", "effective_to")
+	if !ok {
+		return
+	}
+	var outbreakID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("outbreak_id")); raw != "" {
+		parsed, parseErr := uuid.Parse(raw)
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid outbreak_id")
+			return
+		}
+		outbreakID = &parsed
+	}
+	result, err := h.Service.SearchDocuments(services.OutbreakDocumentQuery{Page: page, Search: c.Query("search"), OutbreakID: outbreakID, DocumentKind: c.Query("document_kind"), Authority: c.Query("issuing_authority"), Language: c.Query("language"), Audience: c.Query("audience"), MIMEType: c.Query("mime_type"), EffectiveFrom: from, EffectiveTo: to, Sort: c.Query("sort"), Order: c.Query("order")})
+	h.result(c, result, err)
+}
+
+// GetDocumentGlobal godoc
+// @Summary Get a published effective outbreak document without its parent route
+// @Tags public-outbreaks
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentEnvelope
+// @Router /api/public/outbreak-documents/{documentId} [get]
+func (h OutbreakHandler) GetDocumentGlobal(c *gin.Context) {
+	id, ok := outbreakUUID(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.GetDocumentGlobal(id)
+	h.result(c, result, err)
+}
+
+// DocumentContent godoc
+// @Summary Read approved derived Markdown or plain-text outbreak document content
+// @Tags public-outbreaks
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentContentEnvelope
+// @Failure 415 {object} handlers.OutbreakDocumentInlineUnsupportedEnvelope
+// @Failure 422 {object} handlers.OutbreakDocumentInlineUnsupportedEnvelope
+// @Router /api/public/outbreak-documents/{documentId}/content [get]
+func (h OutbreakHandler) DocumentContent(c *gin.Context) {
+	id, ok := outbreakUUID(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentContent(id)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		httpx.Error(c, http.StatusNotFound, "readable outbreak document content not found")
+		return
+	}
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) || errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+		status := http.StatusUnsupportedMediaType
+		if errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+			status = http.StatusUnprocessableEntity
+		}
+		c.Header("Cache-Control", "no-store")
+		c.JSON(status, gin.H{
+			"success": false,
+			"error":   gin.H{"code": outbreakDocumentContentErrorCode(err), "message": err.Error()},
+			"data":    result,
+		})
+		return
+	}
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, "failed to load outbreak document content")
+		return
+	}
+	etag := `"` + result.ChecksumSHA256 + `"`
+	c.Header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+	c.Header("Vary", "Accept-Encoding")
+	c.Header("X-Content-Type-Options", "nosniff")
+	if result.ChecksumSHA256 != "" {
+		c.Header("ETag", etag)
+	}
+	if result.ChecksumSHA256 != "" && outbreakDocumentETagMatches(c.GetHeader("If-None-Match"), etag) {
+		c.Status(http.StatusNotModified)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": result})
+}
+
+func outbreakDocumentContentErrorCode(err error) string {
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) {
+		return "inline_reading_unsupported"
+	}
+	return "derived_content_unavailable"
+}
+
+func outbreakDocumentETagMatches(header, etag string) bool {
+	for _, candidate := range strings.Split(header, ",") {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "*" || candidate == etag || strings.TrimPrefix(candidate, "W/") == etag {
+			return true
+		}
+	}
+	return false
 }
 
 // GetDocument godoc

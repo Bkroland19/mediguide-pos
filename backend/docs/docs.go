@@ -491,6 +491,206 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/outbreak-documents": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Search published effective outbreak documents across all outbreaks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title, metadata, outbreak or extracted-content search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent outbreak UUID",
+                        "name": "outbreak_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document classification",
+                        "name": "document_kind",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Issuing authority",
+                        "name": "issuing_authority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Language code",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Intended audience",
+                        "name": "audience",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact MIME type (charset parameters are ignored)",
+                        "name": "mime_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or after",
+                        "name": "effective_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or before",
+                        "name": "effective_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreakDocumentsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreak-documents/{documentId}": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Get a published effective outbreak document without its parent route",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreak-documents/{documentId}/content": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Read approved derived Markdown or plain-text outbreak document content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentContentEnvelope"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentInlineUnsupportedEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentInlineUnsupportedEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreak-resources": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Search safe, published outbreak quick resources",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title, description, issuer, or outbreak title",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "outbreak_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource type",
+                        "name": "resource_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "guideline, situation_report, internal_route, or external_url",
+                        "name": "target_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "title, publication_date, or sort_order",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreakResourcesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/outbreaks": {
             "get": {
                 "tags": [
@@ -11706,6 +11906,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/content": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Preview server-derived Markdown or plain text for an outbreak document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentContentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/outbreaks/{id}/documents/{documentId}/corrections": {
             "post": {
                 "security": [
@@ -11824,6 +12061,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/reprocess": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Rebuild safe search and preview content from the immutable managed file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Current optimistic lock version",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/outbreaks/{id}/documents/{documentId}/review-comments": {
             "post": {
                 "security": [
@@ -11849,6 +12132,50 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/search-preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Preview how a query matches server-derived outbreak document content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search phrase (2-200 characters)",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakDocumentSearchPreview"
+                        }
                     }
                 }
             }
@@ -16963,11 +17290,47 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.OutbreakDocumentContentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicOutbreakDocumentContent"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.OutbreakDocumentEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
                     "$ref": "#/definitions/services.PublicOutbreakDocument"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.OutbreakDocumentInlineError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.OutbreakDocumentInlineUnsupportedEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicOutbreakDocumentContent"
+                },
+                "error": {
+                    "$ref": "#/definitions/handlers.OutbreakDocumentInlineError"
                 },
                 "success": {
                     "type": "boolean"
@@ -20757,6 +21120,7 @@ const docTemplate = `{
                         "none",
                         "guideline",
                         "outbreak",
+                        "outbreak_document",
                         "situation_report",
                         "drug",
                         "calculator",
@@ -21522,6 +21886,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "asset_url": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "issuing_organization": {
                     "type": "string"
                 },
                 "lock_version": {
@@ -23919,6 +24289,7 @@ const docTemplate = `{
                         "none",
                         "guideline",
                         "outbreak",
+                        "outbreak_document",
                         "situation_report",
                         "drug",
                         "calculator",
@@ -24862,7 +25233,13 @@ const docTemplate = `{
                 "checksum_sha256": {
                     "type": "string"
                 },
+                "content_format": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "derived_content_checksum": {
                     "type": "string"
                 },
                 "description": {
@@ -24880,10 +25257,25 @@ const docTemplate = `{
                 "expires_at": {
                     "type": "string"
                 },
+                "extracted_at": {
+                    "type": "string"
+                },
+                "extraction_error": {
+                    "type": "string"
+                },
+                "extraction_source_checksum": {
+                    "type": "string"
+                },
+                "extraction_status": {
+                    "type": "string"
+                },
                 "file_size": {
                     "type": "integer"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "indexed_at": {
                     "type": "string"
                 },
                 "issuing_authority": {
@@ -24922,6 +25314,12 @@ const docTemplate = `{
                 "reviewed_by": {
                     "type": "string"
                 },
+                "search_index_status": {
+                    "type": "string"
+                },
+                "search_schema_version": {
+                    "type": "integer"
+                },
                 "sort_order": {
                     "type": "integer"
                 },
@@ -24930,6 +25328,9 @@ const docTemplate = `{
                 },
                 "supersedes_id": {
                     "type": "string"
+                },
+                "supports_preview": {
+                    "type": "boolean"
                 },
                 "title": {
                     "type": "string"
@@ -24994,6 +25395,38 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.OutbreakDocumentSearchPreview": {
+            "type": "object",
+            "properties": {
+                "document_id": {
+                    "type": "string"
+                },
+                "indexed_at": {
+                    "type": "string"
+                },
+                "matching_heading": {
+                    "type": "string"
+                },
+                "matching_pdf_page": {
+                    "type": "integer"
+                },
+                "matching_section_id": {
+                    "type": "string"
+                },
+                "query": {
+                    "type": "string"
+                },
+                "search_index_status": {
+                    "type": "string"
+                },
+                "searchable": {
+                    "type": "boolean"
+                },
+                "snippet": {
                     "type": "string"
                 }
             }
@@ -25149,7 +25582,13 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "issuing_organization": {
                     "type": "string"
                 },
                 "lock_version": {
@@ -26377,6 +26816,12 @@ const docTemplate = `{
                 "checksum_sha256": {
                     "type": "string"
                 },
+                "content_format": {
+                    "type": "string"
+                },
+                "content_url": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -26407,13 +26852,31 @@ const docTemplate = `{
                 "language": {
                     "type": "string"
                 },
+                "matching_heading": {
+                    "type": "string"
+                },
+                "matching_pdf_page": {
+                    "type": "integer"
+                },
+                "matching_section_id": {
+                    "type": "string"
+                },
                 "mime_type": {
                     "type": "string"
                 },
                 "original_filename": {
                     "type": "string"
                 },
+                "outbreak_area": {
+                    "type": "string"
+                },
+                "outbreak_disease": {
+                    "type": "string"
+                },
                 "outbreak_id": {
+                    "type": "string"
+                },
+                "outbreak_title": {
                     "type": "string"
                 },
                 "page_count": {
@@ -26422,13 +26885,101 @@ const docTemplate = `{
                 "published_at": {
                     "type": "string"
                 },
+                "reader_url": {
+                    "type": "string"
+                },
                 "review_date": {
                     "type": "string"
+                },
+                "search_relevance_score": {
+                    "type": "number"
+                },
+                "search_snippet": {
+                    "type": "string"
+                },
+                "supports_inline": {
+                    "type": "boolean"
+                },
+                "supports_offline_download": {
+                    "type": "boolean"
                 },
                 "title": {
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakDocumentContent": {
+            "type": "object",
+            "properties": {
+                "can_read_inline": {
+                    "type": "boolean"
+                },
+                "checksum_sha256": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "document_id": {
+                    "type": "string"
+                },
+                "download_url": {
+                    "type": "string"
+                },
+                "effective_date": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_available": {
+                    "type": "boolean"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicOutbreakDocumentSection"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakDocumentSection": {
+            "type": "object",
+            "properties": {
+                "heading": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "text": {
                     "type": "string"
                 }
             }
@@ -26439,13 +26990,31 @@ const docTemplate = `{
                 "asset_url": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
+                "download_capability": {
+                    "type": "boolean"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "issuing_organization": {
                     "type": "string"
                 },
                 "outbreak_id": {
                     "type": "string"
                 },
+                "outbreak_title": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
                 "published_at": {
+                    "type": "string"
+                },
+                "reader_capability": {
                     "type": "string"
                 },
                 "resource_type": {
@@ -26453,6 +27022,12 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer"
+                },
+                "target_type": {
+                    "type": "string"
+                },
+                "target_url": {
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"

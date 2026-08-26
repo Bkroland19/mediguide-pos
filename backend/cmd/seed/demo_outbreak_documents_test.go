@@ -7,10 +7,12 @@ import (
 	"encoding/hex"
 	"io"
 	"net/url"
+	"path"
 	"testing"
 	"time"
 
 	"mediguide/internal/models"
+	"mediguide/internal/services"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -54,7 +56,8 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	outbreakID := demoID("outbreak", "bundibugyo-uganda-2026")
-	if err := database.Create(&models.Outbreak{Base: models.Base{ID: outbreakID}, Title: "Demo outbreak", Status: "published", LastUpdate: time.Now().UTC()}).Error; err != nil {
+	publishedAt := time.Date(2026, time.May, 16, 12, 0, 0, 0, time.UTC)
+	if err := database.Create(&models.Outbreak{Base: models.Base{ID: outbreakID}, Title: "Demo outbreak", Status: "published", PublishedAt: &publishedAt, LastUpdate: time.Now().UTC()}).Error; err != nil {
 		t.Fatal(err)
 	}
 	authorID := uuid.New()
@@ -83,7 +86,7 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 	}
 
 	seenKinds := map[string]bool{}
-	for _, row := range rows {
+	for index, row := range rows {
 		content, exists := store.objects[row.StorageKey]
 		if !exists || len(content) == 0 {
 			t.Fatalf("published seed %s references a missing object %q", row.ID, row.StorageKey)
@@ -91,6 +94,10 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 		digest := sha256.Sum256(content)
 		if row.ChecksumSHA256 != hex.EncodeToString(digest[:]) || row.FileSize != int64(len(content)) {
 			t.Fatalf("stored metadata does not match fixture for %s", row.ID)
+		}
+		projection := services.DeriveOutbreakDocumentProjection(path.Ext(fixtures[index].Fixture), content)
+		if row.ExtractionStatus != "ready" || row.SearchIndexStatus != "indexed" || row.IndexedAt == nil || row.ExtractedAt == nil || row.ExtractionSourceChecksum != row.ChecksumSHA256 || row.DerivedContentChecksum != projection.Checksum || row.SearchSchemaVersion != services.OutbreakDocumentSearchSchemaVersion || row.SearchContent != projection.Search || row.SearchHeadings != projection.Headings || row.RenderedContent != projection.Rendered || !bytes.Equal(row.ContentSections, projection.SectionsJSON) || !bytes.Equal(row.SourcePageMap, projection.PageMapJSON) {
+			t.Fatalf("seeded document is not honestly extracted and indexed for %s: %#v", row.ID, row)
 		}
 		if row.ID != demoID("outbreak-document", fixtures[len(seenKinds)].Key) {
 			t.Fatalf("document ID is not deterministic for sort position %d", len(seenKinds))
