@@ -150,6 +150,51 @@ describe("GuidelineMarkdownEditor", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("opens large drafts in edit mode without mounting the full preview", () => {
+    const largeContent = `# Large guideline\n\n${"Reviewed clinical content.\n".repeat(3_500)}`
+
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-large"
+        documentTitle="Large guideline"
+        versionLabel="1.0"
+        initialContent={largeContent}
+        editable
+        published={false}
+      />,
+    )
+
+    expect(screen.getByRole("textbox", { name: "Markdown source" })).toBeInTheDocument()
+    expect(screen.queryByRole("article", { name: "Rendered Markdown preview" })).not.toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Edit" })).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("opens review and activity when an older API returns null empty lists", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(GuidelineMarkdownService, "reviewAssignments").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "reviewerCandidates").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "editorComments").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "activity").mockResolvedValue(null as never)
+
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-empty-review"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
+        initialContent="# Reviewable guideline"
+        editable
+        published={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Review & activity" }))
+
+    const dialog = await screen.findByRole("dialog", { name: "Review and activity" })
+    expect(within(dialog).getByText("No reviewers assigned.")).toBeInTheDocument()
+    expect(within(dialog).getByText("No review comments.")).toBeInTheDocument()
+    expect(within(dialog).getByText("No editorial activity recorded.")).toBeInTheDocument()
+  })
+
   it("supports the keyboard save shortcut", async () => {
     const saveDraft = vi
       .spyOn(GuidelineMarkdownService, "saveDraft")
@@ -345,5 +390,62 @@ describe("GuidelineMarkdownEditor", () => {
       )
       expect(routerPush).toHaveBeenCalledWith("/guidelines/document-1/versions/new-version/markdown")
     })
+  })
+
+  it("restores a pending regeneration review and opens its pending blocks", async () => {
+    const user = userEvent.setup()
+    const initialDraft = savedDraft("# Regenerated")
+    initialDraft.revision = {
+      ...initialDraft.revision,
+      regeneration_job_id: "job-1",
+      structured_content_status: "review_required",
+    }
+
+    vi.spyOn(GuidelineMarkdownService, "validate").mockRejectedValue(
+      new Error("validation unavailable"),
+    )
+    vi.spyOn(
+      GuidelineMarkdownService,
+      "regenerationReview",
+    ).mockResolvedValue({
+      id: "review-1",
+      version_id: "version-1",
+      revision_id: "revision-1",
+      job_id: "job-1",
+      status: "pending",
+      before_snapshot: {},
+      after_snapshot: {},
+      comparison: {},
+      outstanding_high_risk_blocks: 17,
+      pending_high_risk_blocks: [],
+      pending_high_risk_blocks_truncated: false,
+    })
+    vi.spyOn(GuidelineMarkdownService, "reviewComments").mockResolvedValue([])
+
+    render(
+      <GuidelineMarkdownEditor
+        documentId="document-1"
+        versionId="version-1"
+        documentTitle="Clinical guideline"
+        versionLabel="1.0"
+        initialContent={initialDraft.content}
+        initialDraft={initialDraft}
+        editable
+        published={false}
+      />,
+    )
+
+    const button = await screen.findByRole("button", {
+      name: "Review pending blocks",
+    })
+    expect(
+      screen.getByText("17 high-risk blocks require a decision"),
+    ).toBeInTheDocument()
+
+    await user.click(button)
+
+    expect(routerPush).toHaveBeenCalledWith(
+      "/guidelines/document-1/versions/version-1/review?focus=pending-high-risk",
+    )
   })
 })

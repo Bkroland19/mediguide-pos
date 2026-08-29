@@ -275,8 +275,25 @@ func TestRegenerationCancellationRetryAndReviewGate(t *testing.T) {
 	if !errors.Is(err, ErrRegenerationReviewIncomplete) {
 		t.Fatalf("unreviewed high-risk block was accepted: %v", err)
 	}
+	pendingReview, err := service.GetRegenerationReview(version.ID, queued.Job.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pendingReview.OutstandingHighRiskBlocks != 1 || len(pendingReview.PendingHighRiskBlocks) != 1 {
+		t.Fatalf("pending review progress was not exposed: %#v", pendingReview)
+	}
+	if pendingReview.PendingHighRiskBlocks[0].ID != block.ID || pendingReview.PendingHighRiskBlocks[0].Type != models.GuidelineBlockWarning {
+		t.Fatalf("wrong pending block returned: %#v", pendingReview.PendingHighRiskBlocks[0])
+	}
 	if err := service.DB.Model(&block).Update("review_status", models.GuidelineBlockReviewed).Error; err != nil {
 		t.Fatal(err)
+	}
+	clearedReview, err := service.GetRegenerationReview(version.ID, queued.Job.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clearedReview.OutstandingHighRiskBlocks != 0 || len(clearedReview.PendingHighRiskBlocks) != 0 {
+		t.Fatalf("review progress did not clear after approval: %#v", clearedReview)
 	}
 	review, err := service.DecideRegenerationReview(version.ID, queued.Job.ID, actorID, true, RegenerationDecisionInput{Comment: "Reviewed against source"})
 	if err != nil {
@@ -284,6 +301,25 @@ func TestRegenerationCancellationRetryAndReviewGate(t *testing.T) {
 	}
 	if review.Status != "accepted" {
 		t.Fatalf("unexpected review status %s", review.Status)
+	}
+}
+
+func TestSupersededRegenerationCannotBeRetried(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued, err := service.RegenerateMarkdown(version.ID, actorID, MarkdownRegenerationInput{RevisionID: draft.Revision.ID, IdempotencyKey: "superseded-retry"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.IngestionJob{}).Where("id=?", queued.Job.ID).Updates(map[string]any{"status": "canceled", "progress_stage": "superseded"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.RetryRegenerationJob(version.ID, queued.Job.ID, actorID)
+	if !errors.Is(err, ErrRegenerationJobConflict) {
+		t.Fatalf("expected superseded job retry conflict, got %v", err)
 	}
 }
 

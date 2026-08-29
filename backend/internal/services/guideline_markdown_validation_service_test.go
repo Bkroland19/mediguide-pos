@@ -30,7 +30,7 @@ func TestValidateMarkdownDocumentReportsUnsafeAndStructuralIssues(t *testing.T) 
 }
 
 func TestValidateMarkdownDocumentFlagsHighRiskReviewWithoutChangingClinicalText(t *testing.T) {
-	content := "# Dose\n\n:::dosage title=Adult\nGive 5 mg orally daily.\n:::\n\n| Drug | Dose |\n| --- | --- |\n| A | 5 mg |"
+	content := "# Dose\n\n:::dosage title=Adult\nGive 5 mg orally daily.\n:::\n\n**Table 1. Adult doses**\n\n| Drug | Dose |\n| --- | --- |\n| A | 5 mg |"
 	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
 	for _, issue := range result.Issues {
 		if issue.Severity == "error" {
@@ -40,14 +40,18 @@ func TestValidateMarkdownDocumentFlagsHighRiskReviewWithoutChangingClinicalText(
 	if !result.Valid {
 		t.Fatal("expected valid Markdown")
 	}
-	found := false
+	foundCallout := false
+	foundTable := false
 	for _, issue := range result.Issues {
 		if issue.Code == "high_risk_review_required" {
-			found = true
+			foundCallout = true
+		}
+		if issue.Code == "high_risk_table_review_required" && issue.Message == `Clinical table "Table 1. Adult doses" requires explicit publisher review after regeneration.` {
+			foundTable = true
 		}
 	}
-	if !found {
-		t.Fatal("expected high-risk review warning")
+	if !foundCallout || !foundTable {
+		t.Fatalf("expected named high-risk review warnings: %#v", result.Issues)
 	}
 }
 
@@ -63,5 +67,42 @@ func TestValidateMarkdownDocumentRejectsEmptyCalloutAndMissingReference(t *testi
 		if !found {
 			t.Errorf("missing %s", code)
 		}
+	}
+}
+
+func TestValidateMarkdownDocumentAcceptsTrailingEmptyTableCells(t *testing.T) {
+	content := "# Assessment\n\n| Area | Finding | Primary | Secondary | Tertiary |\n| --- | --- | --- | --- | --- |\n| History | Confirm diagnosis | x |  |  |\n| Examination | Assess complications | x | x |  |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			t.Fatalf("valid empty table cells were rejected: %#v", result.Issues)
+		}
+	}
+	if !result.Valid {
+		t.Fatalf("expected valid Markdown: %#v", result.Issues)
+	}
+}
+
+func TestValidateMarkdownDocumentKeepsEscapedAndCodePipesInTableCells(t *testing.T) {
+	content := "# Assessment\n\n| Label | Expression | Notes |\n| --- | --- | --- |\n| Choice | A \\| B | `x | y` |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			t.Fatalf("literal pipes were counted as columns: %#v", result.Issues)
+		}
+	}
+}
+
+func TestValidateMarkdownDocumentRejectsRealTableColumnMismatch(t *testing.T) {
+	content := "# Assessment\n\n| One | Two | Three |\n| --- | --- | --- |\n| A | B |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			found = true
+		}
+	}
+	if !found || result.Valid {
+		t.Fatalf("expected malformed table error: %#v", result.Issues)
 	}
 }

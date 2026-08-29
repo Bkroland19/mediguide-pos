@@ -98,6 +98,7 @@ import {
   RegenerationReview,
   RegenerationReviewComment,
   GuidelineReviewAssignment,
+  GuidelineReviewerCandidate,
   GuidelineEditorComment,
   GuidelineActivityItem,
 } from "@/services/guideline-markdown.service"
@@ -228,7 +229,7 @@ export function GuidelineMarkdownEditor({
   const [content, setContent] = React.useState(initialContent)
   const [savedContent, setSavedContent] = React.useState(initialContent)
   const [draft, setDraft] = React.useState<MarkdownDraft | null>(initialDraft)
-  const [mode, setMode] = React.useState<MarkdownViewMode>(editable ? "split" : "preview")
+  const [mode, setMode] = React.useState<MarkdownViewMode>(editable ? (initialContent.length >= 80_000 ? "edit" : "split") : "preview")
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null)
@@ -242,6 +243,7 @@ export function GuidelineMarkdownEditor({
   const [collaborationOpen, setCollaborationOpen] = React.useState(false)
   const [collaborationLoading, setCollaborationLoading] = React.useState(false)
   const [assignments, setAssignments] = React.useState<GuidelineReviewAssignment[]>([])
+  const [reviewerCandidates, setReviewerCandidates] = React.useState<GuidelineReviewerCandidate[]>([])
   const [editorComments, setEditorComments] = React.useState<GuidelineEditorComment[]>([])
   const [activity, setActivity] = React.useState<GuidelineActivityItem[]>([])
   const [reviewerId, setReviewerId] = React.useState("")
@@ -309,9 +311,13 @@ export function GuidelineMarkdownEditor({
   }, [documentId, initialDraft?.revision.document_id, versionId])
   const dirty = canEdit && content !== savedContent
   const headings = React.useMemo(() => markdownHeadings(content), [content])
+  const headingsRef = React.useRef(headings)
+  headingsRef.current = headings
   const localIssues = React.useMemo(() => validateMarkdown(content), [content])
   const issues = !dirty && serverIssues.length > 0 ? serverIssues : localIssues
+  const displayedIssues = React.useMemo(() => issues.slice(0, 150), [issues])
   const stats = React.useMemo(() => markdownStats(content), [content])
+  const regenerationSuperseded = regenerationJob?.job.progress_stage === "superseded"
   const visibleHeadings = React.useMemo(() => headings.filter((heading, index) => {
     if (!heading.text.toLowerCase().includes(outlineSearch.toLowerCase())) return false
     if (outlineSearch.trim()) return true
@@ -516,6 +522,35 @@ export function GuidelineMarkdownEditor({
 
   React.useEffect(() => {
     const jobId = draft?.revision.regeneration_job_id
+    const status = draft?.revision.structured_content_status
+    if (!jobId || regenerationReview || !["review_required", "approved"].includes(status ?? "")) return
+
+    let active = true
+    const restoreReview = async () => {
+      try {
+        const [review, comments] = await Promise.all([
+          GuidelineMarkdownService.regenerationReview(versionId, jobId),
+          GuidelineMarkdownService.reviewComments(versionId, jobId),
+        ])
+        if (!active) return
+        setRegenerationReview(review)
+        setReviewComments(comments)
+      } catch {
+        // The editor remains usable if an older backend has no persisted review.
+      }
+    }
+
+    void restoreReview()
+    return () => { active = false }
+  }, [
+    draft?.revision.regeneration_job_id,
+    draft?.revision.structured_content_status,
+    regenerationReview,
+    versionId,
+  ])
+
+  React.useEffect(() => {
+    const jobId = draft?.revision.regeneration_job_id
     if (!draft || !jobId || !["queued", "processing"].includes(draft.revision.structured_content_status)) return
     let active = true
     const refresh = async () => {
@@ -531,8 +566,15 @@ export function GuidelineMarkdownEditor({
             setRegenerationReview(await GuidelineMarkdownService.regenerationReview(versionId,jobId))
             setReviewComments(await GuidelineMarkdownService.reviewComments(versionId,jobId))
           }
-          if (job.job.status === "failed") showToast.error("Regeneration failed", job.job.error || "The worker could not regenerate this revision.")
-          else showToast.success("Regeneration updated", `Regeneration is ${job.job.status}.`)
+          if (job.job.status === "failed") {
+            showToast.error("Regeneration failed", job.job.error || "The worker could not regenerate this revision.")
+          } else if (job.job.progress_stage === "superseded") {
+            showToast.warning("Regeneration stopped", "A newer saved Markdown revision became current. Reload it before regenerating again.")
+          } else if (job.job.status === "canceled") {
+            showToast.info("Regeneration canceled", "The saved Markdown revision was not changed.")
+          } else {
+            showToast.success("Regeneration completed", "The current Markdown revision is ready for editorial review.")
+          }
         }
       } catch { /* Retain the last known status and retry. */ }
     }
@@ -617,14 +659,18 @@ export function GuidelineMarkdownEditor({
   const loadCollaboration = async () => {
     setCollaborationLoading(true)
     try {
-      const [nextAssignments, nextComments, nextActivity] = await Promise.all([
+      const [nextAssignments, nextReviewers, nextComments, nextActivity] = await Promise.all([
         GuidelineMarkdownService.reviewAssignments(versionId),
+        GuidelineMarkdownService.reviewerCandidates(),
         GuidelineMarkdownService.editorComments(versionId),
         GuidelineMarkdownService.activity(versionId),
       ])
-      setAssignments(nextAssignments)
-      setEditorComments(nextComments)
-      setActivity(nextActivity)
+      // Older API deployments serialized empty Go slices as `data: null`.
+      // Keep the review workspace resilient while those deployments roll forward.
+      setAssignments(Array.isArray(nextAssignments) ? nextAssignments : [])
+      setReviewerCandidates(Array.isArray(nextReviewers) ? nextReviewers : [])
+      setEditorComments(Array.isArray(nextComments) ? nextComments : [])
+      setActivity(Array.isArray(nextActivity) ? nextActivity : [])
       setCollaborationOpen(true)
     } catch (error) {
       showToast.error("Review workspace unavailable", error instanceof Error ? error.message : "Could not load collaboration data")
@@ -728,8 +774,32 @@ export function GuidelineMarkdownEditor({
 
   const decideRegeneration = async (decision:"accept"|"reject") => {
     const jobId=draft?.revision.regeneration_job_id;if(!jobId)return
-    try { const review=await GuidelineMarkdownService.decideRegeneration(versionId,jobId,decision,reviewComment);setRegenerationReview(review);setReviewComment("");setDraft(await GuidelineMarkdownService.loadDraft(versionId));showToast.success(`Regeneration ${decision}ed`) }
+    try {
+      if (decision === "accept") {
+        const currentReview = await GuidelineMarkdownService.regenerationReview(versionId, jobId)
+        setRegenerationReview(currentReview)
+        const outstanding = currentReview.outstanding_high_risk_blocks ?? 0
+        if (outstanding > 0) {
+          showToast.error(
+            "Clinical review is incomplete",
+            `${outstanding} high-risk block${outstanding === 1 ? "" : "s"} must be approved in Editorial Review.`,
+          )
+          return
+        }
+      }
+      const review=await GuidelineMarkdownService.decideRegeneration(versionId,jobId,decision,reviewComment);setRegenerationReview(review);setReviewComment("");setDraft(await GuidelineMarkdownService.loadDraft(versionId));showToast.success(`Regeneration ${decision}ed`)
+    }
     catch(error){showToast.error("Review decision failed",error instanceof Error?error.message:"Could not save the review decision")}
+  }
+
+  const refreshRegenerationReview = async () => {
+    const jobId = draft?.revision.regeneration_job_id
+    if (!jobId) return
+    try {
+      setRegenerationReview(await GuidelineMarkdownService.regenerationReview(versionId, jobId))
+    } catch (error) {
+      showToast.error("Review status unavailable", error instanceof Error ? error.message : "Could not refresh review status")
+    }
   }
 
   const addReviewComment = async () => {
@@ -816,7 +886,7 @@ export function GuidelineMarkdownEditor({
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return
       const cursor = update.state.selection.main.head
-      const next = markdownHeadings(update.state.doc.toString()).findLastIndex((heading) => heading.from <= cursor)
+      const next = headingsRef.current.findLastIndex((heading) => heading.from <= cursor)
       setActiveHeading(Math.max(0, next))
     }),
     ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),
@@ -955,16 +1025,19 @@ export function GuidelineMarkdownEditor({
         )}
         {!online && <Alert className="m-4 mb-0"><CloudOff className="h-4 w-4" /><AlertTitle>Working offline</AlertTitle><AlertDescription>Your text is retained locally. Server saving resumes after reconnection.</AlertDescription></Alert>}
         {published && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Published version</AlertTitle><AlertDescription>Published Markdown is immutable. Create a new version to revise it.</AlertDescription></Alert>}
+        {!published && issues.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Markdown validation guidance</AlertTitle><AlertDescription><strong>Errors block regeneration.</strong> Warnings are advisory and do not stop regeneration. Warnings about clinical callouts, tables, dosages, or units identify content that must be checked in Editorial Review before publication.</AlertDescription></Alert>}
         {renamedAnchors.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Stable section anchor retained</AlertTitle><AlertDescription>{renamedAnchors.length} renamed heading{renamedAnchors.length === 1 ? "" : "s"} will retain revision metadata anchors. Review inbound links before publication.</AlertDescription></Alert>}
         {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
         {regenerationJob && <Alert className="m-4 mb-0 print:hidden">
           <Clock3 className="h-4 w-4" />
-          <AlertTitle>Regeneration: {regenerationJob.job.progress_stage.replaceAll("_"," ")} ({regenerationJob.job.progress_percent}%)</AlertTitle>
+          <AlertTitle>{regenerationSuperseded ? "Regeneration stopped: newer revision" : `Regeneration: ${regenerationJob.job.progress_stage.replaceAll("_"," ")} (${regenerationJob.job.progress_percent}%)`}</AlertTitle>
           <AlertDescription>
+            {regenerationSuperseded && <p className="mt-2">This job is bound to an older immutable revision. Reload the current saved revision, then start a new regeneration. Retrying this stale job is intentionally disabled.</p>}
             <div className="mt-2 h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{width:`${regenerationJob.job.progress_percent}%`}} /></div>
             <div className="mt-2 flex flex-wrap gap-2">
               {["queued","running","cancel_requested"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.cancelRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job})}catch(error){showToast.error("Cancellation unavailable",error instanceof Error?error.message:"Could not cancel")}}}>Cancel safely</Button>}
-              {["failed","canceled"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.retryRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job});setDraft((current)=>current?{...current,revision:{...current.revision,structured_content_status:"queued"}}:current)}catch(error){showToast.error("Retry unavailable",error instanceof Error?error.message:"Could not retry")}}}>Retry</Button>}
+              {["failed","canceled"].includes(regenerationJob.job.status) && !regenerationSuperseded && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.retryRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job});setDraft((current)=>current?{...current,revision:{...current.revision,structured_content_status:"queued"}}:current)}catch(error){showToast.error("Retry unavailable",error instanceof Error?error.message:"Could not retry")}}}>Retry</Button>}
+              {regenerationSuperseded && <Button size="sm" variant="outline" onClick={async()=>{try{const current=await GuidelineMarkdownService.loadDraft(versionId);applySavedDraft(current);setRegenerationJob(null);showToast.info("Current revision loaded","Review the saved source, then select Regenerate to create a job for this revision.")}catch(error){showToast.error("Reload unavailable",error instanceof Error?error.message:"Could not load the current revision")}}}>Reload current revision</Button>}
               {regenerationJob.job.error && <span className="text-destructive">{regenerationJob.job.error}</span>}
             </div>
           </AlertDescription>
@@ -973,10 +1046,56 @@ export function GuidelineMarkdownEditor({
           <GitCompareArrows className="h-4 w-4" /><AlertTitle>Regeneration review: {regenerationReview.status}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>The comparison covers hierarchy, block-type counts, tables, chunks, assets, provenance, and original-PDF availability. Review individual high-risk blocks in the structured review workspace before acceptance.</p>
+            {regenerationReview.status === "pending" && documentId && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={() => router.push(`/guidelines/${documentId}/versions/${versionId}/review?focus=pending-high-risk`)}>
+                  <Users className="h-4 w-4" /> Review pending blocks
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0
+                    ? `${regenerationReview.outstanding_high_risk_blocks} high-risk block${regenerationReview.outstanding_high_risk_blocks === 1 ? "" : "s"} require a decision`
+                    : "Open Editorial Review to verify the regenerated projection"}
+                </span>
+              </div>
+            )}
+            {regenerationReview.status === "pending" && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-950">
+                <div className="flex items-start gap-2">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="space-y-2">
+                    <p className="font-medium">
+                      {(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0
+                        ? `${regenerationReview.outstanding_high_risk_blocks} high-risk block${regenerationReview.outstanding_high_risk_blocks === 1 ? "" : "s"} still require approval`
+                        : "Editorial review is required before acceptance"}
+                    </p>
+                    <p className="text-xs">
+                      Tables, recommendations, warnings, dosages, procedures, algorithms, contraindications, cautions, and referral criteria must be compared with the source and marked reviewed. Rejected blocks remain pending until corrected and approved.
+                    </p>
+                    {(regenerationReview.pending_high_risk_blocks ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(regenerationReview.pending_high_risk_blocks ?? []).slice(0, 10).map((block) => (
+                          <Badge key={block.id} variant="outline" className="border-amber-400 bg-white/60">
+                            {block.type.replaceAll("_", " ")} · p.{block.page_start ?? "—"} · {block.review_status}
+                          </Badge>
+                        ))}
+                        {(regenerationReview.pending_high_risk_blocks_truncated || (regenerationReview.pending_high_risk_blocks ?? []).length > 10) && (
+                          <Badge variant="outline">More in Editorial Review</Badge>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => void refreshRegenerationReview()}>
+                        <RotateCcw className="h-4 w-4" /> Refresh approval status
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <pre className="max-h-56 overflow-auto rounded bg-muted p-3 text-xs">{JSON.stringify(regenerationReview.comparison,null,2)}</pre>
             <div className="space-y-2">{reviewComments.map((comment)=><div key={comment.id} className="rounded border p-2 text-xs"><span className="font-medium">{comment.author_id}</span> · {new Date(comment.created_at).toLocaleString()}<p className="mt-1 whitespace-pre-wrap">{comment.body}</p></div>)}</div>
             <div className="flex gap-2"><Textarea className="min-h-16" value={threadComment} onChange={(event)=>setThreadComment(event.target.value)} placeholder="Leave a review comment" /><Button size="sm" variant="outline" disabled={!threadComment.trim()} onClick={()=>void addReviewComment()}>Comment</Button></div>
-            {regenerationReview.status === "pending" && <><Textarea value={reviewComment} onChange={(event)=>setReviewComment(event.target.value)} placeholder="Reviewer comment (required for rejection)" /><div className="flex gap-2"><Button size="sm" onClick={()=>void decideRegeneration("accept")}>Accept regenerated projection</Button><Button size="sm" variant="destructive" disabled={!reviewComment.trim()} onClick={()=>void decideRegeneration("reject")}>Reject and return to Markdown</Button></div></>}
+            {regenerationReview.status === "pending" && <><Textarea value={reviewComment} onChange={(event)=>setReviewComment(event.target.value)} placeholder="Reviewer comment (required for rejection)" /><div className="flex gap-2"><Button size="sm" disabled={(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0} title={(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0 ? "Approve all high-risk blocks in Editorial Review first" : undefined} onClick={()=>void decideRegeneration("accept")}>Accept regenerated projection</Button><Button size="sm" variant="destructive" disabled={!reviewComment.trim()} onClick={()=>void decideRegeneration("reject")}>Reject and return to Markdown</Button></div></>}
           </AlertDescription>
         </Alert>}
 
@@ -1012,7 +1131,7 @@ export function GuidelineMarkdownEditor({
                   </button>
                 )})}
                 {issues.length > 0 && <div className="mt-4 border-t pt-3 text-xs font-medium">Validation</div>}
-                {issues.map((issue, index) => (
+                {displayedIssues.map((issue, index) => (
                   <button
                     key={`${issue.code}-${index}`}
                     type="button"
@@ -1029,6 +1148,7 @@ export function GuidelineMarkdownEditor({
                     <span>{issue.message}</span>
                   </button>
                 ))}
+                {issues.length > displayedIssues.length && <p className="mt-2 px-2 text-xs text-muted-foreground">Showing the first {displayedIssues.length} of {issues.length} issues. Resolve errors first; repeated clinical warnings are reviewed after regeneration.</p>}
               </ScrollArea>
             </aside>
           )}
@@ -1166,10 +1286,16 @@ export function GuidelineMarkdownEditor({
           <DialogHeader><DialogTitle>Review and activity</DialogTitle><DialogDescription>Review is asynchronous and protected by immutable revisions and ETags. Live cursors and presence are not supported.</DialogDescription></DialogHeader>
           <div className="grid max-h-[70vh] gap-5 overflow-y-auto lg:grid-cols-2">
             <section className="space-y-3"><h3 className="font-medium">Reviewer assignments</h3>
-              <Input aria-label="Reviewer user UUID" placeholder="Reviewer user UUID" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)} />
+              <Label htmlFor="guideline-reviewer">Clinical reviewer</Label>
+              <select id="guideline-reviewer" aria-label="Clinical reviewer" className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)}>
+                <option value="">Select a reviewer by name</option>
+                {reviewerCandidates.map((reviewer) => <option key={reviewer.id} value={reviewer.id}>{reviewer.name || reviewer.email}{reviewer.name ? ` — ${reviewer.email}` : ""}</option>)}
+              </select>
+              {reviewerCandidates.length === 0 && <p className="text-sm text-muted-foreground">No active users with guideline review permission are available. Assign the Reviewer role to a user first.</p>}
               <Input aria-label="Review due date" type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} />
               <Button size="sm" disabled={!reviewerId.trim()} onClick={async () => { try { const row = await GuidelineMarkdownService.assignReviewer(versionId, reviewerId.trim(), reviewDueAt ? new Date(`${reviewDueAt}T23:59:59Z`).toISOString() : undefined); setAssignments((current) => [row, ...current]); setReviewerId(""); setReviewDueAt("") } catch (error) { showToast.error("Reviewer not assigned", error instanceof Error ? error.message : "Could not assign reviewer") } }}>Assign reviewer</Button>
-              {assignments.length === 0 ? <p className="text-sm text-muted-foreground">No reviewers assigned.</p> : assignments.map((assignment) => <div key={assignment.id} className="rounded border p-3 text-sm"><div className="font-medium">{assignment.reviewer_id}</div><div className="text-xs text-muted-foreground">{assignment.status}{assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleDateString()}` : ""}</div>{assignment.status === "assigned" && <div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "completed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Complete</Button><Button size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "dismissed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Dismiss</Button></div>}</div>)}
+              <p className="text-xs text-muted-foreground">Assignment coordinates the review. The reviewer must still approve regenerated high-risk blocks in Editorial Review before publication.</p>
+              {assignments.length === 0 ? <p className="text-sm text-muted-foreground">No reviewers assigned.</p> : assignments.map((assignment) => <div key={assignment.id} className="rounded border p-3 text-sm"><div className="font-medium">{assignment.reviewer_name || assignment.reviewer_email || "Reviewer"}</div>{assignment.reviewer_name && <div className="text-xs text-muted-foreground">{assignment.reviewer_email}</div>}<div className="text-xs text-muted-foreground">{assignment.status}{assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleDateString()}` : ""}</div>{assignment.status === "assigned" && <div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "completed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Complete</Button><Button size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "dismissed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Dismiss</Button></div>}</div>)}
             </section>
             <section className="space-y-3"><h3 className="font-medium">Revision comments</h3>
               <Textarea value={editorComment} onChange={(event) => setEditorComment(event.target.value)} placeholder="Comment on the current immutable revision" />

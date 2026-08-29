@@ -230,18 +230,19 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 			add("error", "malformed_link", "A Markdown link or image is not closed correctly.", lineNo, 1, len(line)+1)
 		}
 		if strings.Contains(line, "|") && index+1 < len(lines) && regexp.MustCompile(`^\s*\|?\s*:?-+`).MatchString(lines[index+1]) {
-			expected := len(strings.Split(strings.Trim(line, " |"), "|"))
-			separator := len(strings.Split(strings.Trim(lines[index+1], " |"), "|"))
+			expected := len(markdownTableCells(line))
+			separator := len(markdownTableCells(lines[index+1]))
 			if expected != separator {
 				add("error", "malformed_table", "Table header and separator have different column counts.", lineNo, 1, len(line)+1)
 			}
 			for rowIndex := index + 2; rowIndex < len(lines) && strings.Contains(lines[rowIndex], "|"); rowIndex++ {
-				columns := len(strings.Split(strings.Trim(lines[rowIndex], " |"), "|"))
+				columns := len(markdownTableCells(lines[rowIndex]))
 				if columns != expected {
 					add("error", "malformed_table", fmt.Sprintf("Table row has %d columns; expected %d.", columns, expected), rowIndex+1, 1, len(lines[rowIndex])+1)
 				}
 			}
-			add("warning", "high_risk_table_review_required", "Clinical tables require explicit publisher review after regeneration.", lineNo, 1, len(line)+1)
+			label := markdownTableLabel(lines, index)
+			add("warning", "high_risk_table_review_required", fmt.Sprintf("Clinical table %q requires explicit publisher review after regeneration.", label), lineNo, 1, len(line)+1)
 		}
 		if mdDoseRE.MatchString(line) && !regexp.MustCompile(`(?i)\b(per|every|daily|once|twice|hour|day|week|kg|dose|route|oral|iv|im|sc)\b`).MatchString(line) {
 			add("warning", "ambiguous_dosage_or_unit", "Review this dosage or unit for an explicit route, frequency, and patient basis.", lineNo, 1, len(line)+1)
@@ -288,6 +289,63 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 	}
 	result.Valid = result.Errors == 0
 	return result
+}
+
+func markdownTableLabel(lines []string, headerIndex int) string {
+	for index := headerIndex - 1; index >= 0; index-- {
+		candidate := strings.TrimSpace(lines[index])
+		if candidate == "" {
+			continue
+		}
+		candidate = strings.TrimSpace(strings.Trim(candidate, "*_`"))
+		if matches := mdHeadingRE.FindStringSubmatch(candidate); len(matches) == 3 {
+			candidate = strings.TrimSpace(matches[2])
+		}
+		if candidate != "" {
+			return candidate
+		}
+	}
+	return fmt.Sprintf("starting on line %d", headerIndex+1)
+}
+
+// markdownTableCells counts Markdown table cells without discarding meaningful
+// empty cells at either edge. It also keeps escaped pipes and pipes inside
+// inline-code spans in their containing cell.
+func markdownTableCells(line string) []string {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "|") {
+		line = strings.TrimPrefix(line, "|")
+	}
+	if strings.HasSuffix(line, "|") && !isEscapedMarkdownByte(line, len(line)-1) {
+		line = strings.TrimSuffix(line, "|")
+	}
+
+	cells := make([]string, 0, strings.Count(line, "|")+1)
+	start := 0
+	inCode := false
+	for index := 0; index < len(line); index++ {
+		switch line[index] {
+		case '`':
+			if !isEscapedMarkdownByte(line, index) {
+				inCode = !inCode
+			}
+		case '|':
+			if !inCode && !isEscapedMarkdownByte(line, index) {
+				cells = append(cells, line[start:index])
+				start = index + 1
+			}
+		}
+	}
+	cells = append(cells, line[start:])
+	return cells
+}
+
+func isEscapedMarkdownByte(value string, index int) bool {
+	backslashes := 0
+	for index--; index >= 0 && value[index] == '\\'; index-- {
+		backslashes++
+	}
+	return backslashes%2 == 1
 }
 
 func markdownAnchor(value string) string {

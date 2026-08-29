@@ -35,9 +35,13 @@ Authenticated guideline editors use:
 - `POST /api/v2/guideline-versions/:id/duplicate`
 - `POST /api/v2/guideline-versions/:id/regenerate`
 
-The current permission model maps these operations to `guideline.write`.
-Publication remains protected by `guideline.publish`. Requests are rate-limited,
-and regeneration is concurrency-limited per authenticated user.
+The current permission model uses granular capabilities: private reads require
+`guideline.markdown.read`, draft writes require `guideline.markdown.edit`,
+source uploads require `guideline.markdown.upload`, revision restores require
+`guideline.revision.restore`, and regeneration requires
+`guideline.structure.regenerate`. Publication remains protected by
+`guideline.publish`. Requests are rate-limited, and regeneration is
+concurrency-limited per authenticated user.
 
 Each revision stores a version-scoped immutable object key, SHA-256 checksum,
 monotonic revision number, source and parent metadata, editor, checkpoint
@@ -207,6 +211,13 @@ previously published version remains live. Superseded or canceled jobs cannot
 persist. Failures preserve both the source revision and previous generated
 projection.
 
+A `superseded` job is bound to an older immutable revision; it is not a signal
+that the entire guideline has been withdrawn or replaced. Reload the current
+revision and start a new regeneration rather than retrying the stale job. The
+worker identifies Markdown input by `current_markdown_revision_id` and the
+revision's `storage_key`. The version-level `markdown_file_key` contains the
+generated artifact and is deliberately not used as author-source identity.
+
 Regenerated output is `review_required`. Reviewers compare its before/after
 snapshot, resolve comments, and review high-risk blocks individually. Overall
 acceptance requires all high-risk blocks to be reviewed; publication requires
@@ -223,6 +234,10 @@ invalid Markdown may still be saved so work is not lost, but blocking issues
 prevent regeneration/publication. Reports include stable codes, severity,
 messages and source ranges.
 
+For code-by-code correction guidance covering both Markdown validation and the
+post-regeneration publication checks, see
+[`guideline-validation-troubleshooting.md`](guideline-validation-troubleshooting.md).
+
 The API accepts `.md` and `.markdown` UTF-8 source files and PDFs. Images are
 limited to PNG, JPEG, GIF and WebP; SVG and executable content are rejected.
 The deployment-wide source upload ceiling is `MAX_UPLOAD_MB` (100 MiB by
@@ -236,6 +251,11 @@ granular permission matrix and default role behavior. Private draft reads,
 Markdown edits, asset management, regeneration, ordinary/high-risk review,
 revision restore and publication are separate authorities. Actor identity is
 derived from JWT claims and state-changing operations are audited.
+
+For the complete dashboard operating procedure—from document creation and
+Markdown editing through table approval, regeneration acceptance, publication,
+and post-publication verification—see
+[`guideline-authoring-and-publication-workflow.md`](guideline-authoring-and-publication-workflow.md).
 
 ## Troubleshooting
 
