@@ -11,6 +11,17 @@ void main() {
       expect(AppRoutes.isPublic('/profile'), isFalse);
     });
 
+    test('recognizes outbreak clinical section deep links as public', () {
+      final route = AppRoutes.outbreakSectionFor('outbreak-1', 'clinical-care');
+
+      expect(route, '/outbreak-hub/outbreak-1/sections/clinical-care');
+      expect(AppRoutes.isPublic(route), isTrue);
+    });
+
+    test('allows guests to open the general MediGuide Assistant', () {
+      expect(AppRoutes.isPublic(AppRoutes.aiAssistant), isTrue);
+    });
+
     test('accepts only safe local post-authentication destinations', () {
       expect(
         AppRoutes.safeDestination('/public/guidelines/guideline-1'),

@@ -176,6 +176,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppRoutes.outbreakSection,
+        builder: (_, state) => OutbreakSectionGridPage(
+          outbreakId: state.pathParameters['outbreakId'] ?? '',
+          sectionId: state.pathParameters['sectionId'] ?? '',
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.outbreakDocumentDetails,
         builder: (_, state) => OutbreakDocumentPage(
           outbreakId: state.pathParameters['outbreakId'] ?? '',

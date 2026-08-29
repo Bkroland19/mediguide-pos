@@ -18,7 +18,12 @@ final class RagApi extends BackendApiService {
   }) async {
     final failure = error;
     if (failure != null) throw failure;
-    requests.add({'path': path, 'method': method, 'body': body});
+    requests.add({
+      'path': path,
+      'method': method,
+      'body': body,
+      'includeAuth': includeAuth,
+    });
     return {
       'success': true,
       'data': {
@@ -38,6 +43,26 @@ final class RagApi extends BackendApiService {
         ],
       },
     };
+  }
+
+  @override
+  Future<Map<String, dynamic>> requestJsonWithTimeout(
+    String path, {
+    required String method,
+    required Duration receiveTimeout,
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+    bool includeAuth = true,
+  }) async {
+    final response = await requestJson(
+      path,
+      method: method,
+      body: body,
+      query: query,
+      includeAuth: includeAuth,
+    );
+    requests.last['receiveTimeout'] = receiveTimeout;
+    return response;
   }
 }
 
@@ -59,10 +84,13 @@ void main() {
       question: 'How is malaria treated?',
       country: 'Uganda',
       programArea: 'malaria',
+      authenticated: true,
     );
 
     expect(api.requests.single['path'], '/api/v2/chat/ask');
     expect(api.requests.single['method'], 'POST');
+    expect(api.requests.single['includeAuth'], isTrue);
+    expect(api.requests.single['receiveTimeout'], const Duration(seconds: 130));
     expect(api.requests.single['body'], {
       'question': 'How is malaria treated?',
       'language': 'sw',
@@ -80,6 +108,16 @@ void main() {
       reason: 'Freezed RAG values must survive generated JSON round trips',
     );
     expect(answer.copyWith(answer: 'Updated').sessionId, 'session-1');
+  });
+
+  test('uses the public general assistant without auth for guests', () async {
+    final api = RagApi();
+    final repository = RagRepository(api, preferences);
+
+    await repository.ask(question: 'What is diabetes?');
+
+    expect(api.requests.single['path'], '/api/public/assistant/ask');
+    expect(api.requests.single['includeAuth'], isFalse);
   });
 
   test('reuses the server-issued session for conversational context', () async {
