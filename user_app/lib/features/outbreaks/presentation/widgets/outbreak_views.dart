@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/config/app_config.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
@@ -1756,15 +1757,16 @@ String _capitalize(String value) {
 Future<void> _copyLink(BuildContext context, String value) async {
   final api = Uri.parse(AppConfig.current.apiBaseUrl);
   final absolute = api.replace(path: value, query: null, fragment: null);
-  await Clipboard.setData(ClipboardData(text: absolute.toString()));
-
-  if (!context.mounted) {
-    return;
+  try {
+    await Clipboard.setData(ClipboardData(text: absolute.toString()));
+    if (context.mounted) {
+      AppMessage.success(context, 'Link copied.');
+    }
+  } catch (_) {
+    if (context.mounted) {
+      AppMessage.error(context, 'The outbreak link could not be copied.');
+    }
   }
-
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(content: Text('Link copied.')));
 }
 
 Future<void> _openOutbreakResource(
@@ -1776,14 +1778,18 @@ Future<void> _openOutbreakResource(
       _isManagedOutbreakAssetPath(resource.assetUrl)) {
     final base = Uri.parse('${AppConfig.current.apiBaseUrl}/');
     final target = base.resolve(resource.assetUrl.replaceFirst('/', ''));
-    final launched = await launchUrl(
-      target,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this managed document.')),
+    try {
+      final launched = await launchUrl(
+        target,
+        mode: LaunchMode.externalApplication,
       );
+      if (!launched && context.mounted) {
+        AppMessage.error(context, 'Unable to open this managed document.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'Unable to open this managed document.');
+      }
     }
     return;
   }
@@ -1797,18 +1803,23 @@ Future<void> _openOutbreakResource(
     return;
   }
   if (target?.externalUri case final Uri uri) {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this trusted resource.')),
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
       );
+      if (!launched && context.mounted) {
+        AppMessage.error(context, 'Unable to open this trusted resource.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'Unable to open this trusted resource.');
+      }
     }
     return;
   }
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This resource link is unavailable.')),
-    );
+    AppMessage.warning(context, 'This resource link is unavailable.');
   }
 }
 

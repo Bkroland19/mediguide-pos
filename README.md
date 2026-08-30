@@ -268,14 +268,19 @@ tags, GHCR images, deployment, rollback and health checks. Use
 [`docs/mobile-alpha-release.md`](docs/mobile-alpha-release.md) for mobile channel
 promotion and store credentials.
 
+Use [`docs/mobile-release-workflow.md`](docs/mobile-release-workflow.md) as the
+complete Android and iOS operator runbook from prerelease through store rollout.
+
 ## Documentation index
 
 | Document | Covers |
 |---|---|
+| [`docs/mobile-release-workflow.md`](docs/mobile-release-workflow.md) | Complete Android/iOS prerelease, stable artifact and production store runbook |
 | [`docs/firebase-mobile-distribution.md`](docs/firebase-mobile-distribution.md) | Firebase projects, apps, FCM, APNs, Remote Config, Crashlytics, backend Admin and CI secrets |
 | [`docs/mobile-environments.md`](docs/mobile-environments.md) | Flutter flavors, bundle IDs, schemes and debug tools |
 | [`docs/mobile-alpha-release.md`](docs/mobile-alpha-release.md) | Alpha, beta and production mobile delivery |
 | [`docs/mobile-visual-regression.md`](docs/mobile-visual-regression.md) | Golden-image matrix and accessibility sizes |
+| [`docs/mobile-user-messaging.md`](docs/mobile-user-messaging.md) | Canonical Flutter user-message API and usage boundaries |
 | [`docs/release-process.md`](docs/release-process.md) | Unified release, deployment and rollback |
 | [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |

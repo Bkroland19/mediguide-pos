@@ -82,3 +82,14 @@ release builds. The iOS archive is explicitly unsigned. These CI artifacts are
 appropriate for validation and internal distribution, but Play Store and App
 Store delivery require production signing credentials and dedicated deployment
 jobs.
+
+Use the split production APKs for direct Android downloads and the App Bundle
+for Google Play. Commands, artifact selection and CI size budgets are documented
+in [Android application size](../docs/mobile-android-size.md).
+
+iOS release measurement and compressed/install-size budgets are documented in
+[iOS application size](../docs/mobile-ios-size.md).
+
+The complete alpha, beta, tagged-release, Firebase, TestFlight, Google Play and
+App Store workflow is documented in
+[Mobile release workflow](../docs/mobile-release-workflow.md).

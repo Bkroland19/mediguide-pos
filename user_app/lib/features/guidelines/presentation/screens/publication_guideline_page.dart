@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
@@ -315,11 +316,7 @@ class _PublicationGuidelinePageState
 
     if (!content.manifest.hasOfflinePackage &&
         !content.manifest.hasOriginalPdf) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This guideline has no downloadable asset.'),
-        ),
-      );
+      AppMessage.warning(context, 'This guideline has no downloadable asset.');
 
       return;
     }
@@ -337,21 +334,20 @@ class _PublicationGuidelinePageState
           ? 'Verified offline copy is ready.'
           : 'Download ${result.status.name}.';
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      if (result.status == OfflineDownloadStatus.ready) {
+        AppMessage.success(context, message);
+      } else {
+        AppMessage.info(context, message);
+      }
     } catch (_) {
       if (!context.mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'The offline copy could not be downloaded. '
-            'Check your connection and try again.',
-          ),
-        ),
+      AppMessage.error(
+        context,
+        'The offline copy could not be downloaded. '
+        'Check your connection and try again.',
       );
     }
   }
@@ -751,9 +747,7 @@ class _PublicationGuidelinePageState
       }
 
       if (asset == null || asset.url.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Original document is unavailable.')),
-        );
+        AppMessage.warning(context, 'Original document is unavailable.');
 
         return;
       }
@@ -772,13 +766,10 @@ class _PublicationGuidelinePageState
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'The original document could not be opened. '
-            'Check your connection and try again.',
-          ),
-        ),
+      AppMessage.error(
+        context,
+        'The original document could not be opened. '
+        'Check your connection and try again.',
       );
     }
   }
@@ -799,14 +790,30 @@ class _PublicationGuidelinePageState
     final provider = publicationReadingProgressProvider(widget.guidelineId);
 
     final current = ref.read(provider).valueOrNull;
+    final willBookmark = !(current?.isBookmarked ?? false);
 
-    await ref.read(readingProgressRepositoryProvider).upsert(
-      user.id,
-      widget.guidelineId,
-      {'is_bookmarked': !(current?.isBookmarked ?? false)},
-    );
+    try {
+      await ref.read(readingProgressRepositoryProvider).upsert(
+        user.id,
+        widget.guidelineId,
+        {'is_bookmarked': willBookmark},
+      );
 
-    ref.invalidate(provider);
+      ref.invalidate(provider);
+      if (context.mounted) {
+        AppMessage.success(
+          context,
+          willBookmark ? 'Guideline bookmarked.' : 'Bookmark removed.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The bookmark could not be updated. Please try again.',
+        );
+      }
+    }
   }
 
   // ===========================================================================
@@ -836,13 +843,32 @@ class _PublicationGuidelinePageState
       return;
     }
 
-    await ref.read(readingProgressRepositoryProvider).upsert(
-      user.id,
-      widget.guidelineId,
-      {'notes': note.trim()},
-    );
+    final normalizedNote = note.trim();
 
-    ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
+    try {
+      await ref.read(readingProgressRepositoryProvider).upsert(
+        user.id,
+        widget.guidelineId,
+        {'notes': normalizedNote},
+      );
+
+      ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
+      if (context.mounted) {
+        AppMessage.success(
+          context,
+          normalizedNote.isEmpty
+              ? 'Reading note removed.'
+              : 'Reading note saved.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The reading note could not be saved. Please try again.',
+        );
+      }
+    }
   }
 
   // ===========================================================================
@@ -852,15 +878,16 @@ class _PublicationGuidelinePageState
   Future<void> _copyLink(BuildContext context) async {
     final link = AppRoutes.publicGuideline(widget.guidelineId);
 
-    await Clipboard.setData(ClipboardData(text: link));
-
-    if (!context.mounted) {
-      return;
+    try {
+      await Clipboard.setData(ClipboardData(text: link));
+      if (context.mounted) {
+        AppMessage.success(context, 'Guideline link copied.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The guideline link could not be copied.');
+      }
     }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Guideline link copied.')));
   }
 
   // ===========================================================================
@@ -868,9 +895,7 @@ class _PublicationGuidelinePageState
   // ===========================================================================
 
   void _requireSignIn(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppMessage.warning(context, message);
 
     final destination = Uri.encodeComponent(
       AppRoutes.publicGuideline(widget.guidelineId),
