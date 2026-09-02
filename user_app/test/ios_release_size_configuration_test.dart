@@ -15,4 +15,12 @@ void main() {
     expect(fastfile, contains('enforce_artifact_size!'));
     expect(fastfile, contains('MAX_IOS_IPA_BYTES'));
   });
+
+  test('Firebase distribution passes absolute artifact paths to Fastlane', () {
+    final fastfile = File('fastlane/Fastfile').readAsStringSync();
+
+    expect(fastfile, contains('binary_path = File.expand_path(binary)'));
+    expect(fastfile, contains('android_artifact_path: binary_path.end_with?'));
+    expect(fastfile, contains('ipa_path: binary_path.end_with?'));
+  });
 }

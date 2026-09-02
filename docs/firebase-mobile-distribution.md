@@ -593,6 +593,11 @@ Complete this checklist separately for development, staging and production:
   Flutter `+build` number.
 - App Distribution authentication failures require a valid service account key,
   the App Distribution Admin role, and the App Distribution API enabled.
+- `Couldn't find android binary at path build/...` after a successful Flutter
+  build means the uploader received a path relative to the repository rather
+  than `user_app`. The Fastlane lanes normalize generated APK and IPA paths to
+  absolute paths before invoking App Distribution. For manual upload-only runs,
+  continue to pass an absolute `apk:` or `ipa:` path as shown above.
 
 Inspect the entitlements on a signed iOS archive when push delivery differs
 between debug and distribution builds:

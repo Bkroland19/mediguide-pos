@@ -68,6 +68,8 @@ end
 
 def firebase_distribution(binary:, app_id:)
   require_environment!("GOOGLE_APPLICATION_CREDENTIALS")
+  binary_path = File.expand_path(binary)
+  UI.user_error!("Firebase distribution binary not found at #{binary_path}") unless File.file?(binary_path)
 
   firebase_app_distribution(
     app: app_id,
@@ -76,8 +78,8 @@ def firebase_distribution(binary:, app_id:)
     groups: ENV.fetch("FIREBASE_TESTER_GROUPS", "mediguide-testers"),
     testers: ENV["FIREBASE_TESTERS"],
     release_notes: release_notes,
-    android_artifact_path: binary.end_with?(".apk", ".aab") ? binary : nil,
-    ipa_path: binary.end_with?(".ipa") ? binary : nil
+    android_artifact_path: binary_path.end_with?(".apk", ".aab") ? binary_path : nil,
+    ipa_path: binary_path.end_with?(".ipa") ? binary_path : nil
   )
 end
 
