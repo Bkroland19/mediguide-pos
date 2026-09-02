@@ -210,8 +210,20 @@ jobs:
             "${RUNNER_TEMP}/mediguide-infra.tar.gz" \
             "${target}:${remote_stage}/infra.tar.gz"
 
-          printf '%s' "${GHCR_TOKEN}" | ssh "${ssh_options[@]}" "${target}" \
-            "DOCKER_CONFIG='${remote_stage}/docker-config' docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
+          registry_login_succeeded=false
+          for attempt in {1..12}; do
+            if printf '%s' "${GHCR_TOKEN}" | ssh "${ssh_options[@]}" "${target}" \
+              "DOCKER_CONFIG='${remote_stage}/docker-config' docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"; then
+              registry_login_succeeded=true
+              break
+            fi
+            echo "GHCR login attempt ${attempt}/12 failed; retrying." >&2
+            sleep 10
+          done
+          if [ "${registry_login_succeeded}" != true ]; then
+            echo "Unable to authenticate the production host to GHCR after 12 attempts." >&2
+            exit 1
+          fi
 
           ssh "${ssh_options[@]}" "${target}" bash -s -- \
             "${DEPLOY_PATH}" "${remote_stage}" "${RELEASE_VERSION}" \
@@ -234,6 +246,8 @@ jobs:
             *) echo "Unsafe remote staging path." >&2; exit 1 ;;
           esac
 
+          export DOCKER_CONFIG="${remote_stage}/docker-config"
+
           cleanup() {
             rm -rf -- "${remote_stage}"
           }
@@ -246,6 +260,49 @@ jobs:
           test -f "${extracted}/infra/deploy-production.sh"
           test -s "${extracted}/infra/production.env"
 
+          # Fetch and verify every immutable first-party image before replacing
+          # the current configuration or stopping any healthy containers.
+          # Pull one image at a time so transient registry failures can resume
+          # from Docker's local layer cache.
+          release_images=(
+            "ghcr.io/${ghcr_owner}/mediguide-pos-api:${release_version}"
+            "ghcr.io/${ghcr_owner}/mediguide-pos-ai-worker:${release_version}"
+            "ghcr.io/${ghcr_owner}/mediguide-pos-dashboard:${release_version}"
+            "ghcr.io/${ghcr_owner}/mediguide-pos-guidelines:${release_version}"
+          )
+          for image in "${release_images[@]}"; do
+            pulled=false
+            for attempt in {1..12}; do
+              if docker pull "${image}"; then
+                pulled=true
+                break
+              fi
+              echo "Pull attempt ${attempt}/12 failed for ${image}; retrying." >&2
+              sleep 10
+            done
+            if [ "${pulled}" != true ]; then
+              echo "Unable to preload ${image}. The running stack was not modified." >&2
+              exit 1
+            fi
+            docker image inspect "${image}" >/dev/null
+          done
+
+          deploy_script="${extracted}/infra/deploy-production.sh"
+          deploy_script_name="deploy-production.sh"
+          if ! grep -q 'MEDIGUIDE_IMAGES_PRELOADED' "${deploy_script}"; then
+            # Compatibility for immutable releases created before preloading
+            # support existed. Remove only the redundant two-line pull step
+            # from a temporary executable copy; the tagged source is unchanged.
+            compatible_script="${extracted}/infra/deploy-production-preloaded.sh"
+            awk '
+              $0 == "echo \"Pulling immutable release images.\"" { skip_pull = 1; next }
+              skip_pull && $0 == "\"${compose[@]}\" pull" { skip_pull = 0; next }
+              { print }
+            ' "${deploy_script}" > "${compatible_script}"
+            chmod 700 "${compatible_script}"
+            deploy_script_name="deploy-production-preloaded.sh"
+          fi
+
           previous="${deploy_path}/infra.previous"
           rm -rf -- "${previous}"
           if [ -d "${deploy_path}/infra" ]; then
@@ -254,7 +311,6 @@ jobs:
           mv "${extracted}/infra" "${deploy_path}/infra"
           chmod 600 "${deploy_path}/infra/production.env"
 
-          export DOCKER_CONFIG="${remote_stage}/docker-config"
-          bash "${deploy_path}/infra/deploy-production.sh" \
+          MEDIGUIDE_IMAGES_PRELOADED=1 bash "${deploy_path}/infra/${deploy_script_name}" \
             "${release_version}" "${release_revision}" "${ghcr_owner}"
           REMOTE
