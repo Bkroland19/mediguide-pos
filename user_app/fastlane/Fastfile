@@ -3,6 +3,11 @@ require "fileutils"
 opt_out_usage
 default_platform(:android)
 
+# Fastlane can resolve the repository root as its working directory in CI even
+# when the workflow step starts in user_app. Keep every Dart, Flutter, and
+# relative artifact path anchored to the mobile package that owns this Fastfile.
+Dir.chdir(File.expand_path("..", __dir__))
+
 def require_environment!(*names)
   missing = names.select { |name| ENV[name].to_s.strip.empty? }
   UI.user_error!("Missing required environment variables: #{missing.join(', ')}") unless missing.empty?
