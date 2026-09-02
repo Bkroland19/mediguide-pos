@@ -122,38 +122,27 @@ trap deployment_failure_diagnostics ERR
 echo "Validating MediGuide production Compose configuration."
 "${compose[@]}" config --quiet
 
-declare -A old_first_party_images=()
-while IFS= read -r container_id; do
-  [[ -n "${container_id}" ]] || continue
-  image_ref="$(docker inspect --format '{{.Config.Image}}' "${container_id}")"
-  case "${image_ref}" in
-    ghcr.io/*/mediguide-pos-api:*|\
-    ghcr.io/*/mediguide-pos-ai-worker:*|\
-    ghcr.io/*/mediguide-pos-dashboard:*|\
-    ghcr.io/*/mediguide-pos-guidelines:*|\
-    mediguide-api:*|\
-    mediguide-ai-worker:*|\
-    mediguide-dashboard:*|\
-    mediguide-guidelines:*)
-      old_first_party_images["${image_ref}"]=1
-      ;;
-  esac
-done < <(docker ps -aq --filter 'label=com.docker.compose.project=mediguide')
+if [[ "${MEDIGUIDE_IMAGES_PRELOADED:-0}" != "1" ]]; then
+  echo "Pulling immutable release images before stopping the running stack."
+  pull_succeeded=false
+  for attempt in {1..12}; do
+    if "${compose[@]}" pull; then
+      pull_succeeded=true
+      break
+    fi
+    echo "Release image pull attempt ${attempt}/12 failed; retrying." >&2
+    sleep 10
+  done
+  if [[ "${pull_succeeded}" != true ]]; then
+    echo "Unable to pull the release images. The running stack was not modified." >&2
+    exit 1
+  fi
+else
+  echo "Using immutable release images preloaded and verified by the deployment workflow."
+fi
 
 echo "Removing existing MediGuide containers while preserving named volumes."
 "${compose[@]}" down --remove-orphans --timeout 60
-
-if (( ${#old_first_party_images[@]} > 0 )); then
-  echo "Removing previous MediGuide first-party images."
-  for image_ref in "${!old_first_party_images[@]}"; do
-    if ! docker image rm "${image_ref}"; then
-      echo "Warning: ${image_ref} is still used elsewhere and was not removed." >&2
-    fi
-  done
-fi
-
-echo "Pulling immutable release images."
-"${compose[@]}" pull
 
 echo "Applying database migrations."
 "${compose[@]}" run --rm api /app/migrate up

@@ -154,6 +154,12 @@ checks for `/healthz`, `/admin/login`, and `/api/readyz` all pass. The queue-onl
 worker uses a process-liveness probe; it does not use the HTTP health endpoint
 exposed by the separate AI HTTP service.
 
+The deployment workflow authenticates with retries and preloads each immutable
+first-party image before replacing configuration or stopping a healthy stack.
+Transient GHCR failures therefore leave the current release running. Image
+layers remain cached between retry attempts, and the deployment script skips a
+redundant registry request after the workflow has verified the complete set.
+
 The normal tagged mobile build retains unsigned Apple compile-verification
 artifacts and signed Android download artifacts, but it does not distribute a
 mobile build to testers or stores. Mobile tester delivery happens only through
