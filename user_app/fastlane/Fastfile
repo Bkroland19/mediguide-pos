@@ -97,6 +97,14 @@ def app_store_api_key
 end
 
 platform :android do
+  private_lane :build_firebase_apk do
+    within_mobile_project do
+      require_environment!("MOBILE_API_BASE_URL")
+      sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
+      sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
+    end
+  end
+
   desc "Build a signed Android APK and AAB"
   lane :build_release do
     within_mobile_project do
@@ -126,7 +134,7 @@ platform :android do
 
   desc "Build Android and upload the APK to Firebase App Distribution"
   lane :firebase_release do
-    build_release
+    build_firebase_apk
     firebase
   end
 

@@ -153,7 +153,7 @@ jobs:
             -storepass "${ANDROID_UPLOAD_STORE_PASSWORD}" \
             -alias "${ANDROID_UPLOAD_KEY_ALIAS}" >/dev/null
 
-      - name: Build and distribute Android beta
+      - name: Build and distribute Android prerelease
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/user_app/firebase-app-distribution.json
           FIREBASE_DART_DEFINES_FILE: ${{ github.workspace }}/user_app/firebase-dart-defines.json
