@@ -17,6 +17,11 @@ version, so the checked-in `pubspec.yaml` version remains numeric while CI
 allocates a unique store build number. Alpha metadata is included in Firebase
 release notes, TestFlight changelog, artifacts, and the GitHub Actions summary.
 
+Stable platform tags do not automatically distribute mobile builds. Run the
+alpha workflow, complete its test charter, and then use the separately gated
+beta workflow. This prevents a backend release tag from bypassing mobile
+regression and clinical review.
+
 ## One-time setup
 
 Use the protected `staging` GitHub Environment already documented in

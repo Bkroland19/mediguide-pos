@@ -336,6 +336,30 @@ typed action selection, and Remote Config controls. Notification administration
 uses the same typed selector for database-backed notices. Test-push and Remote
 Config writes are permission protected and rate limited.
 
+### Production startup failure from Firebase credentials
+
+`FIREBASE_SERVICE_ACCOUNT_BASE64` is optional. Leave it empty when Firebase
+Admin has not been configured; the API remains available while push delivery
+and Remote Config administration report as disabled. Never use a placeholder or
+partially encoded value: a non-empty malformed credential prevents both the API
+and notification worker from starting.
+
+The production deployment workflow validates the credential before contacting
+the server. If it reports invalid base64, invalid service-account JSON, or a
+project mismatch:
+
+1. Download the dedicated backend service-account JSON from the approved
+   Firebase project.
+2. Encode it as one uninterrupted base64 line.
+3. Update `FIREBASE_PROJECT_ID` and `FIREBASE_SERVICE_ACCOUNT_BASE64` inside the
+   protected `PRODUCTION_ENV_FILE` secret.
+4. Re-run `Deploy production` for the same immutable release tag.
+5. Verify `/api/readyz`, then verify Firebase status and a test notification in
+   the dashboard.
+
+Do not substitute the App Distribution service account unless its runtime FCM
+and Remote Config permissions were deliberately reviewed and granted.
+
 ## App Distribution and GitHub testing environment
 
 In the Firebase App Distribution console, create these group aliases:
