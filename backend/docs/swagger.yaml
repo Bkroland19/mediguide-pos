@@ -8281,7 +8281,7 @@ info:
     name: Proprietary
   termsOfService: https://mediguide.local/terms
   title: MediGuide Backend API
-  version: 2.0.24
+  version: 2.1.0
 paths:
   /api/public/assistant/ask:
     post:

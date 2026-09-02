@@ -92,10 +92,18 @@ void main() {
       AppConfig.configure(Flavor.staging, debugToolsEnabled: false);
 
       expect(AppConfig.current.debugToolsEnabled, isTrue);
-      expect(
-        AppConfig.current.apiBaseUrl,
-        'https://staging.mediguide.health.go.ug',
-      );
+      expect(AppConfig.current.apiBaseUrl, 'https://mediguide.health.go.ug');
     },
   );
+
+  test('all flavors default to the production API', () {
+    for (final flavor in Flavor.values) {
+      AppConfig.configure(flavor);
+      expect(
+        AppConfig.current.apiBaseUrl,
+        'https://mediguide.health.go.ug',
+        reason: '$flavor must use the production API by default',
+      );
+    }
+  });
 }

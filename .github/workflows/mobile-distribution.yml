@@ -41,7 +41,7 @@ concurrency:
 env:
   FLUTTER_VERSION: 3.44.8
   RUBY_VERSION: "3.3"
-  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || ((inputs.flavor || 'staging') == 'production' && 'https://mediguide.health.go.ug' || 'https://staging.mediguide.health.go.ug') }}
+  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || 'https://mediguide.health.go.ug' }}
   MOBILE_FLAVOR: ${{ inputs.flavor || 'staging' }}
   RELEASE_NOTES: ${{ inputs.release_notes }}
   MOBILE_BUILD_NUMBER: ${{ inputs.build_number }}

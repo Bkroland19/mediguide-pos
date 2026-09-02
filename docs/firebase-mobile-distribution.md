@@ -110,7 +110,7 @@ Do not commit `GoogleService-Info.plist`, service-account JSON, a generated
 values below remain the shared Dart configuration source.
 
 Signed alpha and beta workflows build the staging native flavor against the
-hosted staging API. The reusable distribution workflow receives the flavor and
+production API. The reusable distribution workflow receives the flavor and
 protected GitHub Environment explicitly, validates that
 `FIREBASE_MOBILE_CONFIG_JSON.MEDIGUIDE_FLAVOR` matches, and uses flavor-specific
 artifact paths. Stable tagged distribution explicitly selects production, so a
@@ -127,9 +127,9 @@ The enforced mapping is:
 The staging Environment must therefore contain Firebase app records and Apple
 profiles for `com.mediguide.ug.staging` and
 `com.omarsoft.mediguide.staging`. Staging has production-like release runtime
-behavior and connects to `https://staging.mediguide.health.go.ug`; its one
-intentional application-level difference is the enabled draggable diagnostic
-overlay.
+behavior and connects to `https://mediguide.health.go.ug`; its intentional
+differences are the staging native/Firebase identity and enabled draggable
+diagnostic overlay.
 
 The current FlutterFire packages require iOS 15 or later. The Podfile and Xcode
 project intentionally use an iOS 15 deployment target.

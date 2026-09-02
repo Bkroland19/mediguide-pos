@@ -2,11 +2,11 @@
 
 Mobile alpha releases distribute internal test builds without deploying the
 backend, dashboard, guidelines site, AI worker, or production Compose stack.
-They use the isolated staging application IDs and hosted staging API:
+They use isolated staging application IDs while querying the production API:
 
 - Android: `com.mediguide.ug.staging`
 - iOS: `com.omarsoft.mediguide.staging`
-- API: `https://staging.mediguide.health.go.ug`
+- API: `https://mediguide.health.go.ug`
 
 The staging binary is a release-mode replica of the staging platform while
 retaining the draggable debug overlay for Network, Remote Config, and Build
@@ -29,9 +29,11 @@ Create a Firebase App Distribution group with alias
 uploads remain internal (`distribute_external: false`) and testers must belong
 to an App Store Connect internal testing group.
 
-Alpha builds use `vars.STAGING_MOBILE_API_BASE_URL` when configured and fall
-back to `https://staging.mediguide.health.go.ug`. Do not point staging builds at
-production.
+Alpha and beta builds use `vars.STAGING_MOBILE_API_BASE_URL` when configured,
+then `vars.MOBILE_API_BASE_URL`, and finally
+`https://mediguide.health.go.ug`. For this deployment, development and staging
+clients intentionally use the production API while retaining their separate
+application IDs, Firebase projects, and diagnostic tooling.
 
 ## Start an alpha release
 
