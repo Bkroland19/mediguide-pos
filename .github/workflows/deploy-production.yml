@@ -134,6 +134,33 @@ jobs:
             printf 'DASHBOARD_BASE_PATH=/admin\n'
             printf 'ALLOWED_ORIGINS=%s\n' "${PUBLIC_SITE_URL%/}"
           } >> infra/production.env
+
+          # Firebase Admin is optional, but a malformed non-empty credential
+          # makes both the API and notification worker fail during startup.
+          # Validate it before any files are copied to the production host.
+          firebase_credentials="$(sed -n 's/^FIREBASE_SERVICE_ACCOUNT_BASE64=//p' infra/production.env | tail -n 1)"
+          firebase_project="$(sed -n 's/^FIREBASE_PROJECT_ID=//p' infra/production.env | tail -n 1)"
+          if [ -n "${firebase_credentials}" ]; then
+            firebase_json="${RUNNER_TEMP}/firebase-service-account.json"
+            if ! printf '%s' "${firebase_credentials}" | base64 --decode > "${firebase_json}"; then
+              echo "FIREBASE_SERVICE_ACCOUNT_BASE64 is not valid base64." >&2
+              exit 1
+            fi
+            if ! jq -e '
+              (.project_id | type == "string" and length > 0) and
+              (.client_email | type == "string" and length > 0) and
+              (.private_key | type == "string" and length > 0)
+            ' "${firebase_json}" >/dev/null; then
+              echo "FIREBASE_SERVICE_ACCOUNT_BASE64 is not a valid Firebase service-account JSON document." >&2
+              exit 1
+            fi
+            credential_project="$(jq -r '.project_id' "${firebase_json}")"
+            if [ -n "${firebase_project}" ] && [ "${firebase_project}" != "${credential_project}" ]; then
+              echo "FIREBASE_PROJECT_ID does not match the Firebase service account." >&2
+              exit 1
+            fi
+            rm -f "${firebase_json}"
+          fi
           tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" infra
 
       - name: Configure verified SSH access

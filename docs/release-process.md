@@ -154,11 +154,14 @@ checks for `/healthz`, `/admin/login`, and `/api/readyz` all pass. The queue-onl
 worker uses a process-liveness probe; it does not use the HTTP health endpoint
 exposed by the separate AI HTTP service.
 
-The normal mobile build retains unsigned Apple compile-verification artifacts.
-The reusable mobile tester distribution workflow creates signed iOS IPAs and
-publishes them to Firebase App Distribution and TestFlight after an alpha,
-beta, or tagged-release workflow passes its gates. It cannot be dispatched
-directly. Its protected signing, Firebase, and App Store Connect setup is documented in
+The normal tagged mobile build retains unsigned Apple compile-verification
+artifacts and signed Android download artifacts, but it does not distribute a
+mobile build to testers or stores. Mobile tester delivery happens only through
+the explicit alpha and beta workflows, preserving their review gates. The
+reusable mobile tester distribution workflow creates signed iOS IPAs and
+publishes them to Firebase App Distribution and TestFlight after an alpha or
+beta workflow passes its gates. It cannot be dispatched directly. Its protected
+signing, Firebase, and App Store Connect setup is documented in
 [`firebase-mobile-distribution.md`](firebase-mobile-distribution.md). Never
 submit the unsigned verification ZIP to the App Store or describe it as an
 installable iOS release.

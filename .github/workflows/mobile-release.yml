@@ -119,7 +119,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     needs: quality
     runs-on: ubuntu-latest
-    environment: testing
+    environment: production
     # Release builds compile both an APK and an app bundle. A cold hosted
     # runner can exceed one hour while Gradle warms its caches.
     timeout-minutes: 90
@@ -316,7 +316,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     needs: quality
     runs-on: macos-latest
-    environment: testing
+    environment: production
     timeout-minutes: 75
     defaults:
       run:
@@ -416,18 +416,6 @@ jobs:
         if: always()
         run: rm -f firebase-dart-defines.json
 
-  distribution:
-    name: Distribute Firebase and TestFlight betas
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: quality
-    uses: ./.github/workflows/mobile-distribution.yml
-    with:
-      destination: all
-      flavor: production
-      github_environment: testing
-      api_base_url: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
-    secrets: inherit
-
   release:
     name: Publish GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
@@ -435,7 +423,6 @@ jobs:
       - android
       - web
       - apple
-      - distribution
     runs-on: ubuntu-latest
     permissions:
       contents: write
