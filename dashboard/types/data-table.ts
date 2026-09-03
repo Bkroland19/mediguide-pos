@@ -79,33 +79,6 @@ export interface ImportResult {
   updated?: number
 }
 
-// Legacy expand types
-export interface ExpandConfig {
-  relations: Record<string, RelationConfig>
-}
-export interface RelationConfig {
-  collection: string
-  displayFields: string[]
-  expandable?: boolean
-  renderer?: 'table' | 'list' | 'custom' | 'inline'
-  customComponent?: React.ComponentType<any>
-  nested?: any
-  maxRows?: number
-  showPagination?: boolean
-  linkTo?: string | ((record: BaseRecord) => string)
-  sortBy?: string
-}
-
-export interface DataTableExpandableRowProps<TData = BaseRecord> {
-  row: TData
-  expandConfig: any
-  isExpanded: boolean
-  onToggle: () => void
-  depth?: number
-  relationRenderers?: Record<string, React.ComponentType<any>>
-}
-
-
 // Action types
 export interface RowAction<TData = BaseRecord> {
   id: string
