@@ -50,7 +50,6 @@ help:
 		"  migrate-down     Roll back backend migrations" \
 		"  migrate-status   Show backend migration status" \
 		"  seed             Seed backend data" \
-		"  importpb         Import PocketBase SQLite data into backend Postgres" \
 		"  clinical-tools-check  Verify legacy tool source checksums and conversion envelopes" \
 		"  clinical-tools-import Import ready clinical-tool conversions as reviewed drafts" \
 		"  ai-test          Run ai-worker tests" \
@@ -221,10 +220,6 @@ migrate-status:
 .PHONY: seed
 seed:
 	$(MAKE) -C $(BACKEND_DIR) seed
-
-.PHONY: importpb
-importpb:
-	$(MAKE) -C $(BACKEND_DIR) importpb
 
 .PHONY: ai-test
 ai-test: ai-deps

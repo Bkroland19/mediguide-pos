@@ -5,7 +5,7 @@ BUILD_VERSION ?= $(shell tr -d '[:space:]' < ../VERSION)
 BUILD_REVISION ?= $(shell git rev-parse --verify HEAD 2>/dev/null || printf unknown)
 API_LDFLAGS := -X mediguide/internal/buildinfo.Version=$(BUILD_VERSION) -X mediguide/internal/buildinfo.Revision=$(BUILD_REVISION)
 
-.PHONY: run build test tidy migrate-up migrate-down migrate-status seed importpb clinical-tools-check clinical-tools-import clinical-tools-development-activate clinical-tools-retirement-check clinical-tools-retirement-rehearsal-check docker-up docker-down swagger proto
+.PHONY: run build test tidy migrate-up migrate-down migrate-status seed clinical-tools-check clinical-tools-import clinical-tools-development-activate clinical-tools-retirement-check clinical-tools-retirement-rehearsal-check docker-up docker-down swagger proto
 
 run:
 	go run -ldflags "$(API_LDFLAGS)" ./cmd/api
@@ -34,9 +34,6 @@ migrate-status:
 
 seed:
 	go run ./cmd/seed
-
-importpb:
-	go run ./cmd/importpb
 
 clinical-tools-check:
 	go run ./cmd/clinicaltool-migrate
