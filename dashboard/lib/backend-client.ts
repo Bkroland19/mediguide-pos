@@ -149,7 +149,9 @@ export class BackendClient {
     },
   }
 
-  autoCancellation(_enabled: boolean) {}
+  autoCancellation(enabled: boolean) {
+    void enabled
+  }
 
   async send<T = any>(path: string, options: RequestOptions = {}) {
     return this.request<T>(path, options)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { guidelineTagService } from "@/services/guideline-content.service"
 import type { GuidelineTagsResponse } from "@/types/backend-types"
 

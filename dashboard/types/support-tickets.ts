@@ -4,9 +4,7 @@
  */
 
 import type {
-  SupportTicketsRecord,
   SupportTicketsResponse,
-  SupportTicketRepliesRecord,
   SupportTicketRepliesResponse,
   UsersResponse,
   SupportTicketsStatusOptions,

@@ -1,11 +1,5 @@
 import { backendClient } from "@/lib/backend-client";
-import type {
-  AbbreviationsResponse,
-  GuidelineCategoriesResponse,
-  GuidelineIndexResponse,
-  GuidelineTagsResponse,
-  MedicalGuidelinesResponse,
-} from "@/types/backend-types";
+import type { GuidelineTagsResponse } from "@/types/backend-types";
 import type { DomainPageQuery, DomainPageResult } from "@/types/data-table";
 import type {
   AbbreviationsWithExpanded,
@@ -22,7 +16,6 @@ import type {
   ServicesAbbreviationInput,
   ServicesGuidelineCategoryInput,
   ServicesGuidelineIndexInput,
-  ServicesGuidelineTagInput,
   ServicesMedicalGuidelineInput,
 } from "@/types/generated/backend-openapi";
 

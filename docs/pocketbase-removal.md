@@ -23,10 +23,11 @@ therapeutic categories, and owned usage events use typed `/api/v2` routes with
 validated query parameters and PostgreSQL pagination. Their compatibility
 specifications have been removed.
 
-`backend/cmd/importpb` is also retained temporarily. It imports historical
-PocketBase SQLite exports into PostgreSQL and is not part of the running API
-image. Build it explicitly with `backend/Dockerfile.import` or run
-`make importpb` only for an approved historical import.
+The temporary PocketBase-to-PostgreSQL importer and its standalone Dockerfile
+were retired after the domain migration completed and repository deployment
+configuration was confirmed not to depend on them. Tagged releases `v2.1.0`
+and `v2.0.23` preserve both artifacts if a historically reproducible import is
+ever required.
 The migrations whose names or comments mention PocketBase are immutable schema
 history and must not be rewritten or deleted.
 
@@ -231,10 +232,7 @@ For each domain:
 Every repository match for `pocketbase`, `pocket base`, `usePb`, `getPB`, or
 `pb_schema` must fit one of these categories:
 
-- **Historical migration:** immutable SQL migration names/comments and
-  `backend/cmd/importpb`.
-- **Temporary importer:** the isolated historical data-import command and its
-  operational documentation.
+- **Historical migration:** immutable SQL migration names and comments.
 - **Documentation:** this migration record and historical explanations.
 - **Unresolved coupling:** a running application import, package dependency,
   environment variable, SDK type, or public client name. This category is not

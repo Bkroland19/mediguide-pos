@@ -3,8 +3,6 @@
  * Based on AccessControl library for granular role-based access control
  */
 
-import { Query } from 'accesscontrol'
-
 // System Resources - Define all resources that can be controlled
 export interface SystemResource {
   key: string

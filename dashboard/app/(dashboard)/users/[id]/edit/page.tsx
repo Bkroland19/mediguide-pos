@@ -229,8 +229,6 @@ export default function EditUserPage() {
     setIsLoading(true)
     
     try {
-      const backend = getBackendClient()
-      
       // Update user record in legacy collection API
       const userData = {
         ...data,

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Bell, Database, ArrowRight } from "lucide-react"
+import { Bell, ArrowRight } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,12 +19,6 @@ const sections: SettingSection[] = [
     description: "Manage in-app notices and inspect notification channel configuration",
     icon: Bell,
     href: "/settings/notifications",
-  },
-  {
-    title: "Backup & Recovery",
-    description: "Manage data backups, restore points, and recovery options",
-    icon: Database,
-    href: "/settings/backup",
   },
 ]
 

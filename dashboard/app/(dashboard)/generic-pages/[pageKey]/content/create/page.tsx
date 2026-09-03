@@ -87,13 +87,10 @@ export default function CreateContentPage({ params }: { params: Promise<{ pageKe
           return
         }
 
-        let geneService = await GenericPagesService.addContent(resolvedParams.pageKey, currentContentKey, {
+        await GenericPagesService.addContent(resolvedParams.pageKey, currentContentKey, {
           title: data.title || "",
           content: data.content
         })
-
-
-        console.log(geneService, "YYYYYYYYYYY")
       } else {
         await GenericPagesService.updatePageContent(resolvedParams.pageKey, data.content)
       }

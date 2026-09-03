@@ -5,10 +5,8 @@
 
 import { backendClient } from "@/lib/backend-client"
 import type {
-  TypedGenericPagesRecord,
   TypedGenericPagesResponse,
-  GenericPageContent,
-  GenericPageContentCollection
+  GenericPageContent
 } from "@/types/generic-pages"
 interface GenericPageWire { id?: string; created_at?: string; updated_at?: string; key?: string; title?: string; description?: string; content?: unknown }
 interface GenericPageList { items: GenericPageWire[]; page: number; per_page: number; total_items: number; total_pages: number }
@@ -228,7 +226,8 @@ export class GenericPagesService {
       }
 
       // Remove content
-      const { [contentKey]: removed, ...updatedContent } = currentContent
+      const updatedContent = { ...currentContent }
+      delete updatedContent[contentKey]
 
       // Update the page
       const updatedRecord = await updatePage(page.id, {
@@ -294,7 +293,7 @@ export class GenericPagesService {
     try {
       const content = await this.getContent(pageKey, contentKey)
       return content === null
-    } catch (error) {
+    } catch {
       // If page doesn't exist, key is unique
       return true
     }

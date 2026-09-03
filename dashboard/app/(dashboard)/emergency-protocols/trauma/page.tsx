@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -24,8 +23,7 @@ import {
   Phone,
   FileText,
   CheckCircle2,
-  Loader2,
-  ArrowLeft
+  Loader2
 } from "lucide-react"
 import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import type { EmergencyProtocolsResponse } from "@/types/backend-types"
