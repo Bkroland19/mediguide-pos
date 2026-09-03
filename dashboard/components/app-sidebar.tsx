@@ -238,7 +238,6 @@ const data: { navMain: NavItem[] } = {
       items: [
         { title: "Notifications", url: "/settings/notifications", backendPermissions: ["notification.publish", "notification.template.read", "notification.campaign.read", "firebase.status.read"] },
         { title: "Firebase", url: "/settings/firebase", backendPermissions: ["firebase.status.read", "firebase.push.test", "firebase.config.manage"] },
-        { title: "Backup", url: "/settings/backup", permission: { resource: "system_settings", action: "read:any" } },
       ],
     },
   ],
