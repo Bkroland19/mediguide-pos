@@ -13,7 +13,6 @@ import { showToast } from "@/lib/toast"
 import { useDomainRecord } from "@/hooks/use-domain-record"
 import { usersService } from "@/services/user-management.service"
 import { UsersResponse } from "@/types/backend-types"
-import { usePermissionContext } from "@/lib/permission-context"
 
 export default function UserProfilePage() {
   const router = useRouter()

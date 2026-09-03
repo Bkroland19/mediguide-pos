@@ -1,15 +1,11 @@
 import type { 
   FaqTagsRecord, 
   FaqTagsResponse, 
-  FaqsRecord, 
-  FaqsResponse, 
-  UsersRecord, 
-  UsersResponse,
+  FaqsRecord,
   FaqsStatusOptions,
   FaqsPriorityOptions,
   FaqsTargetAudienceOptions
 } from "./backend-types"
-import type { FaqsWithExpanded } from "./expanded"
 
 // FAQ Tag with usage statistics
 export type FaqTagWithStats = FaqTagsResponse & {

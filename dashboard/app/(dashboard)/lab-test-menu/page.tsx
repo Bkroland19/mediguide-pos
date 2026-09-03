@@ -19,7 +19,6 @@ import { showToast } from "@/lib/toast"
 import type {
   ContentDeleteState
 } from "./types"
-import { TypedGenericPagesResponse } from "@/types/generic-pages"
 
 const PAGE_KEY = "lab-test-menu" as const
 
@@ -31,11 +30,8 @@ const truncateTitle = (title: string, maxChars: number = 50): string => {
 
 export default function LabTestMenuPage() {
   const router = useRouter()
-  const { loading, refresh: loadPage } = useGenericPage(PAGE_KEY)
-  // const { page, loading, refresh: loadPage } = useGenericPage(PAGE_KEY)
+  const { page, loading, refresh: loadPage } = useGenericPage(PAGE_KEY)
   const { hasPermission, loading: permLoading } = usePermissionContext()
-  const [page, setPage] = useState<TypedGenericPagesResponse | null>(null)
-  // const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (permLoading) return

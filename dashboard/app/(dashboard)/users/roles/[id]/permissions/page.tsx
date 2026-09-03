@@ -20,7 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PermissionBuilder } from '@/components/ui/permission-builder'
 import { PermissionPreview } from '@/components/ui/permission-preview'
 import { showToast } from '@/lib/toast'
-import { getBackendClient } from '@/lib/backend-client'
 import { useRolePermissionManagement } from '@/hooks/use-permissions'
 import { usePermissionContext } from '@/lib/permission-context'
 

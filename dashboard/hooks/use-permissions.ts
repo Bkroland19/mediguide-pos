@@ -17,8 +17,7 @@ import type {
   PermissionCheck, 
   EffectivePermissions,
   PermissionAction,
-  PermissionValidationResult,
-  PermissionGrant
+  PermissionValidationResult
 } from '@/types/permissions'
 import { PERMISSION_TEMPLATES } from '@/types/permissions'
 import type { RolesResponse } from '@/types/backend-types'

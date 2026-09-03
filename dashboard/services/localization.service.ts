@@ -17,10 +17,8 @@ import type {
   LanguageSortOptions,
   LanguageStats,
   TranslationData,
-  BulkUpdateData,
   EnhancedLanguageResponse,
   ValidationResult,
-  ServiceResponse,
 } from "@/types/localization";
 
 interface LanguageWire extends Omit<LanguagesRecord, "created" | "updated"> {
