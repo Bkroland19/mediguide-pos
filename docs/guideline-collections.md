@@ -222,11 +222,11 @@ retryable network/server failure.
 
 ## Test and verification runbook
 
-From the repository root, run backend collection tests:
+From the repository root, run focused backend service and HTTP handler tests:
 
 ```bash
 cd backend
-go test ./internal/services -run GuidelineLibrary
+go test ./internal/services ./internal/handlers -run GuidelineLibrary
 ```
 
 Run the mobile model, repository, controller, workflow, and route tests:
@@ -239,6 +239,36 @@ fvm flutter test \
   test/route_names_test.dart
 fvm flutter analyze
 ```
+
+Before a release, run the full validation matrix from the implementation brief:
+
+```bash
+cd backend
+go test ./...
+go vet ./...
+go build ./cmd/api
+go build ./cmd/worker
+
+cd ../user_app
+dart format --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter build apk --release --split-per-abi \
+  --flavor production \
+  --dart-define=APP_ENV=production
+
+cd ..
+make contracts-check
+git diff --check
+bash scripts/check-release-readiness.sh v2.1.0 --metadata-only
+```
+
+The focused tests include HTTP status/envelope assertions, ownership and
+published-only service rules, complete and partial cache reconciliation,
+offline mutation messages, create/edit/delete interactions, and duplicate-tap
+prevention. Full Flutter golden failures must be compared with the repository's
+committed golden baseline; do not approve a pixel change as part of Collections
+unless the UI change was intentional.
 
 Before release, manually verify with two different accounts:
 
@@ -318,6 +348,19 @@ cleaner. Reproduce with two accounts and do not ship until isolation passes.
 Controllers must restore their prior state when repository writes throw. Check
 that the screen calls the Riverpod controller rather than mutating a local list,
 and that the failure is displayed through `AppMessage`.
+
+### A deleted or renamed collection reappears offline
+
+- Confirm the client stores a complete snapshot only when page one reports
+  `total_pages <= 1`.
+- Confirm successful deletes tombstone the collection, remove its ID from the
+  collection snapshot, and clear its item snapshot and item entities.
+- Confirm successful renames replace the cached entity under the existing ID.
+- For multi-page data, fetch all affected pages before diagnosing a missing
+  entity. A partial snapshot intentionally preserves unfetched cached pages.
+- If the cache predates completeness metadata, perform one successful online
+  refresh before retesting offline behavior. Avoid clearing another user's or
+  the public cache scope as a workaround.
 
 ## Acceptance criteria
 

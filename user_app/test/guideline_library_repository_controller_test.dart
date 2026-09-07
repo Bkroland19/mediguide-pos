@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +92,8 @@ final class FakeGuidelineLibraryApi extends BackendApiService {
   int? failureStatus;
   int? nextFailureStatus;
   String? nextFailureCall;
+  String? gatedCall;
+  Completer<void>? callGate;
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -110,6 +114,9 @@ final class FakeGuidelineLibraryApi extends BackendApiService {
     final status = failureStatus;
     if (status != null) {
       throw BackendApiException('request failed', statusCode: status);
+    }
+    if (gatedCall == '$method $path' && callGate != null) {
+      await callGate!.future;
     }
 
     if (path == '/api/v2/library/collections' && method == 'GET') {
@@ -830,6 +837,177 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Collections'), findsOneWidget);
+  });
+
+  testWidgets('offline collection mutation gives actionable AppMessage', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi();
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: GuidelineCollectionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.failureStatus = 0;
+
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Offline rounds');
+    await tester.tap(find.text('Create collection').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('You are offline. Connect to make this change.'),
+      findsOneWidget,
+    );
+    expect(api.collections, isEmpty);
+  });
+
+  testWidgets('collection creation disables duplicate submission', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final gate = Completer<void>();
+    final api = FakeGuidelineLibraryApi()
+      ..gatedCall = 'POST /api/v2/library/collections'
+      ..callGate = gate;
+    final repository = GuidelineLibraryRepository(api, store.cache);
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const GuidelineCollectionsPage()),
+        GoRoute(
+          path: AppRoutes.collectionDetails,
+          builder: (_, state) => Scaffold(
+            body: Text('Opened ${state.pathParameters['collectionId']}'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'One request');
+    await tester.tap(find.text('Create collection').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final action = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    expect(action.onPressed, isNull);
+    expect(
+      api.calls
+          .where((call) => call == 'POST /api/v2/library/collections')
+          .length,
+      1,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Opened collection-1000'), findsOneWidget);
+  });
+
+  testWidgets('collection detail supports edit with AppMessage feedback', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: GuidelineCollectionPage(collectionId: 'collection-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit collection'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Renamed rounds');
+    await tester.enterText(find.byType(TextFormField).last, 'New description');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collection updated.'), findsOneWidget);
+    expect(find.text('Renamed rounds'), findsWidgets);
+    expect(find.text('New description'), findsOneWidget);
+  });
+
+  testWidgets('collection detail confirms deletion and returns to list', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+    final router = GoRouter(
+      initialLocation: AppRoutes.collection('collection-1'),
+      routes: [
+        GoRoute(
+          path: AppRoutes.library,
+          builder: (_, _) => const Scaffold(body: Text('Collection list')),
+        ),
+        GoRoute(
+          path: AppRoutes.collectionDetails,
+          builder: (_, state) => GuidelineCollectionPage(
+            collectionId: state.pathParameters['collectionId']!,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Collection actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete collection'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete collection?'), findsOneWidget);
+    expect(
+      find.textContaining('Saved guidelines will not be deleted.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collection list'), findsOneWidget);
+    expect(api.collections, isEmpty);
   });
 
   testWidgets('published guideline can be saved from collection picker', (

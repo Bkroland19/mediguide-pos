@@ -312,7 +312,11 @@ class _CollectionView extends ConsumerWidget {
           .delete();
       if (context.mounted) {
         AppMessage.success(context, CollectionMessages.deleted);
-        context.pop();
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.library);
+        }
       }
     } catch (error) {
       if (context.mounted) {
