@@ -10,6 +10,7 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
+import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 part '../widgets/my_library_page_library_header.dart';
@@ -40,8 +41,6 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
     guidelinePublicationRepositoryProvider,
   );
 
-  final libraryRepository = ref.watch(guidelineLibraryRepositoryProvider);
-
   final bookmarksFuture = progressRepository.list(
     user.id,
     perPage: 100,
@@ -52,7 +51,11 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
 
   final publicationsFuture = publicationRepository.publications(perPage: 200);
 
-  final collectionsFuture = libraryRepository.collections(user.id);
+  final collectionsFuture = ref.watch(
+    guidelineCollectionsControllerProvider(user.id).future,
+  );
+
+  final libraryRepository = ref.watch(guidelineLibraryRepositoryProvider);
 
   final downloadsFuture = libraryRepository.downloads(user.id);
 
@@ -67,7 +70,7 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
   final bookmarks = (await bookmarksFuture).items;
   final history = (await historyFuture).items;
   final publications = (await publicationsFuture).items;
-  final collections = await collectionsFuture;
+  final collections = (await collectionsFuture).items;
   final downloads = await downloadsFuture;
 
   return LibraryData(
@@ -104,6 +107,18 @@ class MyLibraryPage extends ConsumerWidget {
         data: (data) {
           return RefreshIndicator(
             onRefresh: () async {
+              final userId = ref
+                  .read(authControllerProvider)
+                  .valueOrNull
+                  ?.user
+                  ?.id;
+              if (userId != null) {
+                await ref
+                    .read(
+                      guidelineCollectionsControllerProvider(userId).notifier,
+                    )
+                    .refresh();
+              }
               ref.invalidate(libraryDataProvider);
 
               await ref.read(libraryDataProvider.future);
