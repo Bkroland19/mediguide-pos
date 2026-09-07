@@ -4,10 +4,12 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -88,7 +90,8 @@ func (s GuidelineLibraryService) GetCollection(userID, id uuid.UUID) (*Guideline
 
 func (s GuidelineLibraryService) CreateCollection(userID uuid.UUID, in GuidelineCollectionInput) (*GuidelineCollectionDTO, error) {
 	name := strings.TrimSpace(in.Name)
-	if name == "" || len(name) > 120 || len(in.Description) > 1000 {
+	description := strings.TrimSpace(in.Description)
+	if !validGuidelineCollectionText(name, description) {
 		return nil, ErrGuidelineLibraryInvalid
 	}
 	var duplicate int64
@@ -98,21 +101,33 @@ func (s GuidelineLibraryService) CreateCollection(userID uuid.UUID, in Guideline
 	if duplicate > 0 {
 		return nil, ErrGuidelineLibraryConflict
 	}
-	row := models.GuidelineCollection{UserID: userID, Name: name, Description: strings.TrimSpace(in.Description)}
+	row := models.GuidelineCollection{UserID: userID, Name: name, Description: description}
 	if err := s.DB.Create(&row).Error; err != nil {
-		return nil, err
+		return nil, guidelineLibraryWriteError(err)
 	}
 	return collectionDTO(row, 0), nil
 }
 
 func (s GuidelineLibraryService) UpdateCollection(userID, id uuid.UUID, in GuidelineCollectionInput) (*GuidelineCollectionDTO, error) {
 	name := strings.TrimSpace(in.Name)
-	if name == "" || len(name) > 120 || len(in.Description) > 1000 {
+	description := strings.TrimSpace(in.Description)
+	if !validGuidelineCollectionText(name, description) {
 		return nil, ErrGuidelineLibraryInvalid
 	}
-	result := s.DB.Model(&models.GuidelineCollection{}).Where("id = ? AND user_id = ?", id, userID).Updates(map[string]any{"name": name, "description": strings.TrimSpace(in.Description)})
+	var duplicate int64
+	if err := s.DB.Model(&models.GuidelineCollection{}).
+		Where("user_id = ? AND lower(name) = ? AND id <> ?", userID, strings.ToLower(name), id).
+		Count(&duplicate).Error; err != nil {
+		return nil, err
+	}
+	if duplicate > 0 {
+		return nil, ErrGuidelineLibraryConflict
+	}
+	result := s.DB.Model(&models.GuidelineCollection{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(map[string]any{"name": name, "description": description})
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, guidelineLibraryWriteError(result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
@@ -294,6 +309,25 @@ func requirePublishedGuidelineDocument(db *gorm.DB, guidelineID uuid.UUID, versi
 func collectionDTO(row models.GuidelineCollection, count int64) *GuidelineCollectionDTO {
 	return &GuidelineCollectionDTO{ID: row.ID, Name: row.Name, Description: row.Description, ItemCount: count, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 }
+
+func validGuidelineCollectionText(name, description string) bool {
+	return name != "" && utf8.RuneCountInString(name) <= 120 && utf8.RuneCountInString(description) <= 1000
+}
+
+func guidelineLibraryWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return ErrGuidelineLibraryConflict
+	}
+	var postgresError *pgconn.PgError
+	if errors.As(err, &postgresError) && postgresError.Code == "23505" && postgresError.ConstraintName == "uq_guideline_collections_user_name" {
+		return ErrGuidelineLibraryConflict
+	}
+	return err
+}
+
 func downloadDTO(row models.GuidelineDownload) *GuidelineDownloadDTO {
 	return &GuidelineDownloadDTO{ID: row.ID, GuidelineID: row.GuidelineID, VersionID: row.VersionID, AssetType: row.AssetType, DownloadedAt: row.DownloadedAt}
 }
