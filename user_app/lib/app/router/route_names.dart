@@ -19,6 +19,8 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String search = '/search';
   static const String library = '/library';
+  static const String collections = '/library/collections';
+  static const String collectionDetails = '/library/collections/:collectionId';
   static const String offlineContent = '/offline-content';
   static const String documentReader = '/document-reader';
   static const String more = '/more';
@@ -136,6 +138,10 @@ abstract final class AppRoutes {
 
   static String guideline(String guidelineId) {
     return '/guidelines/${Uri.encodeComponent(guidelineId)}';
+  }
+
+  static String collection(String collectionId) {
+    return '$collections/${Uri.encodeComponent(collectionId)}';
   }
 
   static String publicGuideline(String guidelineId) {

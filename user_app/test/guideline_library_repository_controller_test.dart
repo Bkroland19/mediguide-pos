@@ -1,12 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collection_controller.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
+import 'package:user_app/features/authentication/data/models/user.dart';
+import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
+import 'package:user_app/features/library/presentation/screens/guideline_collection_page.dart';
+import 'package:user_app/features/library/presentation/screens/guideline_collections_page.dart';
 
 import 'helpers/test_local_store.dart';
+
+final class _AuthenticatedController extends AuthController {
+  @override
+  Future<AuthState> build() async => const AuthState.authenticated(
+    User(id: 'user-1', name: 'Test clinician', email: 'test@example.test'),
+  );
+}
 
 final class FakeGuidelineLibraryApi extends BackendApiService {
   FakeGuidelineLibraryApi({int collectionCount = 0}) {
@@ -328,6 +341,22 @@ void main() {
       expect(created.name, 'Critical care');
       expect(container.read(provider).requireValue.totalItems, 102);
 
+      await container
+          .read(provider.notifier)
+          .addGuideline(created.id, 'guideline-1');
+      await container
+          .read(provider.notifier)
+          .addGuideline(created.id, 'guideline-1');
+      expect(
+        container
+            .read(provider)
+            .requireValue
+            .items
+            .firstWhere((item) => item.id == created.id)
+            .itemCount,
+        1,
+      );
+
       await container.read(provider.notifier).delete(created.id);
       expect(container.read(provider).requireValue.totalItems, 101);
 
@@ -376,5 +405,63 @@ void main() {
 
     await container.read(provider.notifier).removeItem('guideline-1');
     expect(container.read(provider).requireValue.items, isEmpty);
+  });
+
+  testWidgets('collection list renders canonical collection metadata', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: GuidelineCollectionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collection 1'), findsOneWidget);
+    expect(find.text('0 guidelines'), findsOneWidget);
+    expect(find.text('New collection'), findsOneWidget);
+  });
+
+  testWidgets('collection detail renders saved published guidelines', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    api.items['collection-1'] = [
+      {
+        'id': 'item-1',
+        'sort_order': 0,
+        'added_at': '2026-09-07T11:00:00Z',
+        'guideline': FakeGuidelineLibraryApi._guideline('guideline-1'),
+      },
+    ];
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: GuidelineCollectionPage(collectionId: 'collection-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guideline guideline-1'), findsOneWidget);
+    expect(find.text('Clinical care · MOH · Version 1'), findsOneWidget);
+    expect(find.text('1 guideline'), findsOneWidget);
   });
 }

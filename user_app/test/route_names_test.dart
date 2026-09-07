@@ -38,6 +38,14 @@ void main() {
       expect(AppRoutes.isPublic(AppRoutes.aiAssistant), isTrue);
     });
 
+    test('builds encoded, authenticated collection routes', () {
+      final route = AppRoutes.collection('ward rounds/2026');
+
+      expect(route, '/library/collections/ward%20rounds%2F2026');
+      expect(AppRoutes.isPublic(AppRoutes.collections), isFalse);
+      expect(AppRoutes.isPublic(route), isFalse);
+    });
+
     test('accepts only safe local post-authentication destinations', () {
       expect(
         AppRoutes.safeDestination('/public/guidelines/guideline-1'),

@@ -119,6 +119,27 @@ class GuidelineCollectionsController extends _$GuidelineCollectionsController {
     );
   });
 
+  Future<void> addGuideline(
+    String collectionId,
+    String guidelineId, {
+    int sortOrder = 0,
+  }) => _mutate(() async {
+    await _repository.addCollectionItem(
+      _userId,
+      collectionId,
+      guidelineId: guidelineId,
+      sortOrder: sortOrder,
+    );
+    try {
+      _upsertCollection(await _repository.getCollection(_userId, collectionId));
+    } catch (_) {
+      final current = state.valueOrNull;
+      if (current != null) {
+        state = AsyncData(current.copyWith(isMutating: false));
+      }
+    }
+  });
+
   Future<T> _mutate<T>(Future<T> Function() operation) async {
     final current = state.valueOrNull;
     if (current != null) {

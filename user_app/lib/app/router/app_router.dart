@@ -40,6 +40,8 @@ import 'package:user_app/features/guidelines/presentation/screens/publication_cl
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
 import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
 import 'package:user_app/features/library/presentation/screens/my_library_page.dart';
+import 'package:user_app/features/library/presentation/screens/guideline_collections_page.dart';
+import 'package:user_app/features/library/presentation/screens/guideline_collection_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/guest_more_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
@@ -101,6 +103,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.library,
         builder: (_, _) => const MyLibraryPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.collections,
+        builder: (_, _) => const GuidelineCollectionsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.collectionDetails,
+        builder: (_, state) => GuidelineCollectionPage(
+          collectionId: state.pathParameters['collectionId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.offlineContent,

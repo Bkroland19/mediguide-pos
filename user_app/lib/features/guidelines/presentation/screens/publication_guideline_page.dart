@@ -23,6 +23,7 @@ import 'package:user_app/features/downloads/presentation/controllers/guideline_d
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
+import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
 
 part '../widgets/publication_guideline_page_guideline_menu_action.dart';
 part '../widgets/publication_guideline_page_guideline_content_search_delegate.dart';
@@ -129,6 +130,11 @@ class _PublicationGuidelinePageState
         ),
         actions: [
           IconButton(
+            tooltip: 'Save to collection',
+            onPressed: () => _saveToCollection(context),
+            icon: const Icon(LucideIcons.folderPlus),
+          ),
+          IconButton(
             tooltip: progress?.isBookmarked == true
                 ? 'Remove bookmark'
                 : 'Bookmark guideline',
@@ -165,6 +171,13 @@ class _PublicationGuidelinePageState
                 child: ListTile(
                   leading: Icon(LucideIcons.notebookPen),
                   title: Text('Reading notes'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _GuidelineMenuAction.collection,
+                child: ListTile(
+                  leading: Icon(LucideIcons.folderPlus),
+                  title: Text('Save to collection'),
                 ),
               ),
               PopupMenuItem(
@@ -227,6 +240,9 @@ class _PublicationGuidelinePageState
               onNotes: () {
                 _editNotes(context, progress?.notes ?? '');
               },
+              onSaveToCollection: () {
+                _saveToCollection(context);
+              },
               onShare: () {
                 _copyLink(context);
               },
@@ -268,11 +284,35 @@ class _PublicationGuidelinePageState
       case _GuidelineMenuAction.notes:
         await _editNotes(context, notes);
 
+      case _GuidelineMenuAction.collection:
+        await _saveToCollection(context);
+
       case _GuidelineMenuAction.share:
         await _copyLink(context);
 
       case _GuidelineMenuAction.original:
         await _openOriginal(context);
+    }
+  }
+
+  // ===========================================================================
+  // COLLECTIONS
+  // ===========================================================================
+
+  Future<void> _saveToCollection(BuildContext context) async {
+    final user = ref.read(authControllerProvider).valueOrNull?.user;
+    if (user == null) {
+      _requireSignIn(context, 'Sign in to save guidelines to collections.');
+      return;
+    }
+
+    final collectionName = await showSaveToCollectionSheet(
+      context,
+      userId: user.id,
+      guidelineId: widget.guidelineId,
+    );
+    if (collectionName != null && context.mounted) {
+      AppMessage.success(context, 'Saved to “$collectionName”.');
     }
   }
 

@@ -9,6 +9,7 @@ class _ReaderActionBar extends StatelessWidget {
     required this.onAskAi,
     required this.onBookmark,
     required this.onNotes,
+    required this.onSaveToCollection,
     required this.onShare,
     required this.onOriginal,
     required this.onDownload,
@@ -22,6 +23,7 @@ class _ReaderActionBar extends StatelessWidget {
   final VoidCallback onAskAi;
   final VoidCallback onBookmark;
   final VoidCallback onNotes;
+  final VoidCallback onSaveToCollection;
   final VoidCallback onShare;
   final VoidCallback onOriginal;
   final VoidCallback onDownload;
@@ -133,6 +135,17 @@ class _ReaderActionBar extends StatelessWidget {
                   Navigator.pop(sheetContext);
 
                   onNotes();
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(LucideIcons.folderPlus),
+                title: const Text('Save to collection'),
+                subtitle: const Text('Organize this guideline for later'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+
+                  onSaveToCollection();
                 },
               ),
 
