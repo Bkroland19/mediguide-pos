@@ -227,6 +227,31 @@ final class GuidelineLibraryRepository {
     await _bestEffort(() => _invalidateCollectionCaches(scope, id));
   }
 
+  /// Checks the authoritative paginated collection contents before an add so
+  /// the UI can distinguish an idempotent repeat from a new membership.
+  Future<bool> collectionContainsGuideline(
+    String userId,
+    String collectionId,
+    String guidelineId,
+  ) async {
+    final id = _requiredId(collectionId, 'collectionId');
+    final publicationId = _requiredId(guidelineId, 'guidelineId');
+    var page = 1;
+    while (true) {
+      final result = await listCollectionItems(
+        userId,
+        id,
+        page: page,
+        perPage: 100,
+      );
+      if (result.items.any((item) => item.guideline.id == publicationId)) {
+        return true;
+      }
+      if (!result.hasMore) return false;
+      page += 1;
+    }
+  }
+
   Future<void> removeCollectionItem(
     String userId,
     String collectionId,
@@ -508,6 +533,7 @@ final class GuidelineLibraryRepository {
       perPage: perPage,
       totalItems: totalItems,
       totalPages: totalItems == 0 ? 0 : (totalItems / perPage).ceil(),
+      fromCache: true,
     );
   }
 

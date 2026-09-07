@@ -172,6 +172,7 @@ final class GuidelineCollectionItemPage {
     required this.perPage,
     required this.totalItems,
     required this.totalPages,
+    this.fromCache = false,
   });
 
   factory GuidelineCollectionItemPage.fromContract(
@@ -202,6 +203,7 @@ final class GuidelineCollectionItemPage {
       totalItems: (value['total_items'] as num?)?.toInt() ?? items.length,
       totalPages:
           (value['total_pages'] as num?)?.toInt() ?? (items.isEmpty ? 0 : 1),
+      fromCache: value['from_cache'] == true,
     );
   }
 
@@ -210,6 +212,7 @@ final class GuidelineCollectionItemPage {
   final int perPage;
   final int totalItems;
   final int totalPages;
+  final bool fromCache;
 
   bool get hasMore => page < totalPages;
 
@@ -219,6 +222,7 @@ final class GuidelineCollectionItemPage {
     'per_page': perPage,
     'total_items': totalItems,
     'total_pages': totalPages,
+    'from_cache': fromCache,
   };
 }
 

@@ -306,13 +306,20 @@ class _PublicationGuidelinePageState
       return;
     }
 
-    final collectionName = await showSaveToCollectionSheet(
+    final result = await showSaveToCollectionSheet(
       context,
       userId: user.id,
       guidelineId: widget.guidelineId,
     );
-    if (collectionName != null && context.mounted) {
-      AppMessage.success(context, 'Saved to “$collectionName”.');
+    if (result != null && context.mounted) {
+      if (result.alreadyPresent) {
+        AppMessage.info(
+          context,
+          'Already saved in “${result.collectionName}”.',
+        );
+      } else {
+        AppMessage.success(context, 'Saved to “${result.collectionName}”.');
+      }
     }
   }
 

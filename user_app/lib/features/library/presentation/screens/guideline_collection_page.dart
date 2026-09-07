@@ -126,6 +126,18 @@ class _CollectionView extends ConsumerWidget {
                 collection: state.collection,
                 itemCount: state.totalItems,
               ),
+              if (state.isOffline) ...[
+                AppSpacing.gapSm,
+                Card.outlined(
+                  child: const ListTile(
+                    leading: Icon(LucideIcons.cloudOff),
+                    title: Text('Showing saved offline data'),
+                    subtitle: Text(
+                      'Connect to refresh this collection or make changes.',
+                    ),
+                  ),
+                ),
+              ],
               AppSpacing.gapLg,
               Text(
                 'Saved guidelines',
@@ -133,7 +145,9 @@ class _CollectionView extends ConsumerWidget {
               ),
               AppSpacing.gapSm,
               if (state.items.isEmpty)
-                const _EmptyCollection()
+                _EmptyCollection(
+                  onAdd: () => context.push(AppRoutes.publicGuidelines),
+                )
               else
                 for (final item in state.items)
                   Padding(
@@ -360,25 +374,33 @@ class _CollectionGuidelineCard extends StatelessWidget {
 }
 
 class _EmptyCollection extends StatelessWidget {
-  const _EmptyCollection();
+  const _EmptyCollection({required this.onAdd});
+
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Card.outlined(
-      child: const Padding(
-        padding: EdgeInsets.all(AppSpacing.xl),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: [
-            Icon(LucideIcons.bookPlus, size: 44),
+            const Icon(LucideIcons.bookPlus, size: 44),
             AppSpacing.gapMd,
-            Text(
+            const Text(
               'No guidelines saved yet',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             AppSpacing.gapSm,
-            Text(
+            const Text(
               'Open a published guideline and choose “Save to collection”.',
               textAlign: TextAlign.center,
+            ),
+            AppSpacing.gapMd,
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(LucideIcons.plus),
+              label: const Text('Add guidelines'),
             ),
           ],
         ),

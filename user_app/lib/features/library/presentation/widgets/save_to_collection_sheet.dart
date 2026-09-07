@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
+import 'package:user_app/features/library/presentation/controllers/guideline_collection_controller.dart';
 import 'package:user_app/features/library/presentation/widgets/collection_form_sheet.dart';
 
-Future<String?> showSaveToCollectionSheet(
+final class SaveToCollectionResult {
+  const SaveToCollectionResult({
+    required this.collectionName,
+    required this.alreadyPresent,
+  });
+
+  final String collectionName;
+  final bool alreadyPresent;
+}
+
+Future<SaveToCollectionResult?> showSaveToCollectionSheet(
   BuildContext context, {
   required String userId,
   required String guidelineId,
 }) {
-  return showModalBottomSheet<String>(
+  return showModalBottomSheet<SaveToCollectionResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -129,14 +142,35 @@ class _SaveToCollectionSheetState
   ) async {
     setState(() => _savingCollectionId = collection.id);
     try {
-      await ref
-          .read(guidelineCollectionsControllerProvider(widget.userId).notifier)
-          .addGuideline(collection.id, widget.guidelineId);
-      if (context.mounted) Navigator.pop(context, collection.name);
-    } catch (_) {
+      final controller = ref.read(
+        guidelineCollectionsControllerProvider(widget.userId).notifier,
+      );
+      final alreadyPresent = await ref
+          .read(guidelineLibraryRepositoryProvider)
+          .collectionContainsGuideline(
+            widget.userId,
+            collection.id,
+            widget.guidelineId,
+          );
+      if (!alreadyPresent) {
+        await controller.addGuideline(collection.id, widget.guidelineId);
+        ref.invalidate(
+          guidelineCollectionControllerProvider(widget.userId, collection.id),
+        );
+      }
+      if (context.mounted) {
+        Navigator.pop(
+          context,
+          SaveToCollectionResult(
+            collectionName: collection.name,
+            alreadyPresent: alreadyPresent,
+          ),
+        );
+      }
+    } catch (error) {
       if (!context.mounted) return;
       setState(() => _savingCollectionId = null);
-      AppMessage.error(context, 'The guideline could not be saved.');
+      AppMessage.error(context, _friendlySaveError(error));
     }
   }
 
@@ -153,14 +187,22 @@ class _SaveToCollectionSheetState
         description: value.description,
       );
       await controller.addGuideline(collection.id, widget.guidelineId);
-      if (context.mounted) Navigator.pop(context, collection.name);
-    } catch (_) {
+      ref.invalidate(
+        guidelineCollectionControllerProvider(widget.userId, collection.id),
+      );
+      if (context.mounted) {
+        Navigator.pop(
+          context,
+          SaveToCollectionResult(
+            collectionName: collection.name,
+            alreadyPresent: false,
+          ),
+        );
+      }
+    } catch (error) {
       if (!context.mounted) return;
       setState(() => _savingCollectionId = null);
-      AppMessage.error(
-        context,
-        'The collection or saved guideline could not be completed.',
-      );
+      AppMessage.error(context, _friendlySaveError(error));
     }
   }
 
@@ -174,6 +216,24 @@ class _SaveToCollectionSheetState
         AppMessage.error(context, 'More collections could not be loaded.');
       }
     }
+  }
+
+  String _friendlySaveError(Object error) {
+    if (error is BackendApiException) {
+      if (error.statusCode == 0) {
+        return 'You are offline. Connect to save this guideline.';
+      }
+      if (error.statusCode == 401) {
+        return 'Your session expired. Sign in and try again.';
+      }
+      if (error.statusCode == 409) {
+        return 'A collection with this name already exists.';
+      }
+      if (error.statusCode >= 500) {
+        return 'The server is unavailable. Please try again.';
+      }
+    }
+    return 'The guideline could not be saved. Please try again.';
   }
 }
 

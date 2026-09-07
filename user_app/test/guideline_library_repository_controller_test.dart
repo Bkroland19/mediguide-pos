@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collection_controller.dart';
@@ -11,6 +14,7 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
 import 'package:user_app/features/library/presentation/screens/guideline_collection_page.dart';
 import 'package:user_app/features/library/presentation/screens/guideline_collections_page.dart';
+import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
 
 import 'helpers/test_local_store.dart';
 
@@ -19,6 +23,55 @@ final class _AuthenticatedController extends AuthController {
   Future<AuthState> build() async => const AuthState.authenticated(
     User(id: 'user-1', name: 'Test clinician', email: 'test@example.test'),
   );
+}
+
+final class _UnauthenticatedController extends AuthController {
+  @override
+  Future<AuthState> build() async => const AuthState.unauthenticated();
+}
+
+class _SaveToCollectionHarness extends StatefulWidget {
+  const _SaveToCollectionHarness();
+
+  @override
+  State<_SaveToCollectionHarness> createState() =>
+      _SaveToCollectionHarnessState();
+}
+
+class _SaveToCollectionHarnessState extends State<_SaveToCollectionHarness> {
+  String? savedCollection;
+  bool alreadyPresent = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: FilledButton(
+          onPressed: () async {
+            final result = await showSaveToCollectionSheet(
+              context,
+              userId: 'user-1',
+              guidelineId: 'guideline-1',
+            );
+            if (mounted && result != null) {
+              setState(() {
+                savedCollection = result.collectionName;
+                alreadyPresent = result.alreadyPresent;
+              });
+            }
+          },
+          child: const Text('Open collection picker'),
+        ),
+      ),
+      bottomNavigationBar: savedCollection == null
+          ? null
+          : Text(
+              alreadyPresent
+                  ? 'Already saved in $savedCollection'
+                  : 'Saved to $savedCollection',
+            ),
+    );
+  }
 }
 
 final class FakeGuidelineLibraryApi extends BackendApiService {
@@ -34,6 +87,8 @@ final class FakeGuidelineLibraryApi extends BackendApiService {
   int nextCollection = 1000;
   int nextItem = 100;
   int? failureStatus;
+  int? nextFailureStatus;
+  String? nextFailureCall;
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -44,6 +99,13 @@ final class FakeGuidelineLibraryApi extends BackendApiService {
     bool includeAuth = true,
   }) async {
     calls.add('$method $path');
+    if (nextFailureStatus != null &&
+        (nextFailureCall == null || nextFailureCall == '$method $path')) {
+      final status = nextFailureStatus!;
+      nextFailureStatus = null;
+      nextFailureCall = null;
+      throw BackendApiException('request failed', statusCode: status);
+    }
     final status = failureStatus;
     if (status != null) {
       throw BackendApiException('request failed', statusCode: status);
@@ -407,6 +469,78 @@ void main() {
     expect(container.read(provider).requireValue.items, isEmpty);
   });
 
+  test('collection detail controller incrementally loads every item', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    api.items['collection-1'] = [
+      for (var index = 1; index <= 21; index++)
+        {
+          'id': 'item-$index',
+          'sort_order': index,
+          'added_at': '2026-09-07T11:00:00Z',
+          'guideline': FakeGuidelineLibraryApi._guideline('guideline-$index'),
+        },
+    ];
+    final repository = GuidelineLibraryRepository(api, store.cache);
+    final container = ProviderContainer(
+      overrides: [
+        guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final provider = guidelineCollectionControllerProvider(
+      'user-1',
+      'collection-1',
+    );
+    final subscription = container.listen(provider, (_, _) {});
+    addTearDown(subscription.close);
+
+    final firstPage = await container.read(provider.future);
+    expect(firstPage.items, hasLength(20));
+    expect(firstPage.hasMore, isTrue);
+    await container.read(provider.notifier).loadNextPage();
+
+    expect(container.read(provider).requireValue.items, hasLength(21));
+    expect(container.read(provider).requireValue.hasMore, isFalse);
+  });
+
+  test(
+    'collection item cache reconciles a complete published-only snapshot',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeGuidelineLibraryApi(collectionCount: 1);
+      api.items['collection-1'] = [
+        {
+          'id': 'item-1',
+          'sort_order': 0,
+          'added_at': '2026-09-07T11:00:00Z',
+          'guideline': FakeGuidelineLibraryApi._guideline('guideline-1'),
+        },
+      ];
+      final repository = GuidelineLibraryRepository(api, store.cache);
+
+      expect(
+        (await repository.listCollectionItems('user-1', 'collection-1')).items,
+        hasLength(1),
+      );
+      api.items['collection-1'] = [];
+      expect(
+        (await repository.listCollectionItems('user-1', 'collection-1')).items,
+        isEmpty,
+      );
+
+      api.failureStatus = 0;
+      final offline = await repository.listCollectionItems(
+        'user-1',
+        'collection-1',
+      );
+      expect(offline.items, isEmpty);
+      expect(offline.fromCache, isTrue);
+    },
+  );
+
   testWidgets('collection list renders canonical collection metadata', (
     tester,
   ) async {
@@ -463,5 +597,291 @@ void main() {
     expect(find.text('Guideline guideline-1'), findsOneWidget);
     expect(find.text('Clinical care · MOH · Version 1'), findsOneWidget);
     expect(find.text('1 guideline'), findsOneWidget);
+  });
+
+  testWidgets('collection creation validates, persists, and opens the result', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi();
+    final repository = GuidelineLibraryRepository(api, store.cache);
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const GuidelineCollectionsPage()),
+        GoRoute(
+          path: AppRoutes.collectionDetails,
+          builder: (_, state) => Scaffold(
+            body: Text('Opened ${state.pathParameters['collectionId']}'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create collection').last);
+    await tester.pump();
+    expect(find.text('Enter a collection name.'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Ward rounds');
+    await tester.enterText(find.byType(TextFormField).last, 'Rapid references');
+    await tester.tap(find.text('Create collection').last);
+    await tester.pumpAndSettle();
+
+    expect(api.calls, contains('POST /api/v2/library/collections'));
+    expect(find.text('Opened collection-1000'), findsOneWidget);
+  });
+
+  testWidgets('collection creation failure uses the canonical user message', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi();
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: GuidelineCollectionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api
+      ..nextFailureStatus = 409
+      ..nextFailureCall = 'POST /api/v2/library/collections';
+
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Duplicate');
+    await tester.tap(find.text('Create collection').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('The collection could not be created.'), findsOneWidget);
+    expect(find.text('Collections'), findsOneWidget);
+  });
+
+  testWidgets('published guideline can be saved from collection picker', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: _SaveToCollectionHarness()),
+      ),
+    );
+    await tester.tap(find.text('Open collection picker'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Collection 1'));
+    await tester.pumpAndSettle();
+
+    expect(
+      api.calls,
+      contains('POST /api/v2/library/collections/collection-1/items'),
+    );
+    expect(find.text('Saved to Collection 1'), findsOneWidget);
+    expect(api.items['collection-1'], hasLength(1));
+
+    final addCalls = api.calls
+        .where(
+          (call) =>
+              call == 'POST /api/v2/library/collections/collection-1/items',
+        )
+        .length;
+    await tester.tap(find.text('Open collection picker'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Collection 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Already saved in Collection 1'), findsOneWidget);
+    expect(
+      api.calls
+          .where(
+            (call) =>
+                call == 'POST /api/v2/library/collections/collection-1/items',
+          )
+          .length,
+      addCalls,
+    );
+  });
+
+  testWidgets('empty collection offers a route to published guidelines', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+    final router = GoRouter(
+      initialLocation: AppRoutes.collection('collection-1'),
+      routes: [
+        GoRoute(
+          path: AppRoutes.collectionDetails,
+          builder: (_, state) => GuidelineCollectionPage(
+            collectionId: state.pathParameters['collectionId']!,
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.publicGuidelines,
+          builder: (_, _) => const Scaffold(body: Text('Guideline catalogue')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Add guidelines'), findsOneWidget);
+    await tester.tap(find.text('Add guidelines'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guideline catalogue'), findsOneWidget);
+  });
+
+  testWidgets('saved guideline removal requires confirmation and updates UI', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    api.items['collection-1'] = [
+      {
+        'id': 'item-1',
+        'sort_order': 0,
+        'added_at': '2026-09-07T11:00:00Z',
+        'guideline': FakeGuidelineLibraryApi._guideline('guideline-1'),
+      },
+    ];
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: GuidelineCollectionPage(collectionId: 'collection-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Remove from collection'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove guideline?'), findsOneWidget);
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guideline removed from collection.'), findsOneWidget);
+    expect(find.text('No guidelines saved yet'), findsOneWidget);
+    expect(api.items['collection-1'], isEmpty);
+  });
+
+  testWidgets('collection routes explain authentication when opened as guest', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_UnauthenticatedController.new),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => ResponsiveBreakpoints.builder(
+            child: child!,
+            breakpoints: const [
+              Breakpoint(start: 0, end: 450, name: MOBILE),
+              Breakpoint(start: 451, end: double.infinity, name: TABLET),
+            ],
+          ),
+          home: const GuidelineCollectionsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in required'), findsOneWidget);
+    expect(
+      find.text('Sign in to create and sync your guideline collections.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('collections remain usable at 320px and 200 percent text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    api.collections[0] = {
+      ...api.collections[0],
+      'name': 'Emergency and critical care references',
+      'description': 'A long description for a multidisciplinary ward team',
+    };
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_AuthenticatedController.new),
+          guidelineLibraryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => ResponsiveBreakpoints.builder(
+            child: child!,
+            breakpoints: const [
+              Breakpoint(start: 0, end: 450, name: MOBILE),
+              Breakpoint(start: 451, end: double.infinity, name: TABLET),
+            ],
+          ),
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 900),
+              textScaler: TextScaler.linear(2),
+            ),
+            child: const GuidelineCollectionsPage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Emergency and critical care references'), findsOneWidget);
+    expect(find.byTooltip('Collection actions'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

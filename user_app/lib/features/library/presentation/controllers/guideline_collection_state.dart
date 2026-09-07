@@ -10,6 +10,7 @@ final class GuidelineCollectionState {
     required this.totalPages,
     this.isLoadingMore = false,
     this.isMutating = false,
+    this.isOffline = false,
   });
 
   factory GuidelineCollectionState.fromResults(
@@ -22,6 +23,7 @@ final class GuidelineCollectionState {
     perPage: page.perPage,
     totalItems: page.totalItems,
     totalPages: page.totalPages,
+    isOffline: page.fromCache,
   );
 
   final GuidelineCollectionDetail collection;
@@ -32,6 +34,7 @@ final class GuidelineCollectionState {
   final int totalPages;
   final bool isLoadingMore;
   final bool isMutating;
+  final bool isOffline;
 
   bool get hasMore => page < totalPages;
 
@@ -44,6 +47,7 @@ final class GuidelineCollectionState {
     int? totalPages,
     bool? isLoadingMore,
     bool? isMutating,
+    bool? isOffline,
   }) => GuidelineCollectionState(
     collection: collection ?? this.collection,
     items: items ?? this.items,
@@ -53,5 +57,6 @@ final class GuidelineCollectionState {
     totalPages: totalPages ?? this.totalPages,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     isMutating: isMutating ?? this.isMutating,
+    isOffline: isOffline ?? this.isOffline,
   );
 }

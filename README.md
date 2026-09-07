@@ -284,6 +284,7 @@ complete Android and iOS operator runbook from prerelease through store rollout.
 | [`docs/release-process.md`](docs/release-process.md) | Unified release, deployment and rollback |
 | [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |
+| [`docs/guideline-collections.md`](docs/guideline-collections.md) | Private guideline collections architecture, user workflow, API, offline behavior, rollout and troubleshooting |
 | [`docs/markdown-authoring-workspace.md`](docs/markdown-authoring-workspace.md) | Dashboard Markdown editor and review workflow |
 | [`docs/guideline-authoring-and-publication-workflow.md`](docs/guideline-authoring-and-publication-workflow.md) | End-to-end guideline creation, Markdown authoring, clinical block approval, publication, and verification runbook |
 | [`docs/guideline-validation-troubleshooting.md`](docs/guideline-validation-troubleshooting.md) | Resolving guideline Markdown errors, clinical warnings, regeneration failures, and publication blockers |

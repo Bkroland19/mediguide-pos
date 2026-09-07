@@ -7,6 +7,9 @@ The Riverpod application architecture and feature-first project structure are
 documented in [docs/riverpod-migration.md](docs/riverpod-migration.md).
 Screen and feature-widget ownership is documented in
 [docs/presentation-structure.md](docs/presentation-structure.md).
+The authenticated collections workflow, offline behavior, test gates, and
+troubleshooting runbook are documented in
+[Guideline collections](../docs/guideline-collections.md).
 
 ## Environment launcher icons
 

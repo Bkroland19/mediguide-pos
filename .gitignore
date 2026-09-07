@@ -1,4 +1,5 @@
 *.md
+!docs/guideline-collections.md
 !docs/release-process.md
 !README.md
 !**/README.md
