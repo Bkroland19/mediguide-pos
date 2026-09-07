@@ -130,7 +130,14 @@ final class GuidelineLibraryRepository {
     final result = GuidelineCollectionSummary.fromContract(
       ServicesGuidelineCollectionDTO.fromJson(_data(response)),
     );
-    await _bestEffort(() => _cacheCollection(scope, result));
+    await _bestEffort(() async {
+      await _cacheCollection(scope, result);
+      await _updateCollectionSnapshotAfterMutation(
+        scope,
+        delta: 1,
+        addedId: result.id,
+      );
+    });
     return result;
   }
 
@@ -163,6 +170,11 @@ final class GuidelineLibraryRepository {
     await _api.requestJson('/api/v2/library/collections/$id', method: 'DELETE');
     await _bestEffort(() async {
       await _cache.tombstone(type: _collectionsType, id: id, scope: scope);
+      await _updateCollectionSnapshotAfterMutation(
+        scope,
+        delta: -1,
+        removedId: id,
+      );
       await _cache.clearType(type: _itemsType(id), scope: scope);
       await _cache.remove(
         type: _collectionItemsSnapshotType,
@@ -216,6 +228,7 @@ final class GuidelineLibraryRepository {
     if (sortOrder < 0) {
       throw ArgumentError.value(sortOrder, 'sortOrder', 'must be non-negative');
     }
+    final knownAbsent = await _isGuidelineKnownAbsent(scope, id, publicationId);
     await _api.requestJson(
       '/api/v2/library/collections/$id/items',
       method: 'POST',
@@ -224,7 +237,12 @@ final class GuidelineLibraryRepository {
         'sort_order': sortOrder,
       }).toJson(),
     );
-    await _bestEffort(() => _invalidateCollectionCaches(scope, id));
+    await _bestEffort(() async {
+      await _markItemSnapshotAfterAdd(scope, id, incrementTotal: knownAbsent);
+      if (knownAbsent) {
+        await _updateCachedCollectionItemCount(scope, id, 1);
+      }
+    });
   }
 
   /// Checks the authoritative paginated collection contents before an add so
@@ -283,7 +301,8 @@ final class GuidelineLibraryRepository {
           }
         }
       }
-      await _invalidateCollectionCaches(scope, id, clearItems: false);
+      await _updateItemSnapshotAfterRemoval(scope, id);
+      await _updateCachedCollectionItemCount(scope, id, -1);
     });
   }
 
@@ -364,7 +383,7 @@ final class GuidelineLibraryRepository {
           scope: scope,
           ttl: _cacheTtl,
           reconcileMissing: true,
-          snapshotData: {'total_items': page.totalItems},
+          snapshotData: {'total_items': page.totalItems, 'complete': true},
         );
       } else {
         await _cache.putMany(
@@ -378,7 +397,7 @@ final class GuidelineLibraryRepository {
           id: 'all',
           scope: scope,
           ttl: _cacheTtl,
-          data: {'total_items': page.totalItems},
+          data: {'total_items': page.totalItems, 'complete': false},
         );
       }
     });
@@ -417,9 +436,10 @@ final class GuidelineLibraryRepository {
         ? const <GuidelineCollectionSummary>[]
         : values.skip(offset).take(perPage).toList(growable: false);
     final snapshotTotal = (snapshot?['total_items'] as num?)?.toInt() ?? 0;
-    final totalItems = snapshotTotal > values.length
-        ? snapshotTotal
-        : values.length;
+    final snapshotIsComplete = snapshot?['complete'] == true;
+    final totalItems = snapshotIsComplete
+        ? values.length
+        : (snapshotTotal > values.length ? snapshotTotal : values.length);
     return GuidelineCollectionPage(
       items: items,
       page: page,
@@ -476,7 +496,7 @@ final class GuidelineLibraryRepository {
           scope: scope,
           ttl: _cacheTtl,
           reconcileMissing: true,
-          snapshotData: {'total_items': page.totalItems},
+          snapshotData: {'total_items': page.totalItems, 'complete': true},
         );
       } else {
         await _cache.putMany(
@@ -490,7 +510,7 @@ final class GuidelineLibraryRepository {
           id: collectionId,
           scope: scope,
           ttl: _cacheTtl,
-          data: {'total_items': page.totalItems},
+          data: {'total_items': page.totalItems, 'complete': false},
         );
       }
     });
@@ -524,9 +544,10 @@ final class GuidelineLibraryRepository {
         ? const <GuidelineCollectionItem>[]
         : values.skip(offset).take(perPage).toList(growable: false);
     final snapshotTotal = (snapshot?['total_items'] as num?)?.toInt() ?? 0;
-    final totalItems = snapshotTotal > values.length
-        ? snapshotTotal
-        : values.length;
+    final snapshotIsComplete = snapshot?['complete'] == true;
+    final totalItems = snapshotIsComplete
+        ? values.length
+        : (snapshotTotal > values.length ? snapshotTotal : values.length);
     return GuidelineCollectionItemPage(
       items: items,
       page: page,
@@ -537,20 +558,151 @@ final class GuidelineLibraryRepository {
     );
   }
 
-  Future<void> _invalidateCollectionCaches(
+  Future<void> _updateCollectionSnapshotAfterMutation(
+    String scope, {
+    required int delta,
+    String? addedId,
+    String? removedId,
+  }) async {
+    final snapshot = await _cache.get(
+      type: _collectionsSnapshotType,
+      id: 'all',
+      scope: scope,
+    );
+    if (snapshot == null) return;
+    final complete = snapshot['complete'] == true;
+    final active = complete
+        ? await _cache.list(type: _collectionsType, scope: scope, limit: 1000)
+        : const <Map<String, dynamic>>[];
+    final previousTotal = (snapshot['total_items'] as num?)?.toInt() ?? 0;
+    final ids = (snapshot['ids'] as List? ?? const [])
+        .map((value) => value.toString())
+        .toSet();
+    if (addedId != null) ids.add(addedId);
+    if (removedId != null) ids.remove(removedId);
+    await _cache.put(
+      type: _collectionsSnapshotType,
+      id: 'all',
+      scope: scope,
+      ttl: _cacheTtl,
+      data: {
+        'total_items': complete
+            ? active.length
+            : (previousTotal + delta).clamp(0, 1 << 31),
+        'complete': complete,
+        'ids': ids.toList(growable: false),
+      },
+    );
+  }
+
+  Future<bool> _isGuidelineKnownAbsent(
+    String scope,
+    String collectionId,
+    String guidelineId,
+  ) async {
+    try {
+      final snapshot = await _cache.get(
+        type: _collectionItemsSnapshotType,
+        id: collectionId,
+        scope: scope,
+      );
+      if (snapshot?['complete'] != true) return false;
+      final cached = await _cache.list(
+        type: _itemsType(collectionId),
+        scope: scope,
+        limit: 1000,
+      );
+      return !cached.any((item) {
+        final guideline = item['guideline'];
+        return guideline is Map && guideline['id']?.toString() == guidelineId;
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _markItemSnapshotAfterAdd(
     String scope,
     String collectionId, {
-    bool clearItems = true,
+    required bool incrementTotal,
   }) async {
-    await _cache.remove(type: _collectionsType, id: collectionId, scope: scope);
-    await _cache.remove(
+    final snapshot = await _cache.get(
       type: _collectionItemsSnapshotType,
       id: collectionId,
       scope: scope,
     );
-    if (clearItems) {
-      await _cache.clearType(type: _itemsType(collectionId), scope: scope);
-    }
+    if (snapshot == null) return;
+    final previousTotal = (snapshot['total_items'] as num?)?.toInt() ?? 0;
+    await _cache.put(
+      type: _collectionItemsSnapshotType,
+      id: collectionId,
+      scope: scope,
+      ttl: _cacheTtl,
+      data: {
+        ...snapshot,
+        'total_items': previousTotal + (incrementTotal ? 1 : 0),
+        // The 204 add response does not contain the new item entity.
+        'complete': false,
+      },
+    );
+  }
+
+  Future<void> _updateItemSnapshotAfterRemoval(
+    String scope,
+    String collectionId,
+  ) async {
+    final snapshot = await _cache.get(
+      type: _collectionItemsSnapshotType,
+      id: collectionId,
+      scope: scope,
+    );
+    if (snapshot == null) return;
+    final previousTotal = (snapshot['total_items'] as num?)?.toInt() ?? 0;
+    final activeItems = await _cache.list(
+      type: _itemsType(collectionId),
+      scope: scope,
+      limit: 1000,
+    );
+    final ids = (snapshot['ids'] as List? ?? const [])
+        .map((value) => value.toString())
+        .where((id) => activeItems.any((item) => item['id']?.toString() == id))
+        .toList(growable: false);
+    await _cache.put(
+      type: _collectionItemsSnapshotType,
+      id: collectionId,
+      scope: scope,
+      ttl: _cacheTtl,
+      data: {
+        'total_items': (previousTotal - 1).clamp(0, 1 << 31),
+        'complete': snapshot['complete'] == true,
+        'ids': ids,
+      },
+    );
+  }
+
+  Future<void> _updateCachedCollectionItemCount(
+    String scope,
+    String collectionId,
+    int delta,
+  ) async {
+    final value = await _cache.get(
+      type: _collectionsType,
+      id: collectionId,
+      scope: scope,
+    );
+    if (value == null) return;
+    final collection = GuidelineCollectionSummary.fromJson(value);
+    await _cacheCollection(
+      scope,
+      GuidelineCollectionSummary(
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        itemCount: (collection.itemCount + delta).clamp(0, 1 << 31).toInt(),
+        createdAt: collection.createdAt,
+        updatedAt: collection.updatedAt,
+      ),
+    );
   }
 
   String _itemsType(String collectionId) =>

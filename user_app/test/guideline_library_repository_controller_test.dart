@@ -14,6 +14,7 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
 import 'package:user_app/features/library/presentation/screens/guideline_collection_page.dart';
 import 'package:user_app/features/library/presentation/screens/guideline_collections_page.dart';
+import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
 
 import 'helpers/test_local_store.dart';
@@ -358,6 +359,157 @@ void main() {
     expect(offline.totalItems, 0);
   });
 
+  test('deleted collections do not reappear from the offline cache', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    expect((await repository.listCollections('user-1')).totalItems, 1);
+    await repository.deleteCollection('user-1', 'collection-1');
+
+    api.failureStatus = 0;
+    final offline = await repository.listCollections('user-1');
+    expect(offline.items, isEmpty);
+    expect(offline.totalItems, 0);
+    expect(offline.totalPages, 0);
+  });
+
+  test('renamed collections replace their cached representation', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeGuidelineLibraryApi(collectionCount: 1);
+    final repository = GuidelineLibraryRepository(api, store.cache);
+
+    await repository.listCollections('user-1');
+    await repository.updateCollection(
+      'user-1',
+      'collection-1',
+      name: 'Renamed collection',
+    );
+
+    api.failureStatus = 503;
+    final offline = await repository.listCollections('user-1');
+    expect(offline.items.single.name, 'Renamed collection');
+    expect(offline.totalItems, 1);
+  });
+
+  test(
+    'partial refresh never removes cached pages outside its snapshot',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeGuidelineLibraryApi(collectionCount: 102);
+      final repository = GuidelineLibraryRepository(api, store.cache);
+
+      await repository.listCollections(
+        'user-1',
+        page: 2,
+        perPage: 100,
+        sort: 'name',
+        order: 'asc',
+      );
+      api.collections.removeWhere((item) => item['id'] == 'collection-50');
+      await repository.listCollections(
+        'user-1',
+        perPage: 100,
+        sort: 'name',
+        order: 'asc',
+      );
+
+      api.failureStatus = 0;
+      final first = await repository.listCollections(
+        'user-1',
+        perPage: 100,
+        sort: 'name',
+        order: 'asc',
+      );
+      final second = await repository.listCollections(
+        'user-1',
+        page: 2,
+        perPage: 100,
+        sort: 'name',
+        order: 'asc',
+      );
+      final ids = [...first.items, ...second.items].map((item) => item.id);
+      expect(ids, contains('collection-102'));
+      expect(first.totalItems, 101);
+    },
+  );
+
+  test(
+    'item mutations reconcile cached totals and collection counts',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeGuidelineLibraryApi(collectionCount: 1);
+      final repository = GuidelineLibraryRepository(api, store.cache);
+
+      await repository.listCollections('user-1');
+      await repository.listCollectionItems('user-1', 'collection-1');
+      await repository.addCollectionItem(
+        'user-1',
+        'collection-1',
+        guidelineId: 'guideline-1',
+      );
+
+      api.failureStatus = 0;
+      expect(
+        (await repository.getCollection('user-1', 'collection-1')).itemCount,
+        1,
+      );
+      final afterAdd = await repository.listCollectionItems(
+        'user-1',
+        'collection-1',
+      );
+      expect(afterAdd.totalItems, 1);
+      expect(afterAdd.fromCache, isTrue);
+
+      api.failureStatus = null;
+      await repository.listCollectionItems('user-1', 'collection-1');
+      await repository.removeCollectionItem(
+        'user-1',
+        'collection-1',
+        'guideline-1',
+      );
+      api.failureStatus = 0;
+      expect(
+        (await repository.getCollection('user-1', 'collection-1')).itemCount,
+        0,
+      );
+      final afterRemove = await repository.listCollectionItems(
+        'user-1',
+        'collection-1',
+      );
+      expect(afterRemove.items, isEmpty);
+      expect(afterRemove.totalItems, 0);
+    },
+  );
+
+  test('collection messages hide transport details and guide recovery', () {
+    expect(
+      CollectionMessages.failure(
+        const BackendApiException('Dio stack trace', statusCode: 0),
+        CollectionOperation.addGuideline,
+      ),
+      'You are offline. Connect to make this change.',
+    );
+    expect(
+      CollectionMessages.failure(
+        const BackendApiException('constraint detail', statusCode: 409),
+        CollectionOperation.createCollection,
+      ),
+      'A collection with this name already exists.',
+    );
+    expect(
+      CollectionMessages.failure(
+        const BackendApiException('token detail', statusCode: 401),
+        CollectionOperation.deleteCollection,
+      ),
+      'Your session expired. Sign in and try again.',
+    );
+  });
+
   test('offline pagination preserves the authoritative total', () async {
     final store = TestLocalStore();
     addTearDown(store.close);
@@ -673,7 +825,10 @@ void main() {
     await tester.tap(find.text('Create collection').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('The collection could not be created.'), findsOneWidget);
+    expect(
+      find.text('A collection with this name already exists.'),
+      findsOneWidget,
+    );
     expect(find.text('Collections'), findsOneWidget);
   });
 

@@ -24,6 +24,7 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
 import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
+import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 
 part '../widgets/publication_guideline_page_guideline_menu_action.dart';
 part '../widgets/publication_guideline_page_guideline_content_search_delegate.dart';
@@ -315,10 +316,13 @@ class _PublicationGuidelinePageState
       if (result.alreadyPresent) {
         AppMessage.info(
           context,
-          'Already saved in “${result.collectionName}”.',
+          CollectionMessages.guidelineAlreadySaved(result.collectionName),
         );
       } else {
-        AppMessage.success(context, 'Saved to “${result.collectionName}”.');
+        AppMessage.success(
+          context,
+          CollectionMessages.guidelineSaved(result.collectionName),
+        );
       }
     }
   }

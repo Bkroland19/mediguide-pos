@@ -10,6 +10,7 @@ import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collection_controller.dart';
+import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 import 'package:user_app/features/library/presentation/widgets/collection_form_sheet.dart';
 
 final class SaveToCollectionResult {
@@ -96,7 +97,10 @@ class _SaveToCollectionSheetState
                   const AppLoadingView(message: 'Loading collections...'),
               error: (error, _) => AppErrorView(
                 error: error,
-                message: 'Your collections could not be loaded.',
+                message: CollectionMessages.failure(
+                  error,
+                  CollectionOperation.loadCollections,
+                ),
                 onRetry: () => ref.read(provider.notifier).refresh(),
               ),
               data: (value) => value.items.isEmpty
@@ -170,7 +174,10 @@ class _SaveToCollectionSheetState
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _savingCollectionId = null);
-      AppMessage.error(context, _friendlySaveError(error));
+      AppMessage.error(
+        context,
+        CollectionMessages.failure(error, CollectionOperation.addGuideline),
+      );
     }
   }
 
@@ -202,7 +209,10 @@ class _SaveToCollectionSheetState
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _savingCollectionId = null);
-      AppMessage.error(context, _friendlySaveError(error));
+      final operation = error is BackendApiException && error.statusCode == 409
+          ? CollectionOperation.createCollection
+          : CollectionOperation.addGuideline;
+      AppMessage.error(context, CollectionMessages.failure(error, operation));
     }
   }
 
@@ -211,29 +221,17 @@ class _SaveToCollectionSheetState
       await ref
           .read(guidelineCollectionsControllerProvider(widget.userId).notifier)
           .loadNextPage();
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'More collections could not be loaded.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.loadMoreCollections,
+          ),
+        );
       }
     }
-  }
-
-  String _friendlySaveError(Object error) {
-    if (error is BackendApiException) {
-      if (error.statusCode == 0) {
-        return 'You are offline. Connect to save this guideline.';
-      }
-      if (error.statusCode == 401) {
-        return 'Your session expired. Sign in and try again.';
-      }
-      if (error.statusCode == 409) {
-        return 'A collection with this name already exists.';
-      }
-      if (error.statusCode >= 500) {
-        return 'The server is unavailable. Please try again.';
-      }
-    }
-    return 'The guideline could not be saved. Please try again.';
   }
 }
 

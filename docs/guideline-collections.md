@@ -8,13 +8,18 @@ the PostgreSQL model, authenticated API, generated contracts, Flutter
 repository/cache, Riverpod state, collection screens, and the published
 guideline reader.
 
-This document records phases 7 and 8 of the mobile collections delivery:
+This document records phases 7 through 10 of the mobile collections delivery:
 
 - Phase 7: the collection detail screen, including real published content,
   empty/add, rename, delete, remove, pagination, and error workflows.
 - Phase 8: the public-guideline and reader **Save to collection** workflow,
   including authentication redirect, inline collection creation, idempotent
   membership detection, provider refresh, and user feedback.
+- Phase 9: canonical collection communication through `AppMessage`, with safe,
+  actionable wording for authentication, conflicts, connectivity, server
+  failures, successful mutations, and already-saved membership.
+- Phase 10: owner-scoped cache reconciliation, complete-versus-partial snapshot
+  tracking, deletion cleanup, rename replacement, and mutation count updates.
 
 Collections are not bookmarks, reading history, downloads, or shared clinical
 workspaces. Those remain separate capabilities. A collection stores references
@@ -167,6 +172,27 @@ authenticated owner's scope. Empty server snapshots are authoritative and are
 cached too. Pagination metadata is retained so an offline page does not invent
 items or totals.
 
+Every snapshot records whether it is complete:
+
+- A page-one response is complete only when `total_pages <= 1`. Complete
+  collection and item snapshots replace their scoped dataset and tombstone
+  records that disappeared from the server.
+- Any response from a multi-page dataset is partial. It updates the entities
+  and authoritative total that were fetched, but never deletes cached entities
+  from pages outside that response.
+- Creating or deleting a collection updates its cached total. A rename replaces
+  the cached entity with the same ID. Deleting a collection tombstones its
+  summary and clears both its item entities and item snapshot.
+- Removing a guideline tombstones the cached membership and decrements the
+  item and collection totals. Adding a guideline updates a known-complete count;
+  because the API returns `204` without the new item entity, the item snapshot
+  is marked partial until the next successful item refresh.
+
+This completeness marker is essential: treating page one of a multi-page
+response as a full refresh could silently delete valid offline pages, while
+treating a genuinely complete empty response as partial could resurrect remote
+deletions.
+
 The app falls back only for connectivity failures and eligible `5xx` failures.
 It does not provide offline create, edit, delete, save, or remove. When a write
 cannot reach the server, the UI keeps the canonical state and displays an
@@ -186,6 +212,13 @@ reader labels, and a touch target suitable for mobile use.
 
 All transient success and failure communication must use `AppMessage`; do not
 introduce direct `SnackBar`, toast, or package-specific messaging calls.
+Collection wording is centralized in
+`features/library/presentation/utils/collection_messages.dart`. UI code must
+map the operation and caught error through this utility rather than display a
+raw Dio message, database exception, stack trace, or server response. Expected
+messages cover created/updated/deleted, saved/removed/already saved,
+duplicate-name conflict, sign-in required, offline mutation unavailable, and
+retryable network/server failure.
 
 ## Test and verification runbook
 
@@ -219,6 +252,10 @@ Before release, manually verify with two different accounts:
 7. After logout and login as Account B, Account A's cached collections are not
    displayed.
 8. Test a narrow Android device with system font size at 200%.
+9. Cache at least two collection pages, refresh only page one, go offline, and
+   confirm the second cached page is still available.
+10. Delete and rename collections, then simulate an offline read and confirm the
+    deleted collection stays absent and the renamed value remains current.
 
 ## Rollout and rollback
 

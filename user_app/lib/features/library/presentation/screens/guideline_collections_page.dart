@@ -10,6 +10,7 @@ import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
+import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 import 'package:user_app/features/library/presentation/widgets/collection_form_sheet.dart';
 
 part '../widgets/guideline_collections_page_content.dart';
@@ -34,8 +35,7 @@ class GuidelineCollectionsPage extends ConsumerWidget {
               body: const AppErrorView(
                 error: 'Authentication required',
                 title: 'Sign in required',
-                message:
-                    'Sign in to create and sync your guideline collections.',
+                message: CollectionMessages.authenticationRequired,
               ),
             );
           },
@@ -78,7 +78,10 @@ class _CollectionsView extends ConsumerWidget {
         loading: () => const AppLoadingView(message: 'Loading collections...'),
         error: (error, _) => AppErrorView(
           error: error,
-          message: 'Your collections could not be loaded. Please try again.',
+          message: CollectionMessages.failure(
+            error,
+            CollectionOperation.loadCollections,
+          ),
           onRetry: () => ref.read(provider.notifier).refresh(),
         ),
         data: (value) => RefreshIndicator(
@@ -144,12 +147,18 @@ class _CollectionsView extends ConsumerWidget {
           .read(guidelineCollectionsControllerProvider(userId).notifier)
           .create(name: value.name, description: value.description);
       if (context.mounted) {
-        AppMessage.success(context, 'Collection created.');
+        AppMessage.success(context, CollectionMessages.created);
         context.push(AppRoutes.collection(created.id));
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'The collection could not be created.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.createCollection,
+          ),
+        );
       }
     }
   }
@@ -173,10 +182,18 @@ class _CollectionsView extends ConsumerWidget {
             name: value.name,
             description: value.description,
           );
-      if (context.mounted) AppMessage.success(context, 'Collection updated.');
-    } catch (_) {
       if (context.mounted) {
-        AppMessage.error(context, 'The collection could not be updated.');
+        AppMessage.success(context, CollectionMessages.updated);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.updateCollection,
+          ),
+        );
       }
     }
   }
@@ -210,10 +227,18 @@ class _CollectionsView extends ConsumerWidget {
       await ref
           .read(guidelineCollectionsControllerProvider(userId).notifier)
           .delete(collection.id);
-      if (context.mounted) AppMessage.success(context, 'Collection deleted.');
-    } catch (_) {
       if (context.mounted) {
-        AppMessage.error(context, 'The collection could not be deleted.');
+        AppMessage.success(context, CollectionMessages.deleted);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.deleteCollection,
+          ),
+        );
       }
     }
   }
@@ -223,9 +248,15 @@ class _CollectionsView extends ConsumerWidget {
       await ref
           .read(guidelineCollectionsControllerProvider(userId).notifier)
           .loadNextPage();
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'More collections could not be loaded.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.loadMoreCollections,
+          ),
+        );
       }
     }
   }

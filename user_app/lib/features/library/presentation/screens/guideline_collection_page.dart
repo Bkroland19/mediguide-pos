@@ -10,6 +10,7 @@ import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 import 'package:user_app/features/library/presentation/controllers/guideline_collection_controller.dart';
+import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 import 'package:user_app/features/library/presentation/widgets/collection_form_sheet.dart';
 
 part '../widgets/guideline_collection_page_content.dart';
@@ -36,7 +37,7 @@ class GuidelineCollectionPage extends ConsumerWidget {
                 body: const AppErrorView(
                   error: 'Authentication required',
                   title: 'Sign in required',
-                  message: 'Sign in to view and manage this collection.',
+                  message: CollectionMessages.authenticationRequired,
                 ),
               );
             }
@@ -108,7 +109,10 @@ class _CollectionView extends ConsumerWidget {
         loading: () => const AppLoadingView(message: 'Loading collection...'),
         error: (error, _) => AppErrorView(
           error: error,
-          message: 'This collection could not be loaded. Please try again.',
+          message: CollectionMessages.failure(
+            error,
+            CollectionOperation.loadCollection,
+          ),
           onRetry: () => ref.read(provider.notifier).refresh(),
         ),
         data: (state) => RefreshIndicator(
@@ -207,10 +211,18 @@ class _CollectionView extends ConsumerWidget {
             ).notifier,
           )
           .updateCollection(name: value.name, description: value.description);
-      if (context.mounted) AppMessage.success(context, 'Collection updated.');
-    } catch (_) {
       if (context.mounted) {
-        AppMessage.error(context, 'The collection could not be updated.');
+        AppMessage.success(context, CollectionMessages.updated);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.updateCollection,
+          ),
+        );
       }
     }
   }
@@ -248,11 +260,17 @@ class _CollectionView extends ConsumerWidget {
           )
           .removeItem(item.guideline.id);
       if (context.mounted) {
-        AppMessage.success(context, 'Guideline removed from collection.');
+        AppMessage.success(context, CollectionMessages.guidelineRemoved);
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'The guideline could not be removed.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.removeGuideline,
+          ),
+        );
       }
     }
   }
@@ -293,12 +311,18 @@ class _CollectionView extends ConsumerWidget {
           )
           .delete();
       if (context.mounted) {
-        AppMessage.success(context, 'Collection deleted.');
+        AppMessage.success(context, CollectionMessages.deleted);
         context.pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'The collection could not be deleted.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.deleteCollection,
+          ),
+        );
       }
     }
   }
@@ -313,9 +337,15 @@ class _CollectionView extends ConsumerWidget {
             ).notifier,
           )
           .loadNextPage();
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        AppMessage.error(context, 'More guidelines could not be loaded.');
+        AppMessage.error(
+          context,
+          CollectionMessages.failure(
+            error,
+            CollectionOperation.loadMoreGuidelines,
+          ),
+        );
       }
     }
   }
