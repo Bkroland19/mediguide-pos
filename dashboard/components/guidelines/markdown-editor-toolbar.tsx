@@ -28,6 +28,7 @@ import {
   Strikethrough,
   Table2,
   Undo2,
+  WandSparkles,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -76,6 +77,7 @@ interface MarkdownEditorToolbarProps {
   onFullscreen: () => void
   onRegenerate?: () => void
   onDownload?: () => void
+  onPrepareForReview?: () => void
 }
 
 const actionButtons: Array<{
@@ -120,6 +122,7 @@ export function MarkdownEditorToolbar({
   onFullscreen,
   onRegenerate,
   onDownload,
+  onPrepareForReview,
 }: MarkdownEditorToolbarProps) {
   return (
     <div className="border-b bg-card">
@@ -143,6 +146,7 @@ export function MarkdownEditorToolbar({
             {words.toLocaleString()} words · {characters.toLocaleString()} characters
           </span>
           {onDownload && <Button variant="outline" size="sm" onClick={onDownload}><FileDown className="mr-2 h-4 w-4" />Download</Button>}
+          {canEdit && onPrepareForReview && <Button variant="outline" size="sm" onClick={onPrepareForReview}><WandSparkles className="mr-2 h-4 w-4" />Prepare for review</Button>}
           {onRegenerate && <Button variant="outline" size="sm" onClick={onRegenerate} disabled={dirty || saving}><RefreshCw className="mr-2 h-4 w-4" />Regenerate</Button>}
           {canEdit && <Button variant="outline" size="sm" onClick={onRevert} disabled={!dirty || saving}><RotateCcw className="mr-2 h-4 w-4" />Revert</Button>}
           {canEdit && <Button size="sm" onClick={onSave} disabled={!dirty || saving || offline}><Save className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save draft"}</Button>}
@@ -192,7 +196,7 @@ export function MarkdownEditorToolbar({
               "clinical-note", "referral-criteria",
             ].map((value) => <option key={value} value={value}>{value.replaceAll("-", " ")}</option>)}
           </select>
-          <Button type="button" variant="ghost" size="icon" aria-label="Format document" title="Format document" onClick={() => onFormat("format")}><Heading className="h-4 w-4" /></Button>
+          <Button type="button" variant="ghost" size="icon" aria-label="Prepare document for review" title="Prepare document for review" onClick={onPrepareForReview}><Heading className="h-4 w-4" /></Button>
           <Button
             type="button"
             variant="ghost"

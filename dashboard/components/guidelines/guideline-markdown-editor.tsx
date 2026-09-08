@@ -40,13 +40,14 @@ import {
   MarkdownPreviewSurface,
 } from "./markdown-preview-surface"
 import {
-  formatMarkdown,
   clinicalCalloutMarkdown,
   ClinicalCalloutType,
   markdownHeadings,
   markdownStats,
   markdownTemplates,
   moveMarkdownSection,
+  prepareMarkdownForReview,
+  type MarkdownPreparationResult,
   stableHeadingAnchors,
   validateMarkdown,
 } from "./markdown-authoring"
@@ -240,6 +241,8 @@ export function GuidelineMarkdownEditor({
   const [preferences, setPreferences] = React.useState(defaultPreferences)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const [informationOpen, setInformationOpen] = React.useState(false)
+  const [preparationOpen, setPreparationOpen] = React.useState(false)
+  const [preparationResult, setPreparationResult] = React.useState<MarkdownPreparationResult | null>(null)
   const [collaborationOpen, setCollaborationOpen] = React.useState(false)
   const [collaborationLoading, setCollaborationLoading] = React.useState(false)
   const [assignments, setAssignments] = React.useState<GuidelineReviewAssignment[]>([])
@@ -333,6 +336,22 @@ export function GuidelineMarkdownEditor({
   useUnsavedChanges(dirty)
 
   const view = () => editorRef.current?.view
+
+  const openPreparation = React.useCallback(() => {
+    setPreparationResult(prepareMarkdownForReview(content))
+    setPreparationOpen(true)
+  }, [content])
+
+  const applyPreparation = React.useCallback(() => {
+    if (!preparationResult?.changed) return
+    setContent(preparationResult.content)
+    setServerIssues([])
+    setPreparationOpen(false)
+    showToast.success(
+      "Review preparation applied",
+      "Review the draft, then save it before regeneration. Clinical warnings still require human approval.",
+    )
+  }, [preparationResult])
 
   const captureEditorPosition = React.useCallback(() => {
     const editor = editorRef.current?.view
@@ -623,7 +642,7 @@ export function GuidelineMarkdownEditor({
       }
       case "footnote": selectionReplacement(editor, "[^", "]", "reference"); break
       case "reference": selectionReplacement(editor, "[", "]", "reference"); break
-      case "format": setContent(formatMarkdown(content)); break
+      case "format": openPreparation(); break
     }
   }
 
@@ -947,6 +966,7 @@ export function GuidelineMarkdownEditor({
           onFullscreen={() => setFullscreen((value) => !value)}
           onRegenerate={canEdit && draft ? () => void regenerate() : undefined}
           onDownload={() => downloadText(`guideline-revision-${draft?.revision.revision_number || "draft"}.md`, content)}
+          onPrepareForReview={canEdit ? openPreparation : undefined}
         /></div>
 
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs print:hidden">
@@ -1258,6 +1278,63 @@ export function GuidelineMarkdownEditor({
         <DialogContent><DialogHeader><DialogTitle>Editor settings</DialogTitle><DialogDescription>These preferences are stored only in this browser.</DialogDescription></DialogHeader><div className="space-y-5"><div className="flex items-center justify-between"><Label htmlFor="autosave">Autosave drafts</Label><Switch id="autosave" checked={preferences.autosave} onCheckedChange={(value) => setPreferences((current) => ({ ...current, autosave: value }))} /></div><div><Label htmlFor="autosave-delay">Autosave delay (milliseconds)</Label><Input id="autosave-delay" type="number" min={1000} max={30000} step={500} value={preferences.autosaveDelay} onChange={(event) => setPreferences((current) => ({ ...current, autosaveDelay: Math.min(30000, Math.max(1000, Number(event.target.value))) }))} /></div><div className="flex items-center justify-between"><Label htmlFor="line-wrap">Soft line wrapping</Label><Switch id="line-wrap" checked={preferences.lineWrapping} onCheckedChange={(value) => setPreferences((current) => ({ ...current, lineWrapping: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="scroll-sync">Synchronize editor and preview scrolling</Label><Switch id="scroll-sync" checked={preferences.scrollSync} onCheckedChange={(value) => setPreferences((current) => ({ ...current, scrollSync: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="distraction-free">Distraction-free mode</Label><Switch id="distraction-free" checked={preferences.distractionFree} onCheckedChange={(value) => setPreferences((current) => ({ ...current, distractionFree: value }))} /></div><div><Label htmlFor="font-size">Editor font size</Label><Input id="font-size" type="number" min={12} max={22} value={preferences.fontSize} onChange={(event) => setPreferences((current) => ({ ...current, fontSize: Math.min(22, Math.max(12, Number(event.target.value))) }))} /></div><div><Label htmlFor="preview-width">Preview width</Label><select id="preview-width" className="mt-1 h-9 w-full rounded-md border bg-background px-3" value={preferences.previewWidth} onChange={(event) => setPreferences((current) => ({ ...current, previewWidth: event.target.value as EditorPreferences["previewWidth"] }))}><option value="mobile">Mobile</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option></select></div></div></DialogContent>
       </Dialog>
 
+      <Dialog open={preparationOpen} onOpenChange={setPreparationOpen}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle>Prepare Markdown for editorial review</DialogTitle>
+            <DialogDescription>
+              Ruleset v{preparationResult?.rulesetVersion ?? "1"} only normalizes document structure. It never changes doses, units, routes, frequencies, recommendations, contraindications, table-cell meaning, or image references.
+            </DialogDescription>
+          </DialogHeader>
+          {preparationResult && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(["automatic", "editor-review", "manual-review"] as const).map((category) => {
+                  const categoryChanges = preparationResult.changes.filter((change) => change.category === category)
+                  const count = categoryChanges.reduce((total, change) => total + change.count, 0)
+                  return (
+                    <div key={category} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">{category.replace("-", " ")}</span>
+                        <Badge variant={category === "manual-review" && count ? "destructive" : "outline"}>{count}</Badge>
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {categoryChanges.length === 0
+                          ? <p>No changes.</p>
+                          : categoryChanges.map((change) => <p key={change.code}>{change.label}: {change.count}</p>)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <Badge variant={preparationResult.afterIssues.some((issue) => issue.severity === "error") ? "destructive" : "outline"}>
+                  Errors: {preparationResult.beforeIssues.filter((issue) => issue.severity === "error").length} → {preparationResult.afterIssues.filter((issue) => issue.severity === "error").length}
+                </Badge>
+                <Badge variant="outline">
+                  Warnings: {preparationResult.beforeIssues.filter((issue) => issue.severity === "warning").length} → {preparationResult.afterIssues.filter((issue) => issue.severity === "warning").length}
+                </Badge>
+              </div>
+              {!preparationResult.changed ? (
+                <Alert><CheckCircle2 className="h-4 w-4" /><AlertTitle>Formatting is already prepared</AlertTitle><AlertDescription>No safe structural changes were found. Any remaining clinical or asset warnings must be handled during human review.</AlertDescription></Alert>
+              ) : (
+                <MarkdownDiffViewer
+                  before={content}
+                  after={preparationResult.content}
+                  beforeLabel="Current draft"
+                  afterLabel="Prepared draft"
+                  onDownload={(value) => downloadText("review-preparation.diff", value)}
+                />
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreparationOpen(false)}>Cancel</Button>
+            <Button disabled={!preparationResult?.changed} onClick={applyPreparation}>Apply to draft</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={informationOpen} onOpenChange={setInformationOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Document information</DialogTitle><DialogDescription>Statistics are calculated without blocking editing. Server-derived values reflect the latest loaded revision.</DialogDescription></DialogHeader>
@@ -1314,7 +1391,7 @@ export function GuidelineMarkdownEditor({
             <CommandItem disabled={!dirty || saving || !online} onSelect={() => { setCommandOpen(false); void save() }}>Save draft</CommandItem>
             <CommandItem onSelect={() => { changeMode(mode === "preview" ? (canEdit ? "split" : "preview") : "preview"); setCommandOpen(false) }}>Toggle preview</CommandItem>
             <CommandItem onSelect={() => { setFullscreen((value) => !value); setCommandOpen(false) }}>Toggle fullscreen</CommandItem>
-            <CommandItem disabled={!canEdit} onSelect={() => { setContent(formatMarkdown(content)); setCommandOpen(false) }}>Format document / normalize line endings / remove trailing whitespace</CommandItem>
+            <CommandItem disabled={!canEdit} onSelect={() => { openPreparation(); setCommandOpen(false) }}>Prepare document for review</CommandItem>
             <CommandItem disabled={!canEdit} onSelect={() => { const editor = view(); if (editor) openSearchPanel(editor); setCommandOpen(false) }}>Find and replace</CommandItem>
             <CommandItem onSelect={() => { setCommandOpen(false); void loadHistory() }}>Revision history</CommandItem>
           </CommandGroup><CommandGroup heading="Go to heading">{headings.map((heading, index) => <CommandItem key={`${heading.id}-${index}`} value={`heading ${heading.breadcrumb.join(" ")}`} onSelect={() => { const editor = view(); editor?.dispatch({ selection: { anchor: heading.from }, scrollIntoView: true }); editor?.focus(); setCommandOpen(false) }}>{heading.breadcrumb.join(" › ")}</CommandItem>)}</CommandGroup></CommandList></Command>

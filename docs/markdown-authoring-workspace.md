@@ -94,6 +94,32 @@ It includes:
   upload, metadata editing, review state, signed previews, stable references,
   and unused/broken-reference reporting.
 
+## Prepare for review
+
+Before human review, select **Prepare for review** in the editor header, the
+formatting toolbar, or the command palette. The editor runs deterministic
+ruleset v1 locally and opens a diff; it does not replace the draft immediately.
+The summary separates:
+
+- **Automatic** changes: line endings, trailing whitespace, excessive blank
+  lines, and supported legacy `!!!` admonitions converted to clinical fences.
+- **Editor review** changes: proposed context-qualified titles for duplicate
+  heading anchors. These proposals must be checked in the diff.
+- **Manual review** findings: unsupported or empty legacy admonitions that the
+  preparer deliberately leaves unchanged.
+
+Select **Apply to draft** only after reviewing the diff. This creates an
+unsaved editor change; save the draft (or create a named checkpoint) to create
+the next immutable revision. Then run server validation and regeneration in
+the normal workflow. Preparation never starts regeneration or marks clinical
+review items as approved.
+
+The preparer must not rewrite doses, units, routes, frequencies,
+recommendations, contraindications, table-cell meaning, or image references.
+Warnings about those items remain visible for human review. Running the same
+ruleset repeatedly is idempotent: a prepared document produces no further
+formatting changes.
+
 New versions can begin with blank Markdown, one of the six clinical templates,
 PDF upload or Markdown upload. Editors can also duplicate an existing draft or
 create a new draft from an immutable published revision. Loading another

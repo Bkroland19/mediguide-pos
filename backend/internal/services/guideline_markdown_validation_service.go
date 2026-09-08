@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -98,10 +99,13 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 	uses := map[string]int{}
 	assetIDs := map[string]bool{}
 	assetNames := map[string]bool{}
+	assetBaseNameCounts := map[string]int{}
 	for _, asset := range assets {
 		assetIDs[asset.ID.String()] = true
 		if asset.OriginalFilename != nil {
-			assetNames[*asset.OriginalFilename] = true
+			name := strings.TrimSpace(*asset.OriginalFilename)
+			assetNames[name] = true
+			assetBaseNameCounts[path.Base(strings.ReplaceAll(name, "\\", "/"))]++
 		}
 	}
 	frontMatter := false
@@ -169,7 +173,9 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 				}
 				continue
 			}
-			if image && !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") && !assetNames[target] {
+			assetBaseName := path.Base(strings.ReplaceAll(target, "\\", "/"))
+			assetResolved := assetNames[target] || assetBaseNameCounts[assetBaseName] == 1
+			if image && !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") && !assetResolved {
 				add("warning", "unresolved_asset_reference", "The local image reference cannot be resolved to a version asset.", lineNo, 1, len(line)+1)
 			}
 			if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {

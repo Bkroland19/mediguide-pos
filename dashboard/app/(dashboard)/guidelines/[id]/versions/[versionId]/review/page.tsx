@@ -77,6 +77,8 @@ const highRiskBlockTypes = new Set<GuidelineBlockType>([
   "referral_criteria",
 ]);
 
+type BlockReviewFilter = "high-risk" | "pending-high-risk" | "all";
+
 function blockText(block: GuidelineContentBlockRecord) {
   const content = block.content;
   if (typeof content.text === "string") return content.text;
@@ -255,6 +257,12 @@ export default function GuidelineReviewPage() {
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
   const [pdfPage, setPdfPage] = React.useState(1);
   const [previewMode, setPreviewMode] = React.useState<"web" | "mobile">("web");
+  const [blockReviewFilter, setBlockReviewFilter] =
+    React.useState<BlockReviewFilter>(() =>
+      searchParams.get("focus") === "pending-high-risk"
+        ? "pending-high-risk"
+        : "high-risk",
+    );
   const [sectionDraft, setSectionDraft] = React.useState({
     title: "",
     slug: "",
@@ -317,8 +325,14 @@ export default function GuidelineReviewPage() {
   const sectionBlocks = blocks.filter(
     (block) => block.section_id === selectedSection?.id,
   );
+  const visibleSectionBlocks = sectionBlocks.filter((block) => {
+    if (blockReviewFilter === "all") return true;
+    if (!highRiskBlockTypes.has(block.type)) return false;
+    return blockReviewFilter !== "pending-high-risk" || block.review_status !== "reviewed";
+  });
   const selectedBlock =
-    blocks.find((block) => block.id === selectedBlockId) || sectionBlocks[0];
+    visibleSectionBlocks.find((block) => block.id === selectedBlockId) ||
+    visibleSectionBlocks[0];
 
   React.useEffect(() => {
     if (!selectedSectionId && sections[0]) setSelectedSectionId(sections[0].id);
@@ -743,7 +757,10 @@ export default function GuidelineReviewPage() {
         <TabsContent value="workspace">
           <EditorPanel
             sections={sections}
-            blocks={sectionBlocks}
+            blocks={visibleSectionBlocks}
+            sectionBlockCount={sectionBlocks.length}
+            blockReviewFilter={blockReviewFilter}
+            setBlockReviewFilter={setBlockReviewFilter}
             selectedSection={selectedSection}
             selectedBlock={selectedBlock}
             sectionDraft={sectionDraft}
@@ -779,7 +796,10 @@ export default function GuidelineReviewPage() {
         <SourcePanel src={pdfSource} page={selectedPage} />
         <EditorPanel
           sections={sections}
-          blocks={sectionBlocks}
+          blocks={visibleSectionBlocks}
+          sectionBlockCount={sectionBlocks.length}
+          blockReviewFilter={blockReviewFilter}
+          setBlockReviewFilter={setBlockReviewFilter}
           selectedSection={selectedSection}
           selectedBlock={selectedBlock}
           sectionDraft={sectionDraft}
@@ -845,6 +865,9 @@ function SourcePanel({ src, page }: { src: string | null; page: number }) {
 type EditorPanelProps = {
   sections: GuidelineSectionRecord[];
   blocks: GuidelineContentBlockRecord[];
+  sectionBlockCount: number;
+  blockReviewFilter: BlockReviewFilter;
+  setBlockReviewFilter: (value: BlockReviewFilter) => void;
   selectedSection?: GuidelineSectionRecord;
   selectedBlock?: GuidelineContentBlockRecord;
   sectionDraft: { title: string; slug: string; level: number };
@@ -968,9 +991,30 @@ function EditorPanel(props: EditorPanelProps) {
           </div>
         )}
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase text-muted-foreground">
-            Blocks
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">
+              Blocks · {props.blocks.length} of {props.sectionBlockCount}
+            </div>
+            <Label className="sr-only" htmlFor="block-review-filter">Block review filter</Label>
+            <select
+              id="block-review-filter"
+              aria-label="Block review filter"
+              className="h-8 rounded-md border bg-background px-2 text-xs"
+              value={props.blockReviewFilter}
+              onChange={(event) =>
+                props.setBlockReviewFilter(event.target.value as BlockReviewFilter)
+              }
+            >
+              <option value="high-risk">High-risk only</option>
+              <option value="pending-high-risk">Pending high-risk only</option>
+              <option value="all">All blocks</option>
+            </select>
           </div>
+          {props.blocks.length === 0 && (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No blocks in this section match the selected review filter.
+            </div>
+          )}
           {props.blocks.map((block) => (
             <button
               key={block.id}

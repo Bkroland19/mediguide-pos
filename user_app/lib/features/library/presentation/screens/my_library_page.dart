@@ -10,6 +10,7 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
+import 'package:user_app/features/library/presentation/controllers/guideline_collections_controller.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 part '../widgets/my_library_page_library_header.dart';
@@ -40,8 +41,6 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
     guidelinePublicationRepositoryProvider,
   );
 
-  final libraryRepository = ref.watch(guidelineLibraryRepositoryProvider);
-
   final bookmarksFuture = progressRepository.list(
     user.id,
     perPage: 100,
@@ -52,7 +51,11 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
 
   final publicationsFuture = publicationRepository.publications(perPage: 200);
 
-  final collectionsFuture = libraryRepository.collections(user.id);
+  final collectionsFuture = ref.watch(
+    guidelineCollectionsControllerProvider(user.id).future,
+  );
+
+  final libraryRepository = ref.watch(guidelineLibraryRepositoryProvider);
 
   final downloadsFuture = libraryRepository.downloads(user.id);
 
@@ -67,7 +70,7 @@ final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
   final bookmarks = (await bookmarksFuture).items;
   final history = (await historyFuture).items;
   final publications = (await publicationsFuture).items;
-  final collections = await collectionsFuture;
+  final collections = (await collectionsFuture).items;
   final downloads = await downloadsFuture;
 
   return LibraryData(
@@ -104,6 +107,18 @@ class MyLibraryPage extends ConsumerWidget {
         data: (data) {
           return RefreshIndicator(
             onRefresh: () async {
+              final userId = ref
+                  .read(authControllerProvider)
+                  .valueOrNull
+                  ?.user
+                  ?.id;
+              if (userId != null) {
+                await ref
+                    .read(
+                      guidelineCollectionsControllerProvider(userId).notifier,
+                    )
+                    .refresh();
+              }
               ref.invalidate(libraryDataProvider);
 
               await ref.read(libraryDataProvider.future);
@@ -188,7 +203,7 @@ class MyLibraryPage extends ConsumerWidget {
                   },
 
                   onCollections: () {
-                    _showCollections(context, data.collections);
+                    context.push(AppRoutes.collections);
                   },
 
                   onOfflineUpdates: () {
@@ -404,181 +419,6 @@ class MyLibraryPage extends ConsumerWidget {
                             );
                           },
                         ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  static Future<void> _showCollections(
-    BuildContext context,
-    List<GuidelineCollectionSummary> collections,
-  ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.72,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    0,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                  ),
-                  child: Row(
-                    children: [
-                      const _LibraryActionIcon(icon: LucideIcons.folder),
-
-                      AppSpacing.hGapMd,
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Collections',
-                              style: Theme.of(
-                                sheetContext,
-                              ).textTheme.titleLarge,
-                            ),
-                            Text(
-                              '${collections.length} '
-                              '${collections.length == 1 ? 'collection' : 'collections'}',
-                              style: Theme.of(sheetContext).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      sheetContext,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Divider(height: 1),
-
-                Expanded(
-                  child: collections.isEmpty
-                      ? const _EmptyLibrarySection(
-                          icon: LucideIcons.folderPlus,
-                          message:
-                              'Create collections to organize guidelines by topic, programme or clinical workflow.',
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          itemCount: collections.length,
-                          separatorBuilder: (_, _) {
-                            return const Divider(height: 1, indent: 52);
-                          },
-                          itemBuilder: (context, index) {
-                            final collection = collections[index];
-
-                            //
-                            // We intentionally do not assume fields such as
-                            // collection.name / collection.id here because
-                            // your GuidelineCollectionSummary model was not
-                            // included in the snippet.
-                            //
-                            // The row is still interactive. Once you expose a
-                            // collection-detail route, replace this handler
-                            // with that route.
-                            //
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const _LibraryActionIcon(
-                                icon: LucideIcons.folder,
-                              ),
-                              title: Text('Collection ${index + 1}'),
-                              subtitle: const Text('Open collection'),
-                              trailing: const Icon(
-                                LucideIcons.chevronRight,
-                                size: 18,
-                              ),
-                              onTap: () {
-                                _showCollectionDetails(
-                                  sheetContext,
-                                  index: index,
-                                  collection: collection,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  static Future<void> _showCollectionDetails(
-    BuildContext context, {
-    required int index,
-    required GuidelineCollectionSummary collection,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              0,
-              AppSpacing.md,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const _LibraryActionIcon(icon: LucideIcons.folderOpen),
-                    AppSpacing.hGapMd,
-                    Expanded(
-                      child: Text(
-                        'Collection ${index + 1}',
-                        style: Theme.of(sheetContext).textTheme.titleLarge,
-                      ),
-                    ),
-                  ],
-                ),
-
-                AppSpacing.gapMd,
-
-                Text(
-                  'Connect this action to your collection-detail route once '
-                  'the fields and route for GuidelineCollectionSummary are available.',
-                  style: Theme.of(sheetContext).textTheme.bodyMedium,
-                ),
-
-                AppSpacing.gapLg,
-
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                    },
-                    icon: const Icon(LucideIcons.arrowLeft),
-                    label: const Text('Back to collections'),
-                  ),
                 ),
               ],
             ),
