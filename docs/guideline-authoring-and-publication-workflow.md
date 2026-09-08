@@ -194,13 +194,16 @@ sample of the pending block types and source pages. When the count is nonzero:
 
 1. Select **Review pending blocks**.
 2. The Editorial Review workspace opens the first pending high-risk block.
-3. Compare it with the original source and select **Approve**, or correct and
+3. The block list defaults to **Pending high-risk only**. Choose **High-risk
+   only** to include approved safety-sensitive blocks, or **All blocks** when
+   ordinary surrounding content is needed for context or correction.
+4. Compare it with the original source and select **Approve**, or correct and
    re-review it. The queue advances to the next pending block after approval.
-4. A rejected block is intentionally still pending. Correct its source or typed
+5. A rejected block is intentionally still pending. Correct its source or typed
    payload, regenerate when the source changed, and approve the corrected block.
-5. When the queue reports that all high-risk blocks are approved, select
+6. When the queue reports that all high-risk blocks are approved, select
    **Return to regeneration review**.
-6. Select **Refresh approval status**, then **Accept regenerated projection**.
+7. Select **Refresh approval status**, then **Accept regenerated projection**.
 
 There is no bulk-approval or force-accept action. Tables, dosages,
 recommendations, warnings, cautions, contraindications, procedures, algorithms,
