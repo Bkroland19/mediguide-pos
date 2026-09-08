@@ -20,19 +20,6 @@ var (
 	ErrRegenerationReviewIncomplete = errors.New("regeneration review is incomplete")
 )
 
-var regenerationHighRiskBlockTypes = []models.GuidelineBlockType{
-	models.GuidelineBlockTable,
-	models.GuidelineBlockRecommendation,
-	models.GuidelineBlockWarning,
-	models.GuidelineBlockCaution,
-	models.GuidelineBlockContraindication,
-	models.GuidelineBlockDosage,
-	models.GuidelineBlockProcedure,
-	models.GuidelineBlockAlgorithm,
-	models.GuidelineBlockAlgorithmReference,
-	models.GuidelineBlockReferralCriteria,
-}
-
 const regenerationPendingBlockLimit = 100
 
 type RegenerationJobView struct {
@@ -168,8 +155,9 @@ func (s GuidelineService) GetRegenerationReview(versionID, jobID uuid.UUID) (*mo
 }
 
 func populateRegenerationReviewProgress(tx *gorm.DB, versionID uuid.UUID, review *models.GuidelineRegenerationReview) error {
+	highRiskBlockTypes := models.GuidelineHighRiskBlockTypes()
 	pendingQuery := tx.Model(&models.GuidelineContentBlock{}).
-		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, regenerationHighRiskBlockTypes, models.GuidelineBlockReviewed)
+		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, highRiskBlockTypes, models.GuidelineBlockReviewed)
 
 	var outstanding int64
 	if err := pendingQuery.Count(&outstanding).Error; err != nil {
@@ -178,7 +166,7 @@ func populateRegenerationReviewProgress(tx *gorm.DB, versionID uuid.UUID, review
 
 	var blocks []models.GuidelineContentBlock
 	if err := tx.Select("id", "section_id", "type", "sort_order", "review_status", "page_start", "page_end").
-		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, regenerationHighRiskBlockTypes, models.GuidelineBlockReviewed).
+		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, highRiskBlockTypes, models.GuidelineBlockReviewed).
 		Order("sort_order ASC, id ASC").
 		Limit(regenerationPendingBlockLimit).
 		Find(&blocks).Error; err != nil {

@@ -3074,6 +3074,13 @@ export interface ServicesGuidelineBlockOrderInput {
   sort_order?: number;
 }
 
+export interface ServicesGuidelineBlockReviewPolicy {
+  bulk_review_eligible_types?: ModelsGuidelineBlockType[];
+  conditional_risk_types?: ModelsGuidelineBlockType[];
+  high_risk_types?: ModelsGuidelineBlockType[];
+  ineligible_bulk_types?: ModelsGuidelineBlockType[];
+}
+
 export interface ServicesGuidelineCategoryInput {
   color?: string;
   description?: string;
@@ -3202,6 +3209,7 @@ export interface ServicesGuidelineReviewIssue {
 
 export interface ServicesGuidelineReviewWorkspace {
   assets?: ModelsGuidelineAsset[];
+  block_review_policy?: ServicesGuidelineBlockReviewPolicy;
   blocks?: ModelsGuidelineContentBlock[];
   extraction_warnings?: string[];
   sections?: ModelsGuidelineSection[];

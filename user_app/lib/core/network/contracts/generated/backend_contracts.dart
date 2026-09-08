@@ -9584,6 +9584,56 @@ final class ServicesGuidelineBlockOrderInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineBlockReviewPolicy {
+  ServicesGuidelineBlockReviewPolicy(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBlockReviewPolicy.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBlockReviewPolicy(json);
+
+  static const schemaName = 'services.GuidelineBlockReviewPolicy';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineBlockType> get bulkReviewEligibleTypes {
+    final raw = value['bulk_review_eligible_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get conditionalRiskTypes {
+    final raw = value['conditional_risk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get highRiskTypes {
+    final raw = value['high_risk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get ineligibleBulkTypes {
+    final raw = value['ineligible_bulk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineCategoryInput {
   ServicesGuidelineCategoryInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10024,6 +10074,12 @@ final class ServicesGuidelineReviewWorkspace {
         .whereType<Map>()
         .map((item) => ModelsGuidelineAsset.fromJson(_jsonMap(item)))
         .toList(growable: false);
+  }
+
+  ServicesGuidelineBlockReviewPolicy? get blockReviewPolicy {
+    final raw = value['block_review_policy'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineBlockReviewPolicy.fromJson(_jsonMap(raw));
   }
 
   List<ModelsGuidelineContentBlock> get blocks {

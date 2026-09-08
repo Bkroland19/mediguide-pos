@@ -40,8 +40,25 @@ type GuidelineReviewWorkspace struct {
 	Sections           []models.GuidelineSection      `json:"sections"`
 	Blocks             []models.GuidelineContentBlock `json:"blocks"`
 	Assets             []models.GuidelineAsset        `json:"assets"`
+	BlockReviewPolicy  GuidelineBlockReviewPolicy     `json:"block_review_policy"`
 	ExtractionWarnings []string                       `json:"extraction_warnings"`
 	Validation         GuidelinePublicationValidation `json:"validation"`
+}
+
+type GuidelineBlockReviewPolicy struct {
+	HighRiskTypes           []models.GuidelineBlockType `json:"high_risk_types"`
+	BulkReviewEligibleTypes []models.GuidelineBlockType `json:"bulk_review_eligible_types"`
+	ConditionalRiskTypes    []models.GuidelineBlockType `json:"conditional_risk_types"`
+	IneligibleBulkTypes     []models.GuidelineBlockType `json:"ineligible_bulk_types"`
+}
+
+func guidelineBlockReviewPolicy() GuidelineBlockReviewPolicy {
+	return GuidelineBlockReviewPolicy{
+		HighRiskTypes:           models.GuidelineHighRiskBlockTypes(),
+		BulkReviewEligibleTypes: models.GuidelineBulkReviewEligibleBlockTypes(),
+		ConditionalRiskTypes:    models.GuidelineConditionalRiskBlockTypes(),
+		IneligibleBulkTypes:     models.GuidelineIneligibleBulkReviewBlockTypes(),
+	}
 }
 
 type UpdateGuidelineSectionInput struct {
@@ -112,7 +129,7 @@ func (s GuidelineService) ReviewWorkspace(versionID uuid.UUID) (*GuidelineReview
 	}
 	return &GuidelineReviewWorkspace{
 		Version: version, Sections: sections, Blocks: blocks, Assets: assets,
-		ExtractionWarnings: warnings, Validation: *validation,
+		BlockReviewPolicy: guidelineBlockReviewPolicy(), ExtractionWarnings: warnings, Validation: *validation,
 	}, nil
 }
 
@@ -603,7 +620,7 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 		if asset.Type == models.GuidelineAssetFigure && strings.TrimSpace(asset.AlternativeText) == "" {
 			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_asset_alternative_text", Message: fmt.Sprintf("Image %s is missing alternative text.", asset.ID)})
 		}
-		if asset.ClinicallySensitive && asset.ReviewStatus != models.GuidelineBlockReviewed {
+		if models.GuidelineAssetRequiresIndividualReview(asset) && asset.ReviewStatus != models.GuidelineBlockReviewed {
 			result.Errors = append(result.Errors, GuidelineReviewIssue{Code: "unreviewed_clinical_asset", Message: "A clinically sensitive image requires publisher review.", SectionID: asset.SectionID, AssetID: &current.ID})
 			result.Valid = false
 		}
@@ -624,7 +641,7 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 		if err := validateGuidelineBlockPayload(tx, version.ID, block.Type, block.ContentJSON); err != nil {
 			addError("invalid_block_payload", err.Error(), block.SectionID, &current.ID)
 		}
-		if highRiskGuidelineBlock(block.Type) && block.ReviewStatus != models.GuidelineBlockReviewed {
+		if models.GuidelineBlockRequiresIndividualReview(block.Type) && block.ReviewStatus != models.GuidelineBlockReviewed {
 			label := string(block.Type)
 			if block.Type == models.GuidelineBlockTable {
 				var payload models.GuidelineTableBlockPayload
@@ -776,7 +793,7 @@ func guidelineStructureCounts(sections []models.GuidelineSection, blocks []model
 		if block.Type == models.GuidelineBlockTable {
 			result.tables++
 		}
-		if highRiskGuidelineBlock(block.Type) {
+		if models.GuidelineBlockRequiresIndividualReview(block.Type) {
 			result.highRisk++
 		}
 	}
@@ -933,18 +950,6 @@ func validGuidelineBlockType(value models.GuidelineBlockType) bool {
 		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference,
 		models.GuidelineBlockAlgorithm, models.GuidelineBlockReference, models.GuidelineBlockPageBreak,
 		models.GuidelineBlockUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-func highRiskGuidelineBlock(value models.GuidelineBlockType) bool {
-	switch value {
-	case models.GuidelineBlockTable, models.GuidelineBlockRecommendation, models.GuidelineBlockWarning,
-		models.GuidelineBlockCaution, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
-		models.GuidelineBlockProcedure, models.GuidelineBlockAlgorithm, models.GuidelineBlockAlgorithmReference,
-		models.GuidelineBlockReferralCriteria:
 		return true
 	default:
 		return false

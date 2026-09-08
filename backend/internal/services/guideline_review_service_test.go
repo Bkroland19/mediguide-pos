@@ -70,6 +70,45 @@ func TestGuidelinePublicationValidationRejectsUnsafeDraft(t *testing.T) {
 	}
 }
 
+func TestReviewWorkspaceExposesAuthoritativeBlockReviewPolicy(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "draft"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	workspace, err := (GuidelineService{DB: db}).ReviewWorkspace(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy := workspace.BlockReviewPolicy
+	if !containsGuidelineBlockType(policy.HighRiskTypes, models.GuidelineBlockTable) {
+		t.Fatalf("table missing from high-risk capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.BulkReviewEligibleTypes, models.GuidelineBlockParagraph) {
+		t.Fatalf("paragraph missing from bulk-review capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.ConditionalRiskTypes, models.GuidelineBlockFigure) {
+		t.Fatalf("figure missing from conditional capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.IneligibleBulkTypes, models.GuidelineBlockUnknown) {
+		t.Fatalf("unknown missing from ineligible capability: %#v", policy)
+	}
+}
+
+func containsGuidelineBlockType(values []models.GuidelineBlockType, expected models.GuidelineBlockType) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
+}
+
 func TestReviewBlockAuditsPublisherAndEditedContentResetsDecision(t *testing.T) {
 	db := guidelineReviewTestDB(t)
 	document := models.GuidelineDocument{Title: "Clinical guidance"}

@@ -160,6 +160,146 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 	}
 }
 
+// TestPartialReviewPublicationRegression captures the production failure mode
+// observed for Diabetes 2026.09.01. Phase 5 replaces this accepted behavior
+// with publication-completeness gates; until then this test prevents the root
+// cause from being mistaken for a reader-only defect.
+func TestPartialReviewPublicationRegression(t *testing.T) {
+	db := publicGuidelineTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes Clinical Guideline", Language: "en"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{
+		DocumentID: document.ID, Version: "regression-partial", Status: "draft",
+		HTMLFileKey: "guidelines/diabetes.html", MarkdownFileKey: "guidelines/diabetes.md",
+		ExtractionSchemaVersion: 1, StructuredContentStatus: "review_required",
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	completedAt := time.Now().UTC()
+	job := models.IngestionJob{VersionID: version.ID, JobType: "markdown_ingestion", Status: "completed", ProgressStage: "review_required", ProgressPercent: 100, CompletedAt: &completedAt}
+	if err := db.Create(&job).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision := models.GuidelineMarkdownRevision{
+		DocumentID: document.ID, VersionID: version.ID, RevisionNumber: 1,
+		StorageKey: version.MarkdownFileKey, Checksum: "regression-checksum", SizeBytes: 512,
+		SourceType: "uploaded_markdown", RegenerationJobID: &job.ID, IsCurrent: true,
+		StructuredContentStatus: "review_required", ReviewState: "review_required", PublicationState: "draft",
+	}
+	if err := db.Create(&revision).Error; err != nil {
+		t.Fatal(err)
+	}
+	version.CurrentMarkdownRevisionID = &revision.ID
+	version.StructuredMarkdownRevisionID = &revision.ID
+	if err := db.Model(&version).Updates(map[string]any{
+		"current_markdown_revision_id":    revision.ID,
+		"structured_markdown_revision_id": revision.ID,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	review := models.GuidelineRegenerationReview{
+		VersionID: version.ID, RevisionID: revision.ID, JobID: job.ID, Status: "accepted",
+		BeforeSnapshot: []byte(`{}`), AfterSnapshot: []byte(`{}`), Comparison: []byte(`{}`),
+	}
+	if err := db.Create(&review).Error; err != nil {
+		t.Fatal(err)
+	}
+	root := models.GuidelineSection{VersionID: version.ID, Title: document.Title, Slug: "diabetes-clinical-guideline", Level: 1, SortOrder: 0}
+	chapterOne := models.GuidelineSection{VersionID: version.ID, Title: "Chapter 1: Epidemiology", Slug: "chapter-1-epidemiology", Level: 2, SortOrder: 1}
+	chapterTwo := models.GuidelineSection{VersionID: version.ID, Title: "Chapter 2: Diagnosis", Slug: "chapter-2-diagnosis", Level: 2, SortOrder: 3}
+	if err := db.Create(&root).Error; err != nil {
+		t.Fatal(err)
+	}
+	chapterOne.ParentID, chapterTwo.ParentID = &root.ID, &root.ID
+	if err := db.Create(&chapterOne).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&chapterTwo).Error; err != nil {
+		t.Fatal(err)
+	}
+	prevalence := models.GuidelineSection{VersionID: version.ID, ParentID: &chapterOne.ID, Title: "1.1 Global prevalence", Slug: "1-1-global-prevalence", Level: 3, SortOrder: 2}
+	diagnosis := models.GuidelineSection{VersionID: version.ID, ParentID: &chapterTwo.ID, Title: "2.1 Diagnostic criteria", Slug: "2-1-diagnostic-criteria", Level: 3, SortOrder: 4}
+	if err := db.Create(&prevalence).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&diagnosis).Error; err != nil {
+		t.Fatal(err)
+	}
+	reviewer, reviewedAt := uuid.New(), time.Now().UTC()
+	paragraph := models.GuidelineContentBlock{
+		VersionID: version.ID, SectionID: &prevalence.ID, Type: models.GuidelineBlockParagraph,
+		SortOrder: 0, ContentJSON: []byte(`{"type":"paragraph","text":"Diabetes prevalence is increasing."}`),
+		SourceFingerprint: "draft-paragraph", ProvenanceJSON: []byte(`{}`), ReviewStatus: models.GuidelineBlockDraft,
+	}
+	list := models.GuidelineContentBlock{
+		VersionID: version.ID, SectionID: &diagnosis.ID, Type: models.GuidelineBlockUnorderedList,
+		SortOrder: 1, ContentJSON: []byte(`{"type":"unordered_list","items":["Check fasting plasma glucose"]}`),
+		SourceFingerprint: "draft-list", ProvenanceJSON: []byte(`{}`), ReviewStatus: models.GuidelineBlockDraft,
+	}
+	table := models.GuidelineContentBlock{
+		VersionID: version.ID, SectionID: &diagnosis.ID, Type: models.GuidelineBlockTable,
+		SortOrder: 2, ContentJSON: []byte(`{"type":"table","title":"Diagnostic thresholds","columns":["Test","Threshold"],"rows":[["FPG","7.0 mmol/L"]],"footnotes":[]}`),
+		SourceFingerprint: "reviewed-table", ProvenanceJSON: []byte(`{}`), ReviewStatus: models.GuidelineBlockReviewed,
+		ReviewedBy: &reviewer, ReviewedAt: &reviewedAt,
+	}
+	if err := db.Create(&paragraph).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&list).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&table).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, block := range []models.GuidelineContentBlock{paragraph, list, table} {
+		chunk := models.GuidelineChunk{
+			DocumentID: document.ID, VersionID: version.ID, SectionID: block.SectionID, BlockID: &block.ID,
+			Title: "Diabetes", Content: "Structured content", EmbeddingText: "Structured content", ReviewStatus: "draft",
+		}
+		if err := db.Create(&chunk).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	admin := GuidelineService{DB: db}
+	validation, err := admin.ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !validation.Valid {
+		t.Fatalf("regression fixture must demonstrate the current publication gap: %#v", validation.Errors)
+	}
+	if err := admin.PublishVersion(version.ID, reviewer); err != nil {
+		t.Fatalf("current validator unexpectedly rejected the regression fixture: %v", err)
+	}
+
+	public := PublicGuidelineService{DB: db}
+	manifest, err := public.Manifest(context.Background(), document.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.SectionCount != 1 || manifest.BlockCount != 1 || manifest.TableCount != 1 {
+		t.Fatalf("manifest did not reproduce reviewed-only counts: %#v", manifest)
+	}
+	content, err := public.Content(context.Background(), document.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(content.Sections) != 5 || len(content.Blocks) != 1 || content.Blocks[0].Type != models.GuidelineBlockTable {
+		t.Fatalf("public projection did not reproduce headings-without-prose gap: %#v", content)
+	}
+	leaf, err := public.Section(context.Background(), document.ID, prevalence.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(leaf.Blocks) != 0 {
+		t.Fatalf("draft paragraph leaked into the public leaf section: %#v", leaf.Blocks)
+	}
+}
+
 func TestPublishedMarkdownEndToEndUsesCurrentVersionAndChangesETag(t *testing.T) {
 	db := publicGuidelineTestDB(t)
 	store := &fakePublicStore{objects: map[string][]byte{"guidelines/source.pdf": []byte("%PDF-test")}}

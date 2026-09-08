@@ -285,6 +285,69 @@ version in immutable history for audit. Confirm the public manifest, chapter
 cards, representative clinical blocks, search results, and RAG citations after
 the replacement becomes current.
 
+## Partially reviewed publication audit
+
+This audit records the empty-section failure reproduced from Diabetes
+`2026.09.01` on 8 September 2026. The public manifest contained 16 reviewed
+blocks and reported 15 sections containing reviewed content, while the public
+hierarchy contained 310 structural sections. All 16 public blocks were tables;
+there were no reviewed paragraphs. The clinical leaf section `1.1. Global
+prevalence of diabetes` consequently had no public body content.
+
+The failure is a workflow gap, not a chapter-parser defect:
+
+1. Markdown regeneration in `ai-worker/app/repositories/guideline_repo.py`
+   deletes the previous generated projection and creates every regenerated
+   block and chunk as `draft`. This correctly avoids automatic clinical
+   approval.
+2. Sections are structural records without review status, so the complete
+   outline remains visible while its blocks await decisions.
+3. Regeneration acceptance and publication validation require individual
+   decisions for high-risk blocks. Ordinary draft prose does not currently
+   block publication.
+4. The public content service correctly exposes all current sections but only
+   blocks marked `reviewed`.
+5. Manifest `block_count` counts reviewed blocks, while the current
+   `section_count` counts distinct sections represented by reviewed blocks
+   rather than every structural section. Phase 6 of the completeness work will
+   correct that contract.
+6. Search and RAG use approved chunks from the current published version, so
+   draft paragraph chunks remain unavailable. An absent original document or
+   offline package then leaves no fallback for an empty section.
+
+`TestPartialReviewPublicationRegression` is the executable reproduction. Its
+fixture contains one H1 wrapper, two H2 chapters, clinical H3 leaves, draft
+paragraph/list content, one reviewed table, and no original PDF. It documents
+that the current validator permits publication, the manifest reports only the
+reviewed table's section, the public API exposes no prose, and a clinical leaf
+is empty. The later publication-safeguard phase must invert the publication
+expectation in this test.
+
+### Authoritative block-review policy
+
+Block risk classification is defined once in
+`backend/internal/models/guideline_block_review_policy.go`. Publication
+validation and regeneration review use that policy directly, and the
+authenticated Editorial Review workspace exposes it as `block_review_policy`
+so the dashboard does not maintain a separate high-risk list.
+
+- High risk and individually reviewed: tables, recommendations, warnings,
+  cautions, contraindications, dosages, procedures, algorithms, algorithm
+  references, and referral criteria.
+- Low risk and eligible for a future controlled bulk operation: paragraphs,
+  headings, ordered lists, unordered lists, references, and page breaks.
+- Conditional: figures. The referenced asset determines clinical sensitivity,
+  and figures are never bulk-review eligible.
+- Ineligible for bulk review: unknown blocks and conservative clinical types
+  not explicitly admitted to the low-risk allowlist, including key points,
+  evidence, definitions, and clinical notes.
+- Clinically sensitive assets always require an individual review decision.
+
+Future bulk APIs must enforce the backend allowlist and must not trust client
+classification. This phase does not approve existing content, mutate a
+published version, add bulk approval or force acceptance, change manifest
+semantics, or weaken existing clinical-safety gates.
+
 ## What common notifications mean
 
 | Notification | Meaning | Action |

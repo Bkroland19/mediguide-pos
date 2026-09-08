@@ -5206,6 +5206,25 @@ definitions:
     required:
     - id
     type: object
+  services.GuidelineBlockReviewPolicy:
+    properties:
+      bulk_review_eligible_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      conditional_risk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      high_risk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      ineligible_bulk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+    type: object
   services.GuidelineCategoryInput:
     properties:
       color:
@@ -5437,6 +5456,8 @@ definitions:
         items:
           $ref: '#/definitions/models.GuidelineAsset'
         type: array
+      block_review_policy:
+        $ref: '#/definitions/services.GuidelineBlockReviewPolicy'
       blocks:
         items:
           $ref: '#/definitions/models.GuidelineContentBlock'

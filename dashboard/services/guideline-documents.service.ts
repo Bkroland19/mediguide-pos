@@ -184,6 +184,12 @@ export interface GuidelineReviewWorkspace {
   sections: GuidelineSectionRecord[];
   blocks: GuidelineContentBlockRecord[];
   assets: GuidelineAssetRecord[];
+  block_review_policy?: {
+    high_risk_types: GuidelineBlockType[];
+    bulk_review_eligible_types: GuidelineBlockType[];
+    conditional_risk_types: GuidelineBlockType[];
+    ineligible_bulk_types: GuidelineBlockType[];
+  };
   extraction_warnings: string[];
   validation: GuidelinePublicationValidation;
 }

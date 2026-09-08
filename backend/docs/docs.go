@@ -23680,6 +23680,35 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineBlockReviewPolicy": {
+            "type": "object",
+            "properties": {
+                "bulk_review_eligible_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "conditional_risk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "high_risk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "ineligible_bulk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                }
+            }
+        },
         "services.GuidelineCategoryInput": {
             "type": "object",
             "properties": {
@@ -24033,6 +24062,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.GuidelineAsset"
                     }
+                },
+                "block_review_policy": {
+                    "$ref": "#/definitions/services.GuidelineBlockReviewPolicy"
                 },
                 "blocks": {
                     "type": "array",

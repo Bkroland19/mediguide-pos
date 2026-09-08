@@ -64,19 +64,6 @@ const blockTypes: GuidelineBlockType[] = [
   "unknown",
 ];
 
-const highRiskBlockTypes = new Set<GuidelineBlockType>([
-  "table",
-  "recommendation",
-  "warning",
-  "caution",
-  "contraindication",
-  "dosage",
-  "procedure",
-  "algorithm",
-  "algorithm_reference",
-  "referral_criteria",
-]);
-
 type BlockReviewFilter = "high-risk" | "pending-high-risk" | "all";
 
 function blockText(block: GuidelineContentBlockRecord) {
@@ -311,6 +298,10 @@ export default function GuidelineReviewPage() {
     () => workspace?.blocks || [],
     [workspace?.blocks],
   );
+  const highRiskBlockTypes = React.useMemo(
+    () => new Set(workspace?.block_review_policy?.high_risk_types || []),
+    [workspace?.block_review_policy?.high_risk_types],
+  );
   const pendingHighRiskBlocks = React.useMemo(
     () =>
       blocks.filter(
@@ -318,7 +309,7 @@ export default function GuidelineReviewPage() {
           highRiskBlockTypes.has(block.type) &&
           block.review_status !== "reviewed",
       ),
-    [blocks],
+    [blocks, highRiskBlockTypes],
   );
   const selectedSection =
     sections.find((section) => section.id === selectedSectionId) || sections[0];
