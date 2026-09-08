@@ -24,6 +24,18 @@ export function MarkdownDiffViewer({ before, after, beforeLabel, afterLabel = "C
   const diff = React.useMemo(() => lineDiff(before, after), [after, before])
   const changes = React.useMemo(() => diff.map((line, index) => line.type === "same" ? -1 : index).filter((index) => index >= 0), [diff])
   const headings = React.useMemo(() => markdownHeadings(after), [after])
+  const headingIndexesByDiffRow = React.useMemo(() => {
+    const headingsByLine = new Map(headings.map((heading, index) => [heading.line, index]))
+    const result = new Map<number, number>()
+    let afterLine = 0
+    diff.forEach((line, index) => {
+      if (line.type === "removed") return
+      afterLine += 1
+      const headingIndex = headingsByLine.get(afterLine)
+      if (headingIndex !== undefined) result.set(index, headingIndex)
+    })
+    return result
+  }, [diff, headings])
   const visible = React.useMemo(() => collapseUnchanged ? collapseLines(diff) : diff.map((line, index) => ({ line, index })), [collapseUnchanged, diff])
   const summary = React.useMemo(() => ({
     added: diff.filter((line) => line.type === "added").length,
@@ -56,7 +68,7 @@ export function MarkdownDiffViewer({ before, after, beforeLabel, afterLabel = "C
     {headings.length > 0 && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">Go to heading</span><select className="h-8 max-w-xs rounded border bg-background px-2 text-xs" defaultValue="" onChange={(event) => document.querySelector(`[data-heading-id="markdown-diff-heading-${event.target.value}"]`)?.scrollIntoView({ block: "start" })}><option value="">Choose…</option>{headings.map((heading, index) => <option key={`${heading.id}-${index}`} value={index}>{heading.breadcrumb.join(" › ")}</option>)}</select></div>}
     {sideBySide ? <div className="grid max-h-[60vh] grid-cols-2 overflow-hidden rounded border font-mono text-xs">
       {[{ label: beforeLabel, content: before }, { label: afterLabel, content: after }].map((pane, paneIndex) => <div key={pane.label} className={cn("min-w-0", paneIndex === 1 && "border-l")}><div className="border-b bg-muted px-3 py-2 font-sans font-medium">{pane.label}</div><div ref={(node) => { scrollers.current[paneIndex] = node }} onScroll={(event) => synchronize(event.currentTarget, scrollers.current[paneIndex === 0 ? 1 : 0])} className="max-h-[52vh] overflow-auto p-2">{pane.content.split("\n").map((line, index) => <div key={index} className="whitespace-pre-wrap"><span className="mr-3 select-none text-muted-foreground">{index + 1}</span>{line || " "}</div>)}</div></div>)}
-    </div> : <div className="max-h-[60vh] overflow-auto rounded border bg-muted/20 p-2 font-mono text-xs">{visible.map(({ line, index }) => line ? <DiffRow key={`${index}-${line.type}`} line={line} counterpart={line.type === "removed" && diff[index + 1]?.type === "added" ? diff[index + 1].text : line.type === "added" && diff[index - 1]?.type === "removed" ? diff[index - 1].text : undefined} index={index} headingIndex={headings.findIndex((heading) => heading.line === after.slice(0, diff.slice(0, index + 1).filter((item) => item.type !== "removed").map((item) => item.text).join("\n").length).split("\n").length)} /> : <div key={`collapsed-${index}`} className="px-2 py-1 text-center text-muted-foreground">⋯ unchanged lines collapsed ⋯</div>)}</div>}
+    </div> : <div className="max-h-[60vh] overflow-auto rounded border bg-muted/20 p-2 font-mono text-xs">{visible.map(({ line, index }) => line ? <DiffRow key={`${index}-${line.type}`} line={line} counterpart={line.type === "removed" && diff[index + 1]?.type === "added" ? diff[index + 1].text : line.type === "added" && diff[index - 1]?.type === "removed" ? diff[index - 1].text : undefined} index={index} headingIndex={headingIndexesByDiffRow.get(index) ?? -1} /> : <div key={`collapsed-${index}`} className="px-2 py-1 text-center text-muted-foreground">⋯ unchanged lines collapsed ⋯</div>)}</div>}
     <div className="flex justify-end"><Button size="sm" variant="outline" onClick={() => onDownload(diff.map((line) => `${line.type === "added" ? "+" : line.type === "removed" ? "-" : " "}${line.text}`).join("\n"))}>Download diff</Button></div>
   </div>
 }

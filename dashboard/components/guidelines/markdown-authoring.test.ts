@@ -8,6 +8,7 @@ import {
   markdownTemplates,
   moveMarkdownSection,
   parseClinicalCallouts,
+  prepareMarkdownForReview,
   stableHeadingAnchors,
   validateMarkdown,
   wordDiff,
@@ -163,6 +164,79 @@ describe("Markdown authoring utilities", () => {
       { type: "removed", text: "5" },
       { type: "added", text: "10" },
     ]);
+  });
+
+  it("diffs large documents without allocating a quadratic line matrix", () => {
+    const before = Array.from({ length: 5_000 }, (_, index) => `Line ${index}`);
+    const after = [...before];
+    after.splice(2_500, 1, "Updated clinical line");
+
+    const result = lineDiff(before.join("\n"), after.join("\n"));
+
+    expect(result.filter((line) => line.type === "removed")).toEqual([
+      { type: "removed", text: "Line 2500" },
+    ]);
+    expect(result.filter((line) => line.type === "added")).toEqual([
+      { type: "added", text: "Updated clinical line" },
+    ]);
+  });
+
+  it("prepares legacy Markdown for review without changing clinical values", () => {
+    const source = [
+      "# Diabetes care  \r",
+      "\r",
+      "## Treatment\r",
+      "\r",
+      '!!! warning "Dose check"\r',
+      "    Give 5 mg/kg every 8 hours.\r",
+      "\r",
+      "\r",
+      "\r",
+      "## Treatment\r",
+      "\r",
+      "Do not change 10 units subcutaneously.\r",
+    ].join("\n");
+
+    const result = prepareMarkdownForReview(source);
+
+    expect(result.content).toContain(
+      ':::warning title="Dose check"\nGive 5 mg/kg every 8 hours.\n:::',
+    );
+    expect(result.content).toContain("Do not change 10 units subcutaneously.");
+    expect(result.content).toContain("## Treatment — Diabetes care");
+    expect(result.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "converted_legacy_callouts", count: 1 }),
+        expect.objectContaining({
+          code: "disambiguated_duplicate_headings",
+          category: "editor-review",
+          count: 1,
+        }),
+      ]),
+    );
+    expect(
+      result.afterIssues.filter(
+        (issue) => issue.code === "duplicate_heading_anchor",
+      ),
+    ).toEqual([]);
+    expect(prepareMarkdownForReview(result.content).content).toBe(result.content);
+  });
+
+  it("leaves code examples and unsupported legacy callouts for manual review", () => {
+    const source =
+      "# Examples\n\n```md\n!!! warning\n    Example only.\n```\n\n!!! custom\n    Needs a decision.\n";
+
+    const result = prepareMarkdownForReview(source);
+
+    expect(result.content).toContain("```md\n!!! warning\n    Example only.\n```");
+    expect(result.content).toContain("!!! custom\n    Needs a decision.");
+    expect(result.changes).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported_legacy_callouts",
+        category: "manual-review",
+        count: 1,
+      }),
+    );
   });
 
   it("parses safe typed callouts without rewriting clinical values", () => {

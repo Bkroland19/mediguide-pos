@@ -122,6 +122,36 @@ describe("GuidelineMarkdownEditor", () => {
     expect(screen.getAllByText("All changes saved").length).toBeGreaterThan(0)
   })
 
+  it("previews review preparation before applying it to the draft", async () => {
+    const user = userEvent.setup()
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-prepare"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
+        initialContent={'# Care\n\n## Dose\n\n!!! warning "Check"\n    Give 5 mg.\n\n## Dose\n'}
+        editable
+        published={false}
+      />,
+    )
+
+    const editor = screen.getByRole("textbox", { name: "Markdown source" })
+    await user.click(screen.getByRole("button", { name: "Prepare for review" }))
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Prepare Markdown for editorial review",
+    })
+    expect(within(dialog).getByText(/Converted supported legacy callouts/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/Proposed unique titles/)).toBeInTheDocument()
+    expect((editor as HTMLTextAreaElement).value).toContain("!!! warning")
+
+    await user.click(within(dialog).getByRole("button", { name: "Apply to draft" }))
+
+    expect((editor as HTMLTextAreaElement).value).toContain(':::warning title="Check"')
+    expect((editor as HTMLTextAreaElement).value).toContain("Give 5 mg.")
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument()
+  })
+
   it("switches between edit, preview, and split modes", async () => {
     render(
       <GuidelineMarkdownEditor

@@ -69,6 +69,28 @@ export interface MarkdownStats {
   readingMinutes: number;
 }
 
+export type MarkdownPreparationCategory =
+  | "automatic"
+  | "editor-review"
+  | "manual-review";
+
+export interface MarkdownPreparationChange {
+  code: string;
+  category: MarkdownPreparationCategory;
+  label: string;
+  count: number;
+  lines: number[];
+}
+
+export interface MarkdownPreparationResult {
+  content: string;
+  changed: boolean;
+  rulesetVersion: "1";
+  changes: MarkdownPreparationChange[];
+  beforeIssues: MarkdownValidationIssue[];
+  afterIssues: MarkdownValidationIssue[];
+}
+
 export type MarkdownAnchorMetadata = Record<
   string,
   { id: string; title: string }
@@ -468,6 +490,253 @@ export function formatMarkdown(markdown: string) {
     .concat("\n");
 }
 
+const legacyCalloutTypes: Record<
+  string,
+  { type: ClinicalCalloutType; severity?: ClinicalCallout["severity"] }
+> = {
+  note: { type: "clinical-note" },
+  info: { type: "clinical-note" },
+  example: { type: "clinical-note" },
+  quote: { type: "clinical-note" },
+  tip: { type: "key-point" },
+  caution: { type: "caution" },
+  warning: { type: "warning" },
+  danger: { type: "warning", severity: "critical" },
+  important: { type: "warning", severity: "important" },
+};
+
+/**
+ * Applies deterministic, clinical-content-preserving preparation rules before
+ * editorial review. The caller must show the returned diff and require an
+ * explicit editor decision before replacing the draft.
+ */
+export function prepareMarkdownForReview(
+  markdown: string,
+): MarkdownPreparationResult {
+  const changes: MarkdownPreparationChange[] = [];
+  const addChange = (
+    code: string,
+    category: MarkdownPreparationCategory,
+    label: string,
+    lines: number[],
+  ) => {
+    if (!lines.length) return;
+    changes.push({ code, category, label, count: lines.length, lines });
+  };
+
+  const normalizedLineEndings = markdown.replace(/\r\n?/gu, "\n");
+  if (normalizedLineEndings !== markdown) {
+    addChange(
+      "normalized_line_endings",
+      "automatic",
+      "Normalized line endings",
+      [1],
+    );
+  }
+
+  const sourceLines = normalizedLineEndings.split("\n");
+  const trailingWhitespaceLines: number[] = [];
+  const cleanLines = sourceLines.map((line, index) => {
+    const clean = line.replace(/[ \t]+$/u, "");
+    if (clean !== line) trailingWhitespaceLines.push(index + 1);
+    return clean;
+  });
+  addChange(
+    "removed_trailing_whitespace",
+    "automatic",
+    "Removed trailing whitespace",
+    trailingWhitespaceLines,
+  );
+
+  const converted: string[] = [];
+  const convertedCalloutLines: number[] = [];
+  const unsupportedCalloutLines: number[] = [];
+  let inCodeFence = false;
+  let codeFenceMarker = "";
+
+  for (let index = 0; index < cleanLines.length; index += 1) {
+    const line = cleanLines[index];
+    const fence = /^\s*(`{3,}|~{3,})/u.exec(line);
+    if (fence) {
+      const marker = fence[1][0];
+      if (!inCodeFence) {
+        inCodeFence = true;
+        codeFenceMarker = marker;
+      } else if (marker === codeFenceMarker) {
+        inCodeFence = false;
+        codeFenceMarker = "";
+      }
+      converted.push(line);
+      continue;
+    }
+
+    const opening = !inCodeFence
+      ? /^([ \t]*)!!!\s+([a-z_-]+)(?:\s+(?:"([^"]*)"|'([^']*)'|(.+)))?\s*$/iu.exec(
+          line,
+        )
+      : null;
+    if (!opening) {
+      converted.push(line);
+      continue;
+    }
+
+    const mapping = legacyCalloutTypes[opening[2].toLowerCase()];
+    if (!mapping) {
+      unsupportedCalloutLines.push(index + 1);
+      converted.push(line);
+      continue;
+    }
+
+    let cursor = index + 1;
+    while (cursor < cleanLines.length && !cleanLines[cursor].trim()) cursor += 1;
+    if (cursor >= cleanLines.length) {
+      unsupportedCalloutLines.push(index + 1);
+      converted.push(line);
+      continue;
+    }
+
+    const firstIndent = /^[ \t]*/u.exec(cleanLines[cursor])?.[0].length ?? 0;
+    const body: string[] = [];
+    if (firstIndent === 0) {
+      while (
+        cursor < cleanLines.length &&
+        cleanLines[cursor].trim() &&
+        !/^\s*!!!\s+/u.test(cleanLines[cursor])
+      ) {
+        const candidate = cleanLines[cursor];
+        body.push(candidate);
+        cursor += 1;
+        if (/[.!?]["')\]]*$/u.test(candidate.trim())) break;
+      }
+    } else {
+      let pendingBlankLines: string[] = [];
+      while (cursor < cleanLines.length) {
+        const candidate = cleanLines[cursor];
+        if (!candidate.trim()) {
+          pendingBlankLines.push("");
+          cursor += 1;
+          continue;
+        }
+        const indentation = /^[ \t]*/u.exec(candidate)?.[0].length ?? 0;
+        if (indentation < firstIndent) break;
+        body.push(...pendingBlankLines, candidate.slice(firstIndent));
+        pendingBlankLines = [];
+        cursor += 1;
+      }
+    }
+
+    if (!body.some((value) => value.trim())) {
+      unsupportedCalloutLines.push(index + 1);
+      converted.push(line);
+      continue;
+    }
+
+    const title = (opening[3] ?? opening[4] ?? opening[5])
+      ?.trim()
+      .replaceAll('"', "'");
+    const metadata = [
+      title ? `title="${title}"` : "",
+      mapping.severity ? `severity=${mapping.severity}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    converted.push(`:::${mapping.type}${metadata ? ` ${metadata}` : ""}`);
+    converted.push(...body, ":::");
+    convertedCalloutLines.push(index + 1);
+    index = cursor - 1;
+  }
+  addChange(
+    "converted_legacy_callouts",
+    "automatic",
+    "Converted supported legacy callouts to clinical callout fences",
+    convertedCalloutLines,
+  );
+  addChange(
+    "unsupported_legacy_callouts",
+    "manual-review",
+    "Left unsupported or empty legacy callouts unchanged",
+    unsupportedCalloutLines,
+  );
+
+  const headingPattern = /^(#{1,6})\s+(.+?)\s*#*\s*$/u;
+  const ancestors: Array<{ level: number; text: string }> = [];
+  const usedAnchors = new Set<string>();
+  const disambiguatedHeadingLines: number[] = [];
+  inCodeFence = false;
+  codeFenceMarker = "";
+  for (let index = 0; index < converted.length; index += 1) {
+    const fence = /^\s*(`{3,}|~{3,})/u.exec(converted[index]);
+    if (fence) {
+      const marker = fence[1][0];
+      if (!inCodeFence) {
+        inCodeFence = true;
+        codeFenceMarker = marker;
+      } else if (marker === codeFenceMarker) {
+        inCodeFence = false;
+        codeFenceMarker = "";
+      }
+      continue;
+    }
+    if (inCodeFence) continue;
+
+    const match = headingPattern.exec(converted[index]);
+    if (!match) continue;
+    const level = match[1].length;
+    while (ancestors.length && ancestors.at(-1)!.level >= level) ancestors.pop();
+    const original = match[2].trim();
+    let replacement = original;
+    let anchor = headingSlug(replacement);
+    if (usedAnchors.has(anchor)) {
+      const parent = ancestors.at(-1)?.text.replace(/^\d+(?:\.\d+)*\s*/u, "");
+      const context = parent || "continued";
+      replacement = `${original} — ${context}`;
+      anchor = headingSlug(replacement);
+      let suffix = 2;
+      while (usedAnchors.has(anchor)) {
+        replacement = `${original} — ${context} (${suffix})`;
+        anchor = headingSlug(replacement);
+        suffix += 1;
+      }
+      converted[index] = `${match[1]} ${replacement}`;
+      disambiguatedHeadingLines.push(index + 1);
+    }
+    usedAnchors.add(anchor);
+    ancestors.push({ level, text: replacement });
+  }
+  addChange(
+    "disambiguated_duplicate_headings",
+    "editor-review",
+    "Proposed unique titles for duplicate heading anchors",
+    disambiguatedHeadingLines,
+  );
+
+  const beforeBlankNormalization = converted.join("\n");
+  const excessiveBlankMatches = [...beforeBlankNormalization.matchAll(/\n{4,}/gu)];
+  if (excessiveBlankMatches.length) {
+    addChange(
+      "collapsed_excess_blank_lines",
+      "automatic",
+      "Collapsed excessive blank lines",
+      excessiveBlankMatches.map(
+        (match) => beforeBlankNormalization.slice(0, match.index).split("\n").length,
+      ),
+    );
+  }
+
+  const content = beforeBlankNormalization
+    .replace(/\n{4,}/gu, "\n\n\n")
+    .trimEnd()
+    .concat("\n");
+  return {
+    content,
+    changed: content !== markdown,
+    rulesetVersion: "1",
+    changes,
+    beforeIssues: validateMarkdown(markdown),
+    afterIssues: validateMarkdown(content),
+  };
+}
+
 export function headingSlug(value: string) {
   return value
     .toLowerCase()
@@ -538,6 +807,13 @@ export function wordDiff(before: string, after: string): DiffWord[] {
 export function lineDiff(before: string, after: string): DiffLine[] {
   const left = before.split("\n");
   const right = after.split("\n");
+  if (left.length * right.length <= 4_000_000) {
+    return matrixLineDiff(left, right);
+  }
+  return boundedLookaheadLineDiff(left, right);
+}
+
+function matrixLineDiff(left: string[], right: string[]): DiffLine[] {
   const matrix = Array.from({ length: left.length + 1 }, () =>
     Array(right.length + 1).fill(0),
   );
@@ -554,18 +830,65 @@ export function lineDiff(before: string, after: string): DiffLine[] {
   let j = 0;
   while (i < left.length && j < right.length) {
     if (left[i] === right[j]) {
-      result.push({ type: "same", text: left[i] });
-      i += 1;
+      result.push({ type: "same", text: left[i++] });
       j += 1;
     } else if (matrix[i + 1][j] >= matrix[i][j + 1]) {
-      result.push({ type: "removed", text: left[i] });
-      i += 1;
+      result.push({ type: "removed", text: left[i++] });
     } else {
-      result.push({ type: "added", text: right[j] });
-      j += 1;
+      result.push({ type: "added", text: right[j++] });
     }
   }
   while (i < left.length) result.push({ type: "removed", text: left[i++] });
   while (j < right.length) result.push({ type: "added", text: right[j++] });
+  return result;
+}
+
+function boundedLookaheadLineDiff(left: string[], right: string[]): DiffLine[] {
+  const result: DiffLine[] = [];
+  const lookahead = 80;
+  let leftIndex = 0;
+  let rightIndex = 0;
+
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] === right[rightIndex]) {
+      result.push({ type: "same", text: left[leftIndex] });
+      leftIndex += 1;
+      rightIndex += 1;
+      continue;
+    }
+
+    let synchronization: { leftOffset: number; rightOffset: number } | null = null;
+    for (let distance = 1; distance <= lookahead && !synchronization; distance += 1) {
+      for (let leftOffset = 0; leftOffset <= distance; leftOffset += 1) {
+        const rightOffset = distance - leftOffset;
+        if (
+          leftIndex + leftOffset < left.length &&
+          rightIndex + rightOffset < right.length &&
+          left[leftIndex + leftOffset] === right[rightIndex + rightOffset]
+        ) {
+          synchronization = { leftOffset, rightOffset };
+          break;
+        }
+      }
+    }
+
+    if (!synchronization) {
+      result.push(
+        ...left.slice(leftIndex).map((text) => ({ type: "removed" as const, text })),
+        ...right.slice(rightIndex).map((text) => ({ type: "added" as const, text })),
+      );
+      return result;
+    }
+    for (let offset = 0; offset < synchronization.leftOffset; offset += 1) {
+      result.push({ type: "removed", text: left[leftIndex + offset] });
+    }
+    for (let offset = 0; offset < synchronization.rightOffset; offset += 1) {
+      result.push({ type: "added", text: right[rightIndex + offset] });
+    }
+    leftIndex += synchronization.leftOffset;
+    rightIndex += synchronization.rightOffset;
+  }
+  while (leftIndex < left.length) result.push({ type: "removed", text: left[leftIndex++] });
+  while (rightIndex < right.length) result.push({ type: "added", text: right[rightIndex++] });
   return result;
 }
