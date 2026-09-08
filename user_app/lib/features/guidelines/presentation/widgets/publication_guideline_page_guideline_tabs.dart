@@ -3,6 +3,7 @@ part of '../screens/publication_guideline_page.dart';
 class _GuidelineTabs extends StatelessWidget {
   const _GuidelineTabs({
     required this.selectedIndex,
+    required this.hasChapters,
     required this.hasKeyPoints,
     required this.hasTables,
     required this.onSelected,
@@ -10,6 +11,7 @@ class _GuidelineTabs extends StatelessWidget {
 
   final int selectedIndex;
 
+  final bool hasChapters;
   final bool hasKeyPoints;
   final bool hasTables;
 
@@ -19,7 +21,7 @@ class _GuidelineTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final tabs = <(String, bool)>[
       ('Overview', true),
-      ('Chapters', true),
+      ('Chapters', hasChapters),
       ('Key Points', hasKeyPoints),
       ('Tables', hasTables),
     ];

@@ -29,6 +29,26 @@ func TestValidateMarkdownDocumentReportsUnsafeAndStructuralIssues(t *testing.T) 
 	}
 }
 
+func TestValidateMarkdownDocumentRejectsUnchangedTemplate(t *testing.T) {
+	content := "# Emergency protocol title\n\n## Recognition criteria\n\n_Add reviewed clinical content._"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{Title: "Malaria in Adults", SourceOrg: "Ministry"}, nil)
+	if result.Valid {
+		t.Fatal("unchanged authoring template must not validate")
+	}
+	if !hasMarkdownValidationIssue(result.Issues, "template_placeholder") || !hasMarkdownValidationIssue(result.Issues, "document_title_mismatch") {
+		t.Fatalf("missing template safeguards: %#v", result.Issues)
+	}
+}
+
+func hasMarkdownValidationIssue(issues []MarkdownValidationIssue, code string) bool {
+	for _, issue := range issues {
+		if issue.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
 func TestValidateMarkdownDocumentFlagsHighRiskReviewWithoutChangingClinicalText(t *testing.T) {
 	content := "# Dose\n\n:::dosage title=Adult\nGive 5 mg orally daily.\n:::\n\n**Table 1. Adult doses**\n\n| Drug | Dose |\n| --- | --- |\n| A | 5 mg |"
 	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)

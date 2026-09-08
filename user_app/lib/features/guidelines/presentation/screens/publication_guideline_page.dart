@@ -21,6 +21,7 @@ import 'package:user_app/features/documents/presentation/screens/document_reader
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
 import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
@@ -216,7 +217,7 @@ class _PublicationGuidelinePageState
             return _content(context, value);
           }
 
-          return _overviewPage(context, value, progress?.isBookmarked == true);
+          return _overviewPage(context, value, progress);
         },
       ),
 
@@ -334,11 +335,13 @@ class _PublicationGuidelinePageState
   Widget _overviewPage(
     BuildContext context,
     GuidelinePublicationContent value,
-    bool isBookmarked,
+    ReadingProgress? progress,
   ) {
     return _GuidelineOverview(
       content: value,
-      isBookmarked: isBookmarked,
+      isBookmarked: progress?.isBookmarked == true,
+      currentSectionId: progress?.currentSection,
+      readingProgress: progress?.progressPercentage,
       onRead: () {
         context.push(AppRoutes.readPublicGuideline(widget.guidelineId));
       },

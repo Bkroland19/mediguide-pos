@@ -105,15 +105,7 @@ final class GuidelinePublicationRepository {
       final results = await Future.wait<Map<String, dynamic>>([
         _public('/api/public/guidelines/$id'),
         _public('/api/public/guidelines/$id/manifest'),
-        _public(
-          '/api/public/guidelines/$id/sections',
-          query: {
-            'page': '1',
-            'per_page': '500',
-            'sort': 'sort_order',
-            'order': 'asc',
-          },
-        ),
+        _structuredContent(id),
         _public(
           '/api/public/guidelines/$id/figures',
           query: {'page': '1', 'per_page': '500'},
@@ -123,7 +115,7 @@ final class GuidelinePublicationRepository {
       final manifest = _manifestFromContract(_data(results[1]));
       final sections =
           _maps(
-              _data(results[2])['items'],
+              _data(results[2])['sections'],
             ).map(_sectionFromContract).toList(growable: false)
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       final figureAssets = <String, GuidelineAsset>{};
@@ -135,20 +127,14 @@ final class GuidelinePublicationRepository {
         }
       }
 
-      final blocks = <GuidelineBlock>[];
-      for (final section in sections) {
-        final response = await _public(
-          '/api/public/guidelines/$id/sections/${section.id}',
-        );
-        for (final row in _maps(_data(response)['blocks'])) {
-          blocks.add(
-            _block(
+      final blocks = _maps(_data(results[2])['blocks'])
+          .map(
+            (row) => _block(
               ServicesPublicGuidelineBlock.fromJson(row),
               figureAssets[row['id']?.toString()],
             ),
-          );
-        }
-      }
+          )
+          .toList();
       blocks.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
       final value = GuidelinePublicationContent(
@@ -274,6 +260,55 @@ final class GuidelinePublicationRepository {
     final response = await _public(path);
     final data = _data(response);
     return data.isEmpty ? null : _assetFromContract(data);
+  }
+
+  Future<Map<String, dynamic>> _structuredContent(String guidelineId) async {
+    try {
+      return await _public('/api/public/guidelines/$guidelineId/content');
+    } catch (_) {
+      // Supports a rolling deployment where a newer app briefly reaches an
+      // older API. Pagination removes the former 500-section truncation; small
+      // batches keep the compatibility path from flooding the server.
+      final sections = <Map<String, dynamic>>[];
+      var page = 1;
+      var totalPages = 1;
+      do {
+        final response = await _public(
+          '/api/public/guidelines/$guidelineId/sections',
+          query: {
+            'page': '$page',
+            'per_page': '500',
+            'sort': 'sort_order',
+            'order': 'asc',
+          },
+        );
+        final data = _data(response);
+        sections.addAll(_maps(data['items']));
+        totalPages = _integer(data['total_pages'], 1);
+        page++;
+      } while (page <= totalPages);
+
+      final blocks = <Map<String, dynamic>>[];
+      for (var offset = 0; offset < sections.length; offset += 12) {
+        final end = offset + 12 < sections.length
+            ? offset + 12
+            : sections.length;
+        final responses = await Future.wait(
+          sections.sublist(offset, end).map((section) {
+            final sectionId = section['id']?.toString() ?? '';
+            return _public(
+              '/api/public/guidelines/$guidelineId/sections/$sectionId',
+            );
+          }),
+        );
+        for (final response in responses) {
+          blocks.addAll(_maps(_data(response)['blocks']));
+        }
+      }
+      return {
+        'data': {'sections': sections, 'blocks': blocks},
+      };
+    }
   }
 
   Future<Map<String, dynamic>> _public(

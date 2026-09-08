@@ -1271,6 +1271,11 @@ export interface HandlersPublicGuidelineAssetEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPublicGuidelineContentEnvelope {
+  data?: ServicesPublicGuidelineContent;
+  success?: boolean;
+}
+
 export interface HandlersPublicGuidelineEnvelope {
   data?: ServicesPublicGuideline;
   success?: boolean;
@@ -4207,6 +4212,11 @@ export interface ServicesPublicGuidelineBlock {
   section_id?: string;
   sort_order?: number;
   type?: ModelsGuidelineBlockType;
+}
+
+export interface ServicesPublicGuidelineContent {
+  blocks?: ServicesPublicGuidelineBlock[];
+  sections?: ServicesPublicGuidelineSection[];
 }
 
 export interface ServicesPublicGuidelineFigure {

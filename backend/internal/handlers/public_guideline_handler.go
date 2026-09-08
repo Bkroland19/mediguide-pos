@@ -26,6 +26,7 @@ type PublicGuidelineReader interface {
 
 type PublicGuidelineContentReader interface {
 	Manifest(context.Context, uuid.UUID) (*services.PublicGuidelineManifest, error)
+	Content(context.Context, uuid.UUID) (*services.PublicGuidelineContent, error)
 	Sections(context.Context, uuid.UUID, services.PublicGuidelineContentQuery) (*services.PageResult[services.PublicGuidelineSection], error)
 	Section(context.Context, uuid.UUID, uuid.UUID) (*services.PublicGuidelineSectionDetail, error)
 	Tables(context.Context, uuid.UUID, services.PublicGuidelineContentQuery) (*services.PageResult[services.PublicGuidelineTable], error)
@@ -34,6 +35,27 @@ type PublicGuidelineContentReader interface {
 	Original(context.Context, uuid.UUID) (*services.PublicGuidelineAssetLink, error)
 	OfflinePackage(context.Context, uuid.UUID) (*services.PublicGuidelineAssetLink, error)
 	AssetDownload(context.Context, uuid.UUID, uuid.UUID, string) (*services.PublicGuidelineAssetDownload, error)
+}
+
+// Content godoc
+// @Summary Get all reviewed structured content for a published guideline
+// @Description Returns the complete section hierarchy and reviewed blocks in one response.
+// @Tags Public Guidelines
+// @Produce json
+// @Param id path string true "Guideline UUID"
+// @Success 200 {object} handlers.PublicGuidelineContentEnvelope
+// @Router /api/public/guidelines/{id}/content [get]
+func (h PublicGuidelineHandler) ContentBundle(c *gin.Context) {
+	id, ok := publicGuidelineID(c)
+	if !ok || !h.contentAvailable(c) {
+		return
+	}
+	result, err := h.Content.Content(c.Request.Context(), id)
+	if err != nil {
+		publicGuidelineError(c, err)
+		return
+	}
+	respondPublicJSON(c, result, "", time.Time{})
 }
 
 type PublicGuidelineHandler struct {

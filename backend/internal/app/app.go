@@ -206,6 +206,7 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/search", rateLimiter.Limit(middleware.Policy("public-search", 60, time.Minute, 10), middleware.IPIdentity), searchH.PublicSearch)
 		public.GET("/guidelines/:id", publicGuidelineH.Get)
 		public.GET("/guidelines/:id/manifest", publicGuidelineH.Manifest)
+		public.GET("/guidelines/:id/content", publicGuidelineH.ContentBundle)
 		public.GET("/guidelines/:id/sections", publicGuidelineH.Sections)
 		public.GET("/guidelines/:id/sections/:sectionId", publicGuidelineH.Section)
 		public.GET("/guidelines/:id/tables", publicGuidelineH.Tables)

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/features/guidelines/presentation/screens/publication_guideline_page.dart';
 
 void main() {
   group('Guideline publication models', () {
@@ -56,6 +57,42 @@ void main() {
         'first',
         'second',
       ]);
+    });
+
+    test('chapter cards promote children of a single document-title root', () {
+      const title = PublicationSection(
+        id: 'title',
+        title: 'Diabetes',
+        level: 1,
+      );
+      const chapters = [
+        PublicationSection(
+          id: 'chapter-1',
+          parentId: 'title',
+          title: 'Chapter 1',
+          level: 2,
+        ),
+        PublicationSection(
+          id: 'chapter-2',
+          parentId: 'title',
+          title: 'Chapter 2',
+          level: 2,
+        ),
+      ];
+
+      expect(
+        guidelineChapterDisplayRoots(const [title], const {'title': chapters}),
+        chapters,
+      );
+    });
+
+    test('chapter cards preserve curated direct-root chapters', () {
+      const roots = [
+        PublicationSection(id: 'overview', title: '1. Overview', level: 1),
+        PublicationSection(id: 'treatment', title: '2. Treatment', level: 1),
+      ];
+
+      expect(guidelineChapterDisplayRoots(roots, const {}), roots);
     });
   });
 }

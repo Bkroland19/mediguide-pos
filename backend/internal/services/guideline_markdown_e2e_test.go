@@ -17,6 +17,9 @@ func TestMarkdownAuthoringPublicationWorkflow(t *testing.T) {
 	service, version, actorID := markdownServiceFixture(t)
 	ctx := context.Background()
 	public := PublicGuidelineService{DB: service.DB, Store: service.Store}
+	if err := service.DB.Model(&models.GuidelineDocument{}).Where("id = ?", version.DocumentID).Update("title", "Malaria care").Error; err != nil {
+		t.Fatal(err)
+	}
 
 	blank, err := service.SaveMarkdownDraft(ctx, version.ID, actorID, MarkdownDraftInput{Content: "", SourceType: "blank"})
 	if err != nil {

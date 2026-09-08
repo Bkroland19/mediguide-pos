@@ -96,7 +96,11 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 	if err := db.Save(&document).Error; err != nil {
 		t.Fatal(err)
 	}
-	section := models.GuidelineSection{VersionID: version.ID, Title: "Assessment", Slug: "assessment", Level: 1}
+	parent := models.GuidelineSection{VersionID: version.ID, Title: "Clinical care", Slug: "clinical-care", Level: 1}
+	if err := db.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, ParentID: &parent.ID, Title: "Assessment", Slug: "assessment", Level: 2}
 	if err := db.Create(&section).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -114,8 +118,12 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 
 	service := PublicGuidelineService{DB: db, Store: store}
 	sections, err := service.Sections(context.Background(), document.ID, PublicGuidelineContentQuery{})
-	if err != nil || len(sections.Items) != 1 {
+	if err != nil || len(sections.Items) != 2 {
 		t.Fatalf("unexpected sections: %#v %v", sections, err)
+	}
+	content, err := service.Content(context.Background(), document.ID)
+	if err != nil || len(content.Sections) != 2 || len(content.Blocks) != 1 {
+		t.Fatalf("unexpected batched content: %#v %v", content, err)
 	}
 	detail, err := service.Section(context.Background(), document.ID, section.ID)
 	if err != nil {
