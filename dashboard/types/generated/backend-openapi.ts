@@ -2404,6 +2404,8 @@ export interface ServicesAskRequest {
 export interface ServicesAskResponse {
   answer?: string;
   citations?: ServicesCitation[];
+  coverage_notice?: string;
+  search_scope?: string;
   session_id?: string;
 }
 
@@ -4275,7 +4277,11 @@ export interface ServicesPublicGuidelineBlock {
 
 export interface ServicesPublicGuidelineContent {
   blocks?: ServicesPublicGuidelineBlock[];
+  checksum?: string;
+  guideline_id?: string;
+  package_version?: number;
   sections?: ServicesPublicGuidelineSection[];
+  version_id?: string;
 }
 
 export interface ServicesPublicGuidelineFigure {
@@ -4336,7 +4342,11 @@ export interface ServicesPublicGuidelineSection {
 
 export interface ServicesPublicGuidelineSectionDetail {
   blocks?: ServicesPublicGuidelineBlock[];
+  checksum?: string;
+  guideline_id?: string;
+  package_version?: number;
   section?: ServicesPublicGuidelineSection;
+  version_id?: string;
 }
 
 export interface ServicesPublicGuidelineTable {

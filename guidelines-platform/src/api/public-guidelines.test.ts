@@ -4,6 +4,7 @@ import {
   askPublicGuideline,
   clearPublicMarkdownCache,
   getPublicGuidelineManifest,
+  getPublicGuidelineContent,
   getPublicGuidelineMarkdown,
   listPublicGuidelines,
 } from "./public-guidelines";
@@ -103,6 +104,64 @@ describe("public guideline API client", () => {
     await expect(getPublicGuidelineManifest("guideline-id")).rejects.toMatchObject({
       kind: "invalid-response",
     });
+  });
+
+  it("rejects structured content from a different publication identity", async () => {
+    const manifest = {
+      guideline_id: "guideline-id", version_id: "version-2", version: "2",
+      schema_version: 2, package_version: 2, extraction_quality: "reviewed" as const,
+      has_chapters: true, has_key_points: false, has_tables: false,
+      has_figures: false, has_algorithms: false, has_original_pdf: false,
+      has_offline_package: false, section_count: 1, block_count: 1,
+      table_count: 0, figure_count: 0, algorithm_count: 0,
+      checksum: "new-checksum", etag: "new-etag", generated_at: "2026-09-09T00:00:00Z",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: {
+        guideline_id: "guideline-id", version_id: "version-1",
+        package_version: 1, checksum: "old-checksum", sections: [], blocks: [],
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await expect(getPublicGuidelineContent("guideline-id", manifest)).rejects.toMatchObject({
+      kind: "invalid-response",
+    });
+  });
+
+  it("invalidates structured content when the publication manifest changes", async () => {
+    const manifest = (version: string, packageVersion: number, checksum: string) => ({
+      guideline_id: "guideline-id", version_id: version, version,
+      schema_version: 2, package_version: packageVersion, extraction_quality: "reviewed" as const,
+      has_chapters: true, has_key_points: false, has_tables: false,
+      has_figures: false, has_algorithms: false, has_original_pdf: false,
+      has_offline_package: false, section_count: 1, block_count: 1,
+      table_count: 0, figure_count: 0, algorithm_count: 0,
+      checksum, etag: `etag-${version}`, generated_at: "2026-09-09T00:00:00Z",
+    });
+    const firstManifest = manifest("version-1", 1, "checksum-1");
+    const secondManifest = manifest("version-2", 2, "checksum-2");
+    const content = (value: typeof firstManifest) => ({
+      guideline_id: value.guideline_id, version_id: value.version_id,
+      package_version: value.package_version, checksum: value.checksum,
+      sections: [], blocks: [],
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: firstManifest }), { status: 200, headers: { "Content-Type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: content(firstManifest) }), { status: 200, headers: { "Content-Type": "application/json", ETag: '"content-1"' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: secondManifest }), { status: 200, headers: { "Content-Type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: content(secondManifest) }), { status: 200, headers: { "Content-Type": "application/json", ETag: '"content-2"' } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await getPublicGuidelineManifest("guideline-id");
+    await getPublicGuidelineContent("guideline-id", first);
+    const second = await getPublicGuidelineManifest("guideline-id");
+    const current = await getPublicGuidelineContent("guideline-id", second);
+
+    expect(current.version_id).toBe("version-2");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const finalHeaders = fetchMock.mock.calls[3][1]?.headers as Record<string, string>;
+    expect(finalHeaders["If-None-Match"]).toBeUndefined();
   });
 
   it("aborts an in-flight request when navigation is cancelled", async () => {

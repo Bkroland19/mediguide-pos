@@ -58,6 +58,12 @@ class _Overview extends StatelessWidget {
                     ? 'Reviewed structured content'
                     : 'Partial reviewed content',
               ),
+              Chip(label: Text('${manifest.sectionCount} sections')),
+              Chip(
+                label: Text(
+                  '${manifest.reviewedSectionCount} sections with reviewed content',
+                ),
+              ),
             ],
           ),
         ],

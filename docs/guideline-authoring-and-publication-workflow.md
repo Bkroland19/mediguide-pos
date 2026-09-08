@@ -393,6 +393,42 @@ blocks, sections with reviewed content, and empty leaf sections. If a stale
 review is rejected, reload the workspace and re-check the affected blocks
 against the newly generated source before trying again.
 
+### Public reader, cache, and RAG guarantees
+
+Public readers use the following terminology consistently:
+
+- `N sections` is the full published structure.
+- `N sections with reviewed content` is the subset containing at least one
+  approved block.
+- `0 reviewed blocks` never means the source section was empty; it means no
+  structured body block in that section is approved for public display.
+
+An empty leaf section says that reviewed content has not yet been published.
+It offers **Open original document** only when the manifest confirms that an
+original PDF exists. An empty container with reviewed descendants links to
+those subsections instead of presenting the chapter as broken. Partial-reader
+notices state the reviewed-section coverage and never imply that unreviewed
+content is available.
+
+The public content response stores sections and reviewed blocks as one atomic
+snapshot. Its identity is the tuple `guideline_id`, `version_id`,
+`package_version`, and manifest `checksum`. Web and mobile clients cache by
+that complete tuple, invalidate the prior snapshot when the manifest changes,
+and reject any response whose identity differs from the manifest. Mobile cache
+scopes also include the configured API host, preventing incompatible
+environment data from sharing a cache. A downloaded package is marked
+`updateAvailable` when a newer current publication is discovered and is no
+longer treated as the current ready package.
+
+Bulk review alone does not make content searchable. At publication the backend
+first demotes every chunk in the version, then promotes only chunks belonging
+to blocks that are still reviewed. Reviewed chunks must have generated
+embeddings before publication. Public search and both assistant retrieval paths
+join through the document's exact current published version; draft, rejected,
+deleted, and superseded chunks are excluded. Assistant responses include the
+`current_published_reviewed_content` search scope and a coverage notice stating
+that unreviewed content was not searched.
+
 ## What common notifications mean
 
 | Notification | Meaning | Action |

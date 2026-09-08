@@ -55,7 +55,7 @@ func (h PublicGuidelineHandler) ContentBundle(c *gin.Context) {
 		publicGuidelineError(c, err)
 		return
 	}
-	respondPublicJSON(c, result, "", time.Time{})
+	respondPublicJSON(c, result, result.Checksum, time.Time{})
 }
 
 type PublicGuidelineHandler struct {

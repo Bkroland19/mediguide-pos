@@ -125,6 +125,9 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 	if err != nil || len(content.Sections) != 2 || len(content.Blocks) != 1 {
 		t.Fatalf("unexpected batched content: %#v %v", content, err)
 	}
+	if content.GuidelineID != document.ID || content.VersionID != version.ID || content.PackageVersion != manifest.PackageVersion || content.Checksum != manifest.Checksum {
+		t.Fatalf("batched content identity does not match its manifest: %#v", content)
+	}
 	detail, err := service.Section(context.Background(), document.ID, section.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -254,9 +257,16 @@ func TestPartialReviewPublicationRegression(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, block := range []models.GuidelineContentBlock{paragraph, list, table} {
+		chunkContent := "Diagnostic threshold table"
+		switch block.ID {
+		case paragraph.ID:
+			chunkContent = "Diabetes prevalence is increasing"
+		case list.ID:
+			chunkContent = "Check fasting plasma glucose"
+		}
 		chunk := models.GuidelineChunk{
 			DocumentID: document.ID, VersionID: version.ID, SectionID: block.SectionID, BlockID: &block.ID,
-			Title: "Diabetes", Content: "Structured content", EmbeddingText: "Structured content", ReviewStatus: "draft",
+			Title: "Diabetes", Content: chunkContent, EmbeddingText: chunkContent, ReviewStatus: "draft",
 		}
 		if err := db.Create(&chunk).Error; err != nil {
 			t.Fatal(err)
@@ -303,6 +313,20 @@ func TestPartialReviewPublicationRegression(t *testing.T) {
 	}
 	if len(leaf.Blocks) != 1 || leaf.Blocks[0].Type != models.GuidelineBlockParagraph {
 		t.Fatalf("reviewed paragraph is missing from the public leaf section: %#v", leaf.Blocks)
+	}
+	searchResults, err := (SearchService{DB: db}).SearchApprovedGuidelineContext(context.Background(), "diabetes prevalence increasing", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundParagraph := false
+	for _, result := range searchResults {
+		if result.BlockID == paragraph.ID.String() && result.GuidelineID == document.ID.String() {
+			foundParagraph = true
+			break
+		}
+	}
+	if !foundParagraph {
+		t.Fatalf("newly reviewed paragraph was not searchable after publication: %#v", searchResults)
 	}
 }
 

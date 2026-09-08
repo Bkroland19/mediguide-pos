@@ -22018,6 +22018,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.Citation"
                     }
                 },
+                "coverage_notice": {
+                    "type": "string"
+                },
+                "search_scope": {
+                    "type": "string"
+                },
                 "session_id": {
                     "type": "string"
                 }
@@ -27267,11 +27273,23 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.PublicGuidelineBlock"
                     }
                 },
+                "checksum": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "package_version": {
+                    "type": "integer"
+                },
                 "sections": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.PublicGuidelineSection"
                     }
+                },
+                "version_id": {
+                    "type": "string"
                 }
             }
         },
@@ -27430,8 +27448,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.PublicGuidelineBlock"
                     }
                 },
+                "checksum": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "package_version": {
+                    "type": "integer"
+                },
                 "section": {
                     "$ref": "#/definitions/services.PublicGuidelineSection"
+                },
+                "version_id": {
+                    "type": "string"
                 }
             }
         },

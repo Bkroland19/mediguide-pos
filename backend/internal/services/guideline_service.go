@@ -218,6 +218,14 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID, 
 				return err
 			}
 		}
+		// Publication is the authoritative visibility boundary. First demote every
+		// chunk in this version, then promote only chunks whose source block is
+		// currently reviewed. This also removes stale approvals after a reviewer
+		// rejects or reopens a block.
+		if err := tx.Model(&models.GuidelineChunk{}).Where("version_id = ?", versionID).
+			Update("review_status", "draft").Error; err != nil {
+			return err
+		}
 		reviewedBlockIDs := tx.Model(&models.GuidelineContentBlock{}).
 			Select("id").Where("version_id = ? AND review_status = ?", versionID, models.GuidelineBlockReviewed)
 		if err := tx.Model(&models.GuidelineChunk{}).
@@ -628,6 +636,28 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 	}
 	if chunkCount == 0 {
 		return fmt.Errorf("%w: no vectorized chunks were generated from the uploaded source", ErrGuidelineIngestionIncomplete)
+	}
+	var reviewedBlocksWithoutChunks int64
+	if err := tx.Model(&models.GuidelineContentBlock{}).
+		Where("version_id = ? AND deleted_at IS NULL AND review_status = ?", version.ID, models.GuidelineBlockReviewed).
+		Where("NOT EXISTS (SELECT 1 FROM guideline_chunks gc WHERE gc.block_id = guideline_content_blocks.id AND gc.version_id = guideline_content_blocks.version_id AND gc.deleted_at IS NULL)").
+		Count(&reviewedBlocksWithoutChunks).Error; err != nil {
+		return err
+	}
+	if reviewedBlocksWithoutChunks > 0 {
+		return fmt.Errorf("%w: %d reviewed content blocks are waiting for search chunks; rerun regeneration before publishing", ErrGuidelineIngestionIncomplete, reviewedBlocksWithoutChunks)
+	}
+	if tx.Migrator().HasColumn("guideline_chunks", "embedding") {
+		var missingEmbeddings int64
+		if err := tx.Table("guideline_chunks AS gc").
+			Joins("JOIN guideline_content_blocks gcb ON gcb.id = gc.block_id AND gcb.version_id = gc.version_id AND gcb.deleted_at IS NULL").
+			Where("gc.version_id = ? AND gc.deleted_at IS NULL AND gcb.review_status = ? AND gc.embedding IS NULL", version.ID, models.GuidelineBlockReviewed).
+			Count(&missingEmbeddings).Error; err != nil {
+			return err
+		}
+		if missingEmbeddings > 0 {
+			return fmt.Errorf("%w: %d reviewed content chunks are waiting for embeddings; rerun regeneration before publishing", ErrGuidelineIngestionIncomplete, missingEmbeddings)
+		}
 	}
 
 	return nil

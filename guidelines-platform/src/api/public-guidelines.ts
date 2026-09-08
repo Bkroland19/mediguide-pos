@@ -120,7 +120,20 @@ export type PublicGuidelineBlock = {
 };
 
 export type PublicGuidelineSectionDetail = {
+  guideline_id: string;
+  version_id: string;
+  package_version: number;
+  checksum: string;
   section: PublicGuidelineSection;
+  blocks: PublicGuidelineBlock[];
+};
+
+export type PublicGuidelineContent = {
+  guideline_id: string;
+  version_id: string;
+  package_version: number;
+  checksum: string;
+  sections: PublicGuidelineSection[];
   blocks: PublicGuidelineBlock[];
 };
 
@@ -201,6 +214,8 @@ export type PublicAIAnswer = {
   answer: string;
   citations: PublicAICitation[];
   session_id?: string;
+  search_scope?: string;
+  coverage_notice?: string;
 };
 
 export type PublicApiErrorKind =
@@ -240,6 +255,7 @@ const markdownCache = new Map<string, PublicMarkdown>();
 const listCache = new Map<string, CacheEntry<PublicGuidelinePage>>();
 const detailCache = new Map<string, CacheEntry<PublicGuideline>>();
 const structuredCache = new Map<string, ConditionalCacheEntry<unknown>>();
+const manifestIdentityByGuideline = new Map<string, string>();
 const inFlight = new Map<string, Promise<unknown>>();
 const maxCachedDocuments = 8;
 const maxCachedLists = 16;
@@ -321,8 +337,9 @@ async function requestConditionalJson<T>(
   url: string,
   validate: (value: unknown) => value is T,
   signal?: AbortSignal,
+  cacheKey = url,
 ): Promise<T> {
-  const cached = structuredCache.get(url) as ConditionalCacheEntry<T> | undefined;
+  const cached = structuredCache.get(cacheKey) as ConditionalCacheEntry<T> | undefined;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (cached?.etag) headers["If-None-Match"] = cached.etag;
   if (!cached?.etag && cached?.lastModified) {
@@ -344,7 +361,7 @@ async function requestConditionalJson<T>(
   if (!envelope.success || !validate(envelope.data)) {
     throw new PublicApiError("invalid-response", response.status);
   }
-  rememberConditional(url, {
+  rememberConditional(cacheKey, {
     value: envelope.data,
     etag: response.headers.get("ETag") ?? undefined,
     lastModified: response.headers.get("Last-Modified") ?? undefined,
@@ -437,8 +454,34 @@ export function getPublicGuideline(id: string, signal?: AbortSignal) {
 
 export function getPublicGuidelineManifest(id: string, signal?: AbortSignal) {
   const url = publicUrl(`/guidelines/${encodeURIComponent(id)}/manifest`);
-  const load = () => requestConditionalJson(url, isManifest, signal);
+  const load = async () => {
+    const manifest = await requestConditionalJson(url, isManifest, signal);
+    const identity = publicationIdentity(manifest);
+    const previous = manifestIdentityByGuideline.get(id);
+    if (previous && previous !== identity) {
+      invalidateGuidelineStructuredCache(id, url);
+    }
+    manifestIdentityByGuideline.set(id, identity);
+    return manifest;
+  };
   return signal ? load() : deduplicated(`manifest:${url}`, load);
+}
+
+export async function getPublicGuidelineContent(
+  id: string,
+  manifest: PublicGuidelineManifest,
+  signal?: AbortSignal,
+) {
+  const url = publicUrl(`/guidelines/${encodeURIComponent(id)}/content`);
+  const identity = publicationIdentity(manifest);
+  const value = await requestConditionalJson(
+    url,
+    isContent,
+    signal,
+    `${url}#${identity}`,
+  );
+  assertPublicationIdentity(value, manifest);
+  return value;
 }
 
 export function listPublicGuidelineSections(id: string, signal?: AbortSignal) {
@@ -448,10 +491,13 @@ export function listPublicGuidelineSections(id: string, signal?: AbortSignal) {
   return signal ? load() : deduplicated(`sections:${url}`, load);
 }
 
-export function getPublicGuidelineSection(id: string, sectionId: string, signal?: AbortSignal) {
+export async function getPublicGuidelineSection(id: string, sectionId: string, manifest: PublicGuidelineManifest, signal?: AbortSignal) {
   const url = publicUrl(`/guidelines/${encodeURIComponent(id)}/sections/${encodeURIComponent(sectionId)}`);
-  const load = () => requestConditionalJson(url, isSectionDetail, signal);
-  return signal ? load() : deduplicated(`section:${url}`, load);
+  const identity = publicationIdentity(manifest);
+  const load = () => requestConditionalJson(url, isSectionDetail, signal, `${url}#${identity}`);
+  const value = signal ? await load() : await deduplicated(`section:${url}:${identity}`, load);
+  assertPublicationIdentity(value, manifest);
+  return value;
 }
 
 export function listPublicGuidelineTables(id: string, signal?: AbortSignal) {
@@ -555,7 +601,34 @@ export function clearPublicMarkdownCache() {
   listCache.clear();
   detailCache.clear();
   structuredCache.clear();
+  manifestIdentityByGuideline.clear();
   inFlight.clear();
+}
+
+function publicationIdentity(manifest: PublicGuidelineManifest) {
+  return [manifest.guideline_id, manifest.version_id, manifest.package_version, manifest.checksum].join(":");
+}
+
+function assertPublicationIdentity(
+  value: Pick<PublicGuidelineContent, "guideline_id" | "version_id" | "package_version" | "checksum">,
+  manifest: PublicGuidelineManifest,
+) {
+  if (
+    value.guideline_id !== manifest.guideline_id ||
+    value.version_id !== manifest.version_id ||
+    value.package_version !== manifest.package_version ||
+    value.checksum !== manifest.checksum
+  ) {
+    throw new PublicApiError("invalid-response");
+  }
+}
+
+function invalidateGuidelineStructuredCache(id: string, preserveKey?: string) {
+  const encoded = `/guidelines/${encodeURIComponent(id)}/`;
+  for (const key of structuredCache.keys()) {
+    if (key !== preserveKey && key.includes(encoded)) structuredCache.delete(key);
+  }
+  markdownCache.delete(id);
 }
 
 type PublicGuidelinePageOf<T> = {
@@ -607,7 +680,25 @@ function isPage<T>(value: unknown, itemGuard: (item: unknown) => item is T): val
 
 function isSectionPage(value: unknown): value is PublicGuidelinePageOf<PublicGuidelineSection> { return isPage(value, isSection); }
 function isSectionDetail(value: unknown): value is PublicGuidelineSectionDetail {
-  return isRecord(value) && isSection(value.section) && Array.isArray(value.blocks) && value.blocks.every(isBlock);
+  if (!isRecord(value) || !isPublicationPayload(value)) return false;
+  const record = value as Record<string, unknown>;
+  return isSection(record.section) && Array.isArray(record.blocks) && record.blocks.every(isBlock);
+}
+type PublicGuidelinePublicationIdentity = {
+  guideline_id: string;
+  version_id: string;
+  package_version: number;
+  checksum: string;
+};
+function isPublicationPayload(value: unknown): value is PublicGuidelinePublicationIdentity {
+  return isRecord(value) && isString(value.guideline_id) && isString(value.version_id)
+    && isNumber(value.package_version) && isString(value.checksum);
+}
+function isContent(value: unknown): value is PublicGuidelineContent {
+  if (!isRecord(value) || !isPublicationPayload(value)) return false;
+  const record = value as Record<string, unknown>;
+  return Array.isArray(record.sections) && record.sections.every(isSection)
+    && Array.isArray(record.blocks) && record.blocks.every(isBlock);
 }
 function isTable(value: unknown): value is PublicGuidelineTable {
   return isRecord(value) && isString(value.id) && isNumber(value.sort_order) && isRecord(value.content)

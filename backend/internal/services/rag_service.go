@@ -60,9 +60,11 @@ type Citation struct {
 	PageEnd       *int   `json:"page_end"`
 }
 type AskResponse struct {
-	Answer    string     `json:"answer"`
-	Citations []Citation `json:"citations"`
-	SessionID string     `json:"session_id"`
+	Answer         string     `json:"answer"`
+	Citations      []Citation `json:"citations"`
+	SessionID      string     `json:"session_id"`
+	SearchScope    string     `json:"search_scope"`
+	CoverageNotice string     `json:"coverage_notice,omitempty"`
 }
 
 const assistantUserEmail = "assistant@mediguide.local"
@@ -108,7 +110,8 @@ func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.
 	if len(parts) > 0 {
 		answer = "I found the following relevant content in this published guideline. Verify the cited sections before clinical use:\n\n" + strings.Join(parts, "\n")
 	}
-	return &AskResponse{Answer: answer, Citations: citations}, nil
+	coverage := "Only approved content in the current published guideline was searched. Unreviewed sections were excluded."
+	return &AskResponse{Answer: answer, Citations: citations, SearchScope: "current_published_reviewed_content", CoverageNotice: coverage}, nil
 }
 
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
@@ -147,7 +150,12 @@ func (s RAGService) ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	}
 
 	res.SessionID = session.ID.String()
-	s.enrichCitations(res.Citations)
+	res.Citations = s.enrichCitations(res.Citations)
+	if len(res.Citations) == 0 {
+		res.Answer = "I could not find an answer in the current approved guideline content. Review the published guideline or consult a senior clinician."
+	}
+	res.SearchScope = "current_published_reviewed_content"
+	res.CoverageNotice = "Only approved content in current published guideline versions was searched. Unreviewed and superseded content was excluded."
 	cjson, _ := json.Marshal(res.Citations)
 	if err := s.DB.Create(&models.ChatMessage{
 		SessionID:     session.ID,
@@ -176,9 +184,9 @@ func (s RAGService) ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 // enrichCitations attaches stable domain identifiers to worker citations. The
 // worker protocol intentionally remains retrieval-focused; navigation metadata
 // is resolved from the authoritative PostgreSQL chunk rows before responding.
-func (s RAGService) enrichCitations(citations []Citation) {
+func (s RAGService) enrichCitations(citations []Citation) []Citation {
 	if len(citations) == 0 {
-		return
+		return []Citation{}
 	}
 	ids := make([]uuid.UUID, 0, len(citations))
 	for _, citation := range citations {
@@ -187,17 +195,22 @@ func (s RAGService) enrichCitations(citations []Citation) {
 		}
 	}
 	if len(ids) == 0 {
-		return
+		return []Citation{}
 	}
 	var chunks []models.GuidelineChunk
-	if err := s.DB.Select("id", "document_id", "section_id", "block_id").Where("id IN ?", ids).Find(&chunks).Error; err != nil {
+	if err := s.DB.Model(&models.GuidelineChunk{}).
+		Select("guideline_chunks.id", "guideline_chunks.document_id", "guideline_chunks.section_id", "guideline_chunks.block_id").
+		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.current_version_id = guideline_chunks.version_id AND gd.deleted_at IS NULL").
+		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND LOWER(gv.status) = 'published'").
+		Where("guideline_chunks.id IN ? AND guideline_chunks.review_status = ?", ids, "approved").Find(&chunks).Error; err != nil {
 		log.Warn().Err(err).Msg("failed to enrich RAG citation navigation")
-		return
+		return []Citation{}
 	}
 	byID := make(map[string]models.GuidelineChunk, len(chunks))
 	for _, chunk := range chunks {
 		byID[chunk.ID.String()] = chunk
 	}
+	verified := make([]Citation, 0, len(citations))
 	for index := range citations {
 		chunk, ok := byID[citations[index].ChunkID]
 		if !ok {
@@ -210,7 +223,9 @@ func (s RAGService) enrichCitations(citations []Citation) {
 		if chunk.BlockID != nil {
 			citations[index].BlockID = chunk.BlockID.String()
 		}
+		verified = append(verified, citations[index])
 	}
+	return verified
 }
 
 func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskResponse, error) {

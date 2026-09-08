@@ -7662,6 +7662,10 @@ final class ServicesAskResponse {
         .toList(growable: false);
   }
 
+  String? get coverageNotice => value['coverage_notice']?.toString();
+
+  String? get searchScope => value['search_scope']?.toString();
+
   String? get sessionId => value['session_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
@@ -13384,6 +13388,12 @@ final class ServicesPublicGuidelineContent {
         .toList(growable: false);
   }
 
+  String? get checksum => value['checksum']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
   List<ServicesPublicGuidelineSection> get sections {
     final raw = value['sections'];
     if (raw is! List) return const [];
@@ -13392,6 +13402,8 @@ final class ServicesPublicGuidelineContent {
         .map((item) => ServicesPublicGuidelineSection.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
+
+  String? get versionId => value['version_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -13551,11 +13563,19 @@ final class ServicesPublicGuidelineSectionDetail {
         .toList(growable: false);
   }
 
+  String? get checksum => value['checksum']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
   ServicesPublicGuidelineSection? get section {
     final raw = value['section'];
     if (raw is! Map) return null;
     return ServicesPublicGuidelineSection.fromJson(_jsonMap(raw));
   }
+
+  String? get versionId => value['version_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

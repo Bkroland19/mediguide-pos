@@ -92,6 +92,7 @@ func TestPublishedGuidelineAssistantSearchStaysInsideCurrentPublishedVersion(t *
 		{`INSERT INTO guideline_versions(id,document_id,status) VALUES (?,?,?)`, []any{oldVersion, targetID, "published"}},
 		{`INSERT INTO guideline_versions(id,document_id,status) VALUES (?,?,?)`, []any{otherVersion, otherID, "published"}},
 		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), targetID, targetVersion, "Current treatment", "Give intravenous artesunate for severe malaria", "MoH", "2", "approved", time.Now()}},
+		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), targetID, targetVersion, "Unreviewed paragraph", "DRAFT malaria paragraph must remain private", "MoH", "2", "draft", time.Now()}},
 		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), targetID, oldVersion, "Superseded", "Old severe malaria recommendation", "MoH", "1", "approved", time.Now()}},
 		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), otherID, otherVersion, "Other guideline", "Artesunate from another document", "Other", "1", "approved", time.Now()}},
 	} {
@@ -114,6 +115,15 @@ func TestPublishedGuidelineAssistantSearchStaysInsideCurrentPublishedVersion(t *
 	}
 	if len(generalResults) != 1 || generalResults[0].Title != "Current treatment" || generalResults[0].GuidelineID != targetID.String() {
 		t.Fatalf("general assistant search leaked superseded content: %#v", generalResults)
+	}
+	draftResults, err := (SearchService{DB: database}).SearchApprovedGuidelineContext(t.Context(), "DRAFT malaria paragraph", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range draftResults {
+		if result.Title == "Unreviewed paragraph" {
+			t.Fatalf("unreviewed paragraph leaked into RAG retrieval: %#v", draftResults)
+		}
 	}
 }
 

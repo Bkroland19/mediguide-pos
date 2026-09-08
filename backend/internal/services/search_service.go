@@ -305,12 +305,19 @@ func (s SearchService) searchUncached(ctx context.Context, q, programArea string
 		limit = 10
 	}
 	var chunks []models.GuidelineChunk
-	db := s.DB.WithContext(ctx).Where("review_status = ?", "approved")
+	db := s.DB.WithContext(ctx).Model(&models.GuidelineChunk{}).
+		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.deleted_at IS NULL").
+		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
+		Where("guideline_chunks.deleted_at IS NULL AND guideline_chunks.review_status = ? AND LOWER(gv.status) = ?", "approved", "published")
 	if programArea != "" {
-		db = db.Where("program_area = ?", programArea)
+		db = db.Where("guideline_chunks.program_area = ?", programArea)
 	}
 	if q != "" {
-		db = db.Where("content ILIKE ? OR title ILIKE ?", "%"+q+"%", "%"+q+"%")
+		if s.DB.Dialector.Name() == "postgres" {
+			db = db.Where("guideline_chunks.content ILIKE ? OR guideline_chunks.title ILIKE ?", "%"+q+"%", "%"+q+"%")
+		} else {
+			db = db.Where("lower(guideline_chunks.content) LIKE ? OR lower(guideline_chunks.title) LIKE ?", "%"+strings.ToLower(q)+"%", "%"+strings.ToLower(q)+"%")
+		}
 	}
 	if err := db.Limit(limit).Find(&chunks).Error; err != nil {
 		return nil, err

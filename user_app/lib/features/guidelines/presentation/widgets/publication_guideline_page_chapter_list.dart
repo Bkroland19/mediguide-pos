@@ -308,7 +308,7 @@ class _ChapterCard extends StatelessWidget {
                             ),
                             _ChapterMetric(
                               icon: LucideIcons.fileText,
-                              label: '$blockCount blocks',
+                              label: '$blockCount reviewed blocks',
                             ),
                             if (section.pageLabel.isNotEmpty)
                               _ChapterMetric(
@@ -438,7 +438,7 @@ class _ChapterBranch extends StatelessWidget {
           ),
           title: Text(section.title),
           subtitle: Text(
-            '${blocksBySection[section.id]?.length ?? 0} blocks'
+            '${blocksBySection[section.id]?.length ?? 0} reviewed blocks'
             '${section.pageLabel.isEmpty ? '' : ' • ${section.pageLabel}'}',
           ),
           trailing: nested.isEmpty
@@ -504,7 +504,7 @@ class _ChapterSearchResults extends StatelessWidget {
               ),
               title: Text(section.title),
               subtitle: Text(
-                '${blocksBySection[section.id]?.length ?? 0} blocks'
+                '${blocksBySection[section.id]?.length ?? 0} reviewed blocks'
                 '${section.pageLabel.isEmpty ? '' : ' • ${section.pageLabel}'}',
               ),
               trailing: currentSectionId == section.id
