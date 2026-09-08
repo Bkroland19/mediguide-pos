@@ -260,6 +260,84 @@ func (h GuidelineHandler) ReviewWorkspace(c *gin.Context) {
 	httpx.OK(c, workspace)
 }
 
+// ListReviewBlocks godoc
+// @Summary List and filter guideline blocks for editorial review
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Param status query string false "Review status: all, pending, reviewed, rejected"
+// @Param risk query string false "Risk filter: all, low-risk-pending, high-risk, pending-high-risk"
+// @Param block_type query string false "Block type"
+// @Param section_id query string false "Section ID" format(uuid)
+// @Success 200 {object} services.GuidelineReviewBlocksPage
+// @Router /api/v2/guideline-versions/{id}/review-blocks [get]
+func (h GuidelineHandler) ListReviewBlocks(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	page, err := parsePageQuery(c, 50, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	var sectionID *uuid.UUID
+	if value := strings.TrimSpace(c.Query("section_id")); value != "" {
+		parsed, err := uuid.Parse(value)
+		if err != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid section_id")
+			return
+		}
+		sectionID = &parsed
+	}
+	result, err := h.Service.ListReviewBlocks(versionID, services.GuidelineReviewBlocksFilter{
+		Page: page, Status: c.Query("status"), Risk: c.Query("risk"),
+		BlockType: c.Query("block_type"), SectionID: sectionID,
+	})
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// BulkReviewBlocks godoc
+// @Summary Approve a verified selection of low-risk guideline blocks
+// @Tags guideline-review
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param payload body services.BulkReviewGuidelineBlocksInput true "Explicit low-risk review attestation"
+// @Success 200 {object} services.GuidelineBulkReviewResult
+// @Failure 409 {object} handlers.ErrorResponse
+// @Failure 422 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/blocks/bulk-review [post]
+func (h GuidelineHandler) BulkReviewBlocks(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	var input services.BulkReviewGuidelineBlocksInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	result, err := h.Service.BulkReviewBlocks(versionID, reviewActor(c), c.ClientIP(), input)
+	if errors.Is(err, services.ErrGuidelineBulkReviewRejected) {
+		httpx.ErrorWithMeta(c, http.StatusUnprocessableEntity, err.Error(), result)
+		return
+	}
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
 // ValidatePublication godoc
 // @Summary Validate a guideline version before publication
 // @Tags guideline-review

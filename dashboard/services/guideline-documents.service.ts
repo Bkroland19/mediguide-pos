@@ -194,6 +194,50 @@ export interface GuidelineReviewWorkspace {
   validation: GuidelinePublicationValidation;
 }
 
+export interface GuidelineReviewProgress {
+  total_blocks: number;
+  reviewed_blocks: number;
+  pending_low_risk_blocks: number;
+  pending_high_risk_blocks: number;
+  rejected_blocks: number;
+  sections_with_reviewed_content: number;
+  empty_clinical_leaf_sections: number;
+}
+
+export interface GuidelineReviewBlocksPage {
+  items: GuidelineContentBlockRecord[];
+  page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  progress: GuidelineReviewProgress;
+  markdown_revision_id?: string;
+  regeneration_job_id?: string;
+}
+
+export interface GuidelineReviewBlocksFilter {
+  page?: number;
+  per_page?: number;
+  status?: "all" | "pending" | "reviewed" | "rejected";
+  risk?: "all" | "low-risk-pending" | "high-risk" | "pending-high-risk";
+  block_type?: GuidelineBlockType | "all";
+  section_id?: string;
+}
+
+export interface GuidelineBulkReviewResult {
+  reviewed_count: number;
+  skipped_count: number;
+  rejected_count: number;
+  reviewed_ids: string[];
+  skipped_ids: string[];
+  reasons: Array<{
+    code: string;
+    message: string;
+    block_id?: string;
+    type?: GuidelineBlockType;
+  }>;
+}
+
 export interface UpdateGuidelineSectionInput {
   title?: string;
   slug?: string;
@@ -394,6 +438,42 @@ export class GuidelineDocumentsService {
     return getBackendClient().request<GuidelineReviewWorkspace>(
       `/api/v2/guideline-versions/${versionId}/review`,
       { method: "GET" },
+    );
+  }
+
+  static async getReviewBlocks(
+    versionId: string,
+    filters: GuidelineReviewBlocksFilter,
+  ): Promise<GuidelineReviewBlocksPage> {
+    return getBackendClient().request<GuidelineReviewBlocksPage>(
+      `/api/v2/guideline-versions/${versionId}/review-blocks`,
+      {
+        method: "GET",
+        query: {
+          page: filters.page,
+          per_page: filters.per_page,
+          status: filters.status,
+          risk: filters.risk,
+          block_type: filters.block_type,
+          section_id: filters.section_id,
+        },
+      },
+    );
+  }
+
+  static async bulkReviewBlocks(
+    versionId: string,
+    payload: {
+      block_ids: string[];
+      status: "reviewed";
+      confirmation: string;
+      expected_markdown_revision_id: string;
+      expected_regeneration_job_id: string;
+    },
+  ): Promise<GuidelineBulkReviewResult> {
+    return getBackendClient().request<GuidelineBulkReviewResult>(
+      `/api/v2/guideline-versions/${versionId}/blocks/bulk-review`,
+      { method: "POST", body: JSON.stringify(payload) },
     );
   }
 

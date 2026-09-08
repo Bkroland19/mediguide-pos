@@ -348,6 +348,37 @@ classification. This phase does not approve existing content, mutate a
 published version, add bulk approval or force acceptance, change manifest
 semantics, or weaken existing clinical-safety gates.
 
+### Controlled low-risk bulk review
+
+Editorial Review provides a paginated bulk-review queue for large guidelines.
+Reviewers can filter by review state, risk, block type, and section; select
+eligible blocks on the visible page or across the selected section; and approve
+at most 500 blocks in one operation. Selection IDs remain stable while moving
+between pages. High-risk, conditional, unknown, and otherwise ineligible blocks
+never display bulk-selection controls.
+
+Approval requires the reviewer to explicitly attest that every selected block
+was checked against the authoritative source. The dashboard sends the exact
+current Markdown revision and regeneration job identities to
+`POST /api/v2/guideline-versions/{id}/blocks/bulk-review`. The backend repeats
+all eligibility checks, rejects stale identities and mixed eligible/ineligible
+selections atomically, and refuses published, superseded, or archived versions.
+It never trusts the UI's classification.
+
+Successful approval records `reviewed_by` and `reviewed_at`, synchronizes each
+associated chunk to the draft review state, and writes one immutable audit event
+with the version, revision, regeneration job, reviewer, selected block IDs,
+counts by type, previous/resulting states, and the confirmation text. Chunks do
+not become `approved` or searchable at review time. Publication promotes only
+chunks belonging to reviewed blocks, preserving the existing RAG safety gate.
+
+The companion `GET /api/v2/guideline-versions/{id}/review-blocks` endpoint
+provides server-side filters, pagination, exact review identities, and progress
+metrics for total, reviewed, pending low-risk, pending high-risk and rejected
+blocks, sections with reviewed content, and empty leaf sections. If a stale
+review is rejected, reload the workspace and re-check the affected blocks
+against the newly generated source before trying again.
+
 ## What common notifications mean
 
 | Notification | Meaning | Action |

@@ -7671,6 +7671,36 @@ final class ServicesAssignGuidelineReviewerInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesBulkReviewGuidelineBlocksInput {
+  ServicesBulkReviewGuidelineBlocksInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesBulkReviewGuidelineBlocksInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesBulkReviewGuidelineBlocksInput(json);
+
+  static const schemaName = 'services.BulkReviewGuidelineBlocksInput';
+  final Map<String, dynamic> value;
+
+  List<String> get blockIds {
+    final raw = value['block_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get confirmation => value['confirmation']?.toString();
+
+  String? get expectedMarkdownRevisionId =>
+      value['expected_markdown_revision_id']?.toString();
+
+  String? get expectedRegenerationJobId =>
+      value['expected_regeneration_job_id']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesCalculatorDefinitionDTO {
   ServicesCalculatorDefinitionDTO(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -9634,6 +9664,71 @@ final class ServicesGuidelineBlockReviewPolicy {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineBulkReviewReason {
+  ServicesGuidelineBulkReviewReason(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBulkReviewReason.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBulkReviewReason(json);
+
+  static const schemaName = 'services.GuidelineBulkReviewReason';
+  final Map<String, dynamic> value;
+
+  String? get blockId => value['block_id']?.toString();
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineBulkReviewResult {
+  ServicesGuidelineBulkReviewResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBulkReviewResult.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBulkReviewResult(json);
+
+  static const schemaName = 'services.GuidelineBulkReviewResult';
+  final Map<String, dynamic> value;
+
+  List<ServicesGuidelineBulkReviewReason> get reasons {
+    final raw = value['reasons'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesGuidelineBulkReviewReason.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  int? get rejectedCount => (value['rejected_count'] as num?)?.toInt();
+
+  int? get reviewedCount => (value['reviewed_count'] as num?)?.toInt();
+
+  List<String> get reviewedIds {
+    final raw = value['reviewed_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  int? get skippedCount => (value['skipped_count'] as num?)?.toInt();
+
+  List<String> get skippedIds {
+    final raw = value['skipped_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineCategoryInput {
   ServicesGuidelineCategoryInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10015,6 +10110,47 @@ final class ServicesGuidelineReviewAssignmentView {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineReviewBlocksPage {
+  ServicesGuidelineReviewBlocksPage(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewBlocksPage.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineReviewBlocksPage(json);
+
+  static const schemaName = 'services.GuidelineReviewBlocksPage';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineContentBlock> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineContentBlock.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get markdownRevisionId => value['markdown_revision_id']?.toString();
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  ServicesGuidelineReviewProgress? get progress {
+    final raw = value['progress'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineReviewProgress.fromJson(_jsonMap(raw));
+  }
+
+  String? get regenerationJobId => value['regeneration_job_id']?.toString();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineReviewCommentInput {
   ServicesGuidelineReviewCommentInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10052,6 +10188,37 @@ final class ServicesGuidelineReviewIssue {
   String? get message => value['message']?.toString();
 
   String? get sectionId => value['section_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineReviewProgress {
+  ServicesGuidelineReviewProgress(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewProgress.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineReviewProgress(json);
+
+  static const schemaName = 'services.GuidelineReviewProgress';
+  final Map<String, dynamic> value;
+
+  int? get emptyClinicalLeafSections =>
+      (value['empty_clinical_leaf_sections'] as num?)?.toInt();
+
+  int? get pendingHighRiskBlocks =>
+      (value['pending_high_risk_blocks'] as num?)?.toInt();
+
+  int? get pendingLowRiskBlocks =>
+      (value['pending_low_risk_blocks'] as num?)?.toInt();
+
+  int? get rejectedBlocks => (value['rejected_blocks'] as num?)?.toInt();
+
+  int? get reviewedBlocks => (value['reviewed_blocks'] as num?)?.toInt();
+
+  int? get sectionsWithReviewedContent =>
+      (value['sections_with_reviewed_content'] as num?)?.toInt();
+
+  int? get totalBlocks => (value['total_blocks'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

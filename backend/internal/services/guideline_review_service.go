@@ -1054,7 +1054,8 @@ func requireEditableGuidelineVersion(tx *gorm.DB, versionID uuid.UUID) error {
 	if err := tx.First(&version, "id = ?", versionID).Error; err != nil {
 		return err
 	}
-	if strings.EqualFold(strings.TrimSpace(version.Status), "published") {
+	status := strings.ToLower(strings.TrimSpace(version.Status))
+	if status == "published" || status == "superseded" || status == "archived" {
 		return ErrPublishedVersionImmutable
 	}
 	return nil

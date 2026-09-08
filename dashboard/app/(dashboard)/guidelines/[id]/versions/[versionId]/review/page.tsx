@@ -31,6 +31,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/lib/toast";
+import { GuidelineBulkReviewPanel } from "@/components/guidelines/guideline-bulk-review-panel";
 import {
   guidelineDocumentsQueryKey,
   GuidelineBlockType,
@@ -736,6 +737,15 @@ export default function GuidelineReviewPage() {
         </Card>
       )}
 
+      <GuidelineBulkReviewPanel
+        versionId={versionId}
+        sections={sections}
+        eligibleTypes={workspace.block_review_policy?.bulk_review_eligible_types || []}
+        availableTypes={blockTypes}
+        onSelectBlock={selectBlock}
+        onReviewed={refresh}
+      />
+
       <Tabs defaultValue="workspace" className="lg:hidden">
         <TabsList className="grid grid-cols-3">
           <TabsTrigger value="source">Source</TabsTrigger>
@@ -774,7 +784,7 @@ export default function GuidelineReviewPage() {
         </TabsContent>
         <TabsContent value="preview">
           <PreviewPanel
-            blocks={blocks.filter(
+            blocks={sectionBlocks.filter(
               (block) => block.review_status !== "rejected",
             )}
             mode={previewMode}
@@ -811,7 +821,7 @@ export default function GuidelineReviewPage() {
           mergeSection={mergeSection}
         />
         <PreviewPanel
-          blocks={blocks.filter((block) => block.review_status !== "rejected")}
+          blocks={sectionBlocks.filter((block) => block.review_status !== "rejected")}
           mode={previewMode}
           setMode={setPreviewMode}
         />

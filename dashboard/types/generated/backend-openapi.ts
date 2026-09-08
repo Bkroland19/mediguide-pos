@@ -2407,6 +2407,14 @@ export interface ServicesAssignGuidelineReviewerInput {
   reviewer_id: string;
 }
 
+export interface ServicesBulkReviewGuidelineBlocksInput {
+  block_ids: string[];
+  confirmation: string;
+  expected_markdown_revision_id: string;
+  expected_regeneration_job_id: string;
+  status: ModelsGuidelineBlockReviewStatus;
+}
+
 export interface ServicesCalculatorDefinitionDTO {
   calculator_id?: string;
   definition?: ClinicaltoolsDefinition;
@@ -3081,6 +3089,22 @@ export interface ServicesGuidelineBlockReviewPolicy {
   ineligible_bulk_types?: ModelsGuidelineBlockType[];
 }
 
+export interface ServicesGuidelineBulkReviewReason {
+  block_id?: string;
+  code?: string;
+  message?: string;
+  type?: ModelsGuidelineBlockType;
+}
+
+export interface ServicesGuidelineBulkReviewResult {
+  reasons?: ServicesGuidelineBulkReviewReason[];
+  rejected_count?: number;
+  reviewed_count?: number;
+  reviewed_ids?: string[];
+  skipped_count?: number;
+  skipped_ids?: string[];
+}
+
 export interface ServicesGuidelineCategoryInput {
   color?: string;
   description?: string;
@@ -3194,6 +3218,17 @@ export interface ServicesGuidelineReviewAssignmentView {
   version_id?: string;
 }
 
+export interface ServicesGuidelineReviewBlocksPage {
+  items?: ModelsGuidelineContentBlock[];
+  markdown_revision_id?: string;
+  page?: number;
+  per_page?: number;
+  progress?: ServicesGuidelineReviewProgress;
+  regeneration_job_id?: string;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesGuidelineReviewCommentInput {
   block_id?: string;
   body?: string;
@@ -3205,6 +3240,16 @@ export interface ServicesGuidelineReviewIssue {
   code?: string;
   message?: string;
   section_id?: string;
+}
+
+export interface ServicesGuidelineReviewProgress {
+  empty_clinical_leaf_sections?: number;
+  pending_high_risk_blocks?: number;
+  pending_low_risk_blocks?: number;
+  rejected_blocks?: number;
+  reviewed_blocks?: number;
+  sections_with_reviewed_content?: number;
+  total_blocks?: number;
 }
 
 export interface ServicesGuidelineReviewWorkspace {

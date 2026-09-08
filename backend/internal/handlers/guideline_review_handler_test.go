@@ -38,6 +38,29 @@ func TestGuidelineBlockApprovalRequiresHighRiskPermission(t *testing.T) {
 	}
 }
 
+func TestGuidelineBulkReviewRequiresGuidelineReviewPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, test := range []struct {
+		name        string
+		permissions []string
+		wantStatus  int
+	}{
+		{name: "reader rejected", permissions: []string{"guideline.read"}, wantStatus: http.StatusForbidden},
+		{name: "reviewer accepted", permissions: []string{"guideline.review"}, wantStatus: http.StatusOK},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			router := gin.New()
+			router.Use(claimsForReviewTest(test.permissions))
+			router.POST("/review/:id/blocks/bulk-review", middleware.RequirePermission("guideline.review"), func(c *gin.Context) { c.Status(http.StatusOK) })
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/review/"+uuid.NewString()+"/blocks/bulk-review", nil))
+			if response.Code != test.wantStatus {
+				t.Fatalf("status=%d want=%d body=%s", response.Code, test.wantStatus, response.Body.String())
+			}
+		})
+	}
+}
+
 func TestRegenerationAcceptanceRequiresHighRiskPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

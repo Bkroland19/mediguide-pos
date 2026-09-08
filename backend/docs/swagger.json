@@ -7039,6 +7039,64 @@
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/blocks/bulk-review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Approve a verified selection of low-risk guideline blocks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Explicit low-risk review attestation",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.BulkReviewGuidelineBlocksInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineBulkReviewResult"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/blocks/reorder": {
             "put": {
                 "security": [
@@ -8637,6 +8695,80 @@
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-blocks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List and filter guideline blocks for editorial review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Review status: all, pending, reviewed, rejected",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Risk filter: all, low-risk-pending, high-risk, pending-high-risk",
+                        "name": "risk",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Block type",
+                        "name": "block_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Section ID",
+                        "name": "section_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineReviewBlocksPage"
                         }
                     }
                 }
@@ -21829,6 +21961,36 @@
                 }
             }
         },
+        "services.BulkReviewGuidelineBlocksInput": {
+            "type": "object",
+            "required": [
+                "block_ids",
+                "confirmation",
+                "expected_markdown_revision_id",
+                "expected_regeneration_job_id",
+                "status"
+            ],
+            "properties": {
+                "block_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "confirmation": {
+                    "type": "string"
+                },
+                "expected_markdown_revision_id": {
+                    "type": "string"
+                },
+                "expected_regeneration_job_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
+                }
+            }
+        },
         "services.CalculatorDefinitionDTO": {
             "type": "object",
             "properties": {
@@ -23706,6 +23868,55 @@
                 }
             }
         },
+        "services.GuidelineBulkReviewReason": {
+            "type": "object",
+            "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.GuidelineBulkReviewResult": {
+            "type": "object",
+            "properties": {
+                "reasons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineBulkReviewReason"
+                    }
+                },
+                "rejected_count": {
+                    "type": "integer"
+                },
+                "reviewed_count": {
+                    "type": "integer"
+                },
+                "reviewed_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "skipped_count": {
+                    "type": "integer"
+                },
+                "skipped_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "services.GuidelineCategoryInput": {
             "type": "object",
             "properties": {
@@ -24020,6 +24231,38 @@
                 }
             }
         },
+        "services.GuidelineReviewBlocksPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineContentBlock"
+                    }
+                },
+                "markdown_revision_id": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "progress": {
+                    "$ref": "#/definitions/services.GuidelineReviewProgress"
+                },
+                "regeneration_job_id": {
+                    "type": "string"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.GuidelineReviewCommentInput": {
             "type": "object",
             "properties": {
@@ -24048,6 +24291,32 @@
                 },
                 "section_id": {
                     "type": "string"
+                }
+            }
+        },
+        "services.GuidelineReviewProgress": {
+            "type": "object",
+            "properties": {
+                "empty_clinical_leaf_sections": {
+                    "type": "integer"
+                },
+                "pending_high_risk_blocks": {
+                    "type": "integer"
+                },
+                "pending_low_risk_blocks": {
+                    "type": "integer"
+                },
+                "rejected_blocks": {
+                    "type": "integer"
+                },
+                "reviewed_blocks": {
+                    "type": "integer"
+                },
+                "sections_with_reviewed_content": {
+                    "type": "integer"
+                },
+                "total_blocks": {
+                    "type": "integer"
                 }
             }
         },
