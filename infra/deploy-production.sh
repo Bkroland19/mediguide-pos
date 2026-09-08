@@ -145,6 +145,24 @@ fi
 echo "Removing existing MediGuide containers while preserving named volumes."
 "${compose[@]}" down --remove-orphans --timeout 60
 
+echo "Removing superseded MediGuide application images."
+while IFS= read -r image_ref; do
+  [[ -n "${image_ref}" ]] || continue
+  case "${image_ref}" in
+    "ghcr.io/${ghcr_owner}/mediguide-pos-api:${release_version}"|\
+    "ghcr.io/${ghcr_owner}/mediguide-pos-ai-worker:${release_version}"|\
+    "ghcr.io/${ghcr_owner}/mediguide-pos-dashboard:${release_version}"|\
+    "ghcr.io/${ghcr_owner}/mediguide-pos-guidelines:${release_version}")
+      continue
+      ;;
+  esac
+  docker image rm "${image_ref}" || true
+done < <(
+  docker image ls --format '{{.Repository}}:{{.Tag}}' | \
+    grep -E "^ghcr\.io/${ghcr_owner}/mediguide-pos-(api|ai-worker|dashboard|guidelines):" || true
+)
+docker image prune --force
+
 echo "Applying database migrations."
 "${compose[@]}" run --rm api /app/migrate up
 

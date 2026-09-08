@@ -174,6 +174,57 @@ jobs:
           printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/mediguide_deploy"
           printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
 
+      - name: Reclaim superseded MediGuide image storage
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          GHCR_OWNER: ${{ steps.release.outputs.owner }}
+        run: |
+          set -euo pipefail
+          ssh_key="${HOME}/.ssh/mediguide_deploy"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh_options=(
+            -i "${ssh_key}"
+            -p "${DEPLOY_PORT}"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=15
+          )
+
+          ssh "${ssh_options[@]}" "${target}" bash -s -- \
+            "${RELEASE_VERSION}" "${GHCR_OWNER}" <<'REMOTE'
+          set -euo pipefail
+          release_version="$1"
+          ghcr_owner="$2"
+          echo "Storage before scoped cleanup:"
+          df -h /
+          docker system df
+
+          while IFS= read -r image_ref; do
+            [ -n "${image_ref}" ] || continue
+            case "${image_ref}" in
+              "ghcr.io/${ghcr_owner}/mediguide-pos-api:${release_version}"|\
+              "ghcr.io/${ghcr_owner}/mediguide-pos-ai-worker:${release_version}"|\
+              "ghcr.io/${ghcr_owner}/mediguide-pos-dashboard:${release_version}"|\
+              "ghcr.io/${ghcr_owner}/mediguide-pos-guidelines:${release_version}")
+                continue
+                ;;
+            esac
+            docker image rm "${image_ref}" || true
+          done < <(
+            docker image ls --format '{{.Repository}}:{{.Tag}}' | \
+              grep -E "^ghcr\.io/${ghcr_owner}/mediguide-pos-(api|ai-worker|dashboard|guidelines):" || true
+          )
+          docker image prune --force
+
+          echo "Storage after scoped cleanup:"
+          df -h /
+          docker system df
+          REMOTE
+
       - name: Copy infra and deploy immutable images
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
