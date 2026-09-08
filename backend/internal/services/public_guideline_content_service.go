@@ -25,28 +25,33 @@ type PublicGuidelineContentQuery struct {
 }
 
 type PublicGuidelineManifest struct {
-	GuidelineID       uuid.UUID                         `json:"guideline_id"`
-	VersionID         uuid.UUID                         `json:"version_id"`
-	Version           string                            `json:"version"`
-	SchemaVersion     int                               `json:"schema_version"`
-	PackageVersion    int                               `json:"package_version"`
-	ExtractionQuality models.GuidelineExtractionQuality `json:"extraction_quality"`
-	RecommendedMode   string                            `json:"recommended_mode" enums:"structured,partial,original_document"`
-	HasChapters       bool                              `json:"has_chapters"`
-	HasKeyPoints      bool                              `json:"has_key_points"`
-	HasTables         bool                              `json:"has_tables"`
-	HasFigures        bool                              `json:"has_figures"`
-	HasAlgorithms     bool                              `json:"has_algorithms"`
-	HasOriginalPDF    bool                              `json:"has_original_pdf"`
-	HasOfflinePackage bool                              `json:"has_offline_package"`
-	SectionCount      int                               `json:"section_count"`
-	BlockCount        int                               `json:"block_count"`
-	TableCount        int                               `json:"table_count"`
-	FigureCount       int                               `json:"figure_count"`
-	AlgorithmCount    int                               `json:"algorithm_count"`
-	Checksum          string                            `json:"checksum"`
-	ETag              string                            `json:"etag"`
-	GeneratedAt       time.Time                         `json:"generated_at"`
+	GuidelineID              uuid.UUID                         `json:"guideline_id"`
+	VersionID                uuid.UUID                         `json:"version_id"`
+	Version                  string                            `json:"version"`
+	SchemaVersion            int                               `json:"schema_version"`
+	PackageVersion           int                               `json:"package_version"`
+	ExtractionQuality        models.GuidelineExtractionQuality `json:"extraction_quality"`
+	RecommendedMode          string                            `json:"recommended_mode" enums:"structured,partial,original_document"`
+	HasChapters              bool                              `json:"has_chapters"`
+	HasKeyPoints             bool                              `json:"has_key_points"`
+	HasTables                bool                              `json:"has_tables"`
+	HasFigures               bool                              `json:"has_figures"`
+	HasAlgorithms            bool                              `json:"has_algorithms"`
+	HasOriginalPDF           bool                              `json:"has_original_pdf"`
+	HasOfflinePackage        bool                              `json:"has_offline_package"`
+	SectionCount             int                               `json:"section_count"`
+	ReviewedSectionCount     int                               `json:"reviewed_section_count"`
+	LeafSectionCount         int                               `json:"leaf_section_count"`
+	ReviewedLeafSectionCount int                               `json:"reviewed_leaf_section_count"`
+	EmptyLeafSectionCount    int                               `json:"empty_leaf_section_count"`
+	BlockCount               int                               `json:"block_count"`
+	ReviewedParagraphCount   int                               `json:"reviewed_paragraph_count"`
+	TableCount               int                               `json:"table_count"`
+	FigureCount              int                               `json:"figure_count"`
+	AlgorithmCount           int                               `json:"algorithm_count"`
+	Checksum                 string                            `json:"checksum"`
+	ETag                     string                            `json:"etag"`
+	GeneratedAt              time.Time                         `json:"generated_at"`
 }
 
 type PublicGuidelineSection struct {
@@ -435,8 +440,11 @@ func publicManifest(row *models.GuidelineVersionManifest) *PublicGuidelineManife
 		HasKeyPoints:    row.HasKeyPoints, HasTables: row.HasTables, HasFigures: row.HasFigures,
 		HasAlgorithms: row.HasAlgorithms, HasOriginalPDF: row.HasOriginalPDF,
 		HasOfflinePackage: row.HasOfflinePackage, SectionCount: row.SectionCount,
+		ReviewedSectionCount: row.ReviewedSectionCount, LeafSectionCount: row.LeafSectionCount,
+		ReviewedLeafSectionCount: row.ReviewedLeafSectionCount, EmptyLeafSectionCount: row.EmptyLeafSectionCount,
 		BlockCount: row.BlockCount, TableCount: row.TableCount, FigureCount: row.FigureCount,
-		AlgorithmCount: row.AlgorithmCount, Checksum: row.Checksum, ETag: row.ETag,
+		ReviewedParagraphCount: row.ReviewedParagraphCount,
+		AlgorithmCount:         row.AlgorithmCount, Checksum: row.Checksum, ETag: row.ETag,
 		GeneratedAt: row.GeneratedAt,
 	}
 }

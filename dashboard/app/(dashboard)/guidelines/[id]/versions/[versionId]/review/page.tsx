@@ -730,7 +730,12 @@ export default function GuidelineReviewPage() {
                   if (issue.block_id) setSelectedBlockId(issue.block_id);
                 }}
               >
-                {issue.message}
+                <span className="block font-medium">{issue.message}</span>
+                {issue.remediation ? (
+                  <span className="mt-1 block text-xs text-muted-foreground no-underline">
+                    How to resolve: {issue.remediation}
+                  </span>
+                ) : null}
               </button>
             ))}
           </CardContent>

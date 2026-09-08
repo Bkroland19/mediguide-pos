@@ -12,6 +12,31 @@ void main() {
       });
 
       expect(manifest.recommendedMode, GuidelineReaderMode.partial);
+      expect(manifest.reviewedSectionCount, 0);
+      expect(manifest.emptyLeafSectionCount, 0);
+    });
+
+    test('manifest exposes schema 2 completeness counts', () {
+      final manifest = GuidelineManifest.fromJson(const {
+        'guideline_id': 'guideline-1',
+        'version_id': 'version-1',
+        'schema_version': 2,
+        'section_count': 310,
+        'reviewed_section_count': 15,
+        'leaf_section_count': 220,
+        'reviewed_leaf_section_count': 12,
+        'empty_leaf_section_count': 208,
+        'block_count': 16,
+        'reviewed_paragraph_count': 0,
+      });
+
+      expect(manifest.sectionCount, 310);
+      expect(manifest.reviewedSectionCount, 15);
+      expect(manifest.leafSectionCount, 220);
+      expect(manifest.reviewedLeafSectionCount, 12);
+      expect(manifest.emptyLeafSectionCount, 208);
+      expect(manifest.blockCount, 16);
+      expect(manifest.reviewedParagraphCount, 0);
     });
 
     test('unknown future block types use the safe fallback', () {

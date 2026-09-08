@@ -18,6 +18,31 @@ import (
 	"gorm.io/gorm"
 )
 
+// RegenerateManifest godoc
+// @Summary Regenerate completeness metadata for a published guideline version
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Published guideline version ID" format(uuid)
+// @Success 200 {object} models.GuidelineVersionManifest
+// @Failure 409 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/regenerate-manifest [post]
+func (h GuidelineHandler) RegenerateManifest(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	manifest, err := h.Service.RegenerateManifestForAdmin(versionID, reviewActor(c), c.ClientIP())
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, manifest)
+}
+
 // ReviewAsset godoc
 // @Summary Stream an extracted guideline asset for editorial review
 // @Tags guideline-review
@@ -592,7 +617,7 @@ func reviewError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		httpx.Error(c, http.StatusNotFound, "not found")
-	case errors.Is(err, services.ErrPublishedVersionImmutable), errors.Is(err, services.ErrGuidelineReviewConflict):
+	case errors.Is(err, services.ErrPublishedVersionImmutable), errors.Is(err, services.ErrGuidelineReviewConflict), errors.Is(err, services.ErrGuidelineManifestUnavailable):
 		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrGuidelineValidationFailed):
 		httpx.Error(c, http.StatusUnprocessableEntity, err.Error())

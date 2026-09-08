@@ -160,10 +160,9 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 	}
 }
 
-// TestPartialReviewPublicationRegression captures the production failure mode
-// observed for Diabetes 2026.09.01. Phase 5 replaces this accepted behavior
-// with publication-completeness gates; until then this test prevents the root
-// cause from being mistaken for a reader-only defect.
+// TestPartialReviewPublicationRegression proves that a table-only partial
+// projection cannot publish without a reviewed source fallback, then verifies
+// the corrected fully-reviewed projection and manifest semantics.
 func TestPartialReviewPublicationRegression(t *testing.T) {
 	db := publicGuidelineTestDB(t)
 	document := models.GuidelineDocument{Title: "Diabetes Clinical Guideline", Language: "en"}
@@ -269,11 +268,18 @@ func TestPartialReviewPublicationRegression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !validation.Valid {
-		t.Fatalf("regression fixture must demonstrate the current publication gap: %#v", validation.Errors)
+	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatalf("partial publication without a fallback was not blocked: %#v", validation.Errors)
+	}
+	if err := db.Model(&models.GuidelineContentBlock{}).Where("id IN ?", []uuid.UUID{paragraph.ID, list.ID}).Updates(map[string]any{"review_status": models.GuidelineBlockReviewed, "reviewed_by": reviewer, "reviewed_at": reviewedAt}).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err = admin.ValidateVersionForPublication(version.ID)
+	if err != nil || !validation.Valid {
+		t.Fatalf("fully reviewed correction did not validate: %#v %v", validation, err)
 	}
 	if err := admin.PublishVersion(version.ID, reviewer); err != nil {
-		t.Fatalf("current validator unexpectedly rejected the regression fixture: %v", err)
+		t.Fatalf("corrected publication was rejected: %v", err)
 	}
 
 	public := PublicGuidelineService{DB: db}
@@ -281,22 +287,22 @@ func TestPartialReviewPublicationRegression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.SectionCount != 1 || manifest.BlockCount != 1 || manifest.TableCount != 1 {
-		t.Fatalf("manifest did not reproduce reviewed-only counts: %#v", manifest)
+	if manifest.SectionCount != 5 || manifest.ReviewedSectionCount != 2 || manifest.LeafSectionCount != 2 || manifest.ReviewedLeafSectionCount != 2 || manifest.EmptyLeafSectionCount != 0 || manifest.BlockCount != 3 || manifest.ReviewedParagraphCount != 1 || manifest.TableCount != 1 {
+		t.Fatalf("manifest completeness counts are incorrect: %#v", manifest)
 	}
 	content, err := public.Content(context.Background(), document.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(content.Sections) != 5 || len(content.Blocks) != 1 || content.Blocks[0].Type != models.GuidelineBlockTable {
-		t.Fatalf("public projection did not reproduce headings-without-prose gap: %#v", content)
+	if len(content.Sections) != 5 || len(content.Blocks) != 3 {
+		t.Fatalf("corrected public projection is incomplete: %#v", content)
 	}
 	leaf, err := public.Section(context.Background(), document.ID, prevalence.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(leaf.Blocks) != 0 {
-		t.Fatalf("draft paragraph leaked into the public leaf section: %#v", leaf.Blocks)
+	if len(leaf.Blocks) != 1 || leaf.Blocks[0].Type != models.GuidelineBlockParagraph {
+		t.Fatalf("reviewed paragraph is missing from the public leaf section: %#v", leaf.Blocks)
 	}
 }
 

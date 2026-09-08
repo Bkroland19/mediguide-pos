@@ -140,19 +140,21 @@ export default function GuidelineDetailsPage() {
         version.id,
       );
       if (!validation.valid) {
-        const uniqueMessages = [
-          ...new Set(validation.errors.map((issue) => issue.message)),
-        ];
         const reviewCount = validation.errors.filter(
           (issue) => issue.code === "unreviewed_high_risk_block",
         ).length;
         const otherMessage = validation.errors.find(
           (issue) => issue.code !== "unreviewed_high_risk_block",
-        )?.message;
+        );
         const summary =
           reviewCount > 0
-            ? `${reviewCount} clinical block${reviewCount === 1 ? "" : "s"} require publisher review. Open Editorial Review to inspect and approve each named block.${otherMessage ? ` ${otherMessage}` : ""}`
-            : uniqueMessages.slice(0, 3).join(" ");
+            ? `${reviewCount} clinical block${reviewCount === 1 ? "" : "s"} require publisher review. Open Editorial Review to inspect and approve each named block.${otherMessage ? ` ${otherMessage.message}${otherMessage.remediation ? ` ${otherMessage.remediation}` : ""}` : ""}`
+            : validation.errors
+                .slice(0, 3)
+                .map((issue) =>
+                  `${issue.message}${issue.remediation ? ` ${issue.remediation}` : ""}`,
+                )
+                .join(" ");
         showToast.error(
           "Publication needs review",
           summary || "Open Editorial Review and resolve the blocking items.",

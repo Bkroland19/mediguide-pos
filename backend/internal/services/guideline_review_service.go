@@ -22,11 +22,12 @@ var (
 )
 
 type GuidelineReviewIssue struct {
-	Code      string     `json:"code"`
-	Message   string     `json:"message"`
-	SectionID *uuid.UUID `json:"section_id,omitempty"`
-	BlockID   *uuid.UUID `json:"block_id,omitempty"`
-	AssetID   *uuid.UUID `json:"asset_id,omitempty"`
+	Code        string     `json:"code"`
+	Message     string     `json:"message"`
+	Remediation string     `json:"remediation,omitempty"`
+	SectionID   *uuid.UUID `json:"section_id,omitempty"`
+	BlockID     *uuid.UUID `json:"block_id,omitempty"`
+	AssetID     *uuid.UUID `json:"asset_id,omitempty"`
 }
 
 type GuidelinePublicationValidation struct {
@@ -502,14 +503,14 @@ func (s GuidelineService) ValidateVersionForPublication(versionID uuid.UUID) (*G
 	if s.Store != nil && strings.TrimSpace(version.OriginalFileKey) != "" {
 		reader, openErr := s.Store.Get(context.Background(), version.OriginalFileKey)
 		if openErr != nil {
-			validation.Errors = append(validation.Errors, GuidelineReviewIssue{Code: "missing_original_file", Message: "The original PDF cannot be opened from object storage."})
+			validation.Errors = append(validation.Errors, GuidelineReviewIssue{Code: "missing_original_file", Message: "The original PDF cannot be opened from object storage.", Remediation: guidelineIssueRemediation("missing_original_file")})
 			validation.Valid = false
 		} else {
 			buffer := make([]byte, 1)
 			_, readErr := reader.Read(buffer)
 			closeErr := reader.Close()
 			if readErr != nil || closeErr != nil {
-				validation.Errors = append(validation.Errors, GuidelineReviewIssue{Code: "missing_original_file", Message: "The original PDF is empty or unavailable in object storage."})
+				validation.Errors = append(validation.Errors, GuidelineReviewIssue{Code: "missing_original_file", Message: "The original PDF is empty or unavailable in object storage.", Remediation: guidelineIssueRemediation("missing_original_file")})
 				validation.Valid = false
 			}
 		}
@@ -520,7 +521,7 @@ func (s GuidelineService) ValidateVersionForPublication(versionID uuid.UUID) (*G
 func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion) (*GuidelinePublicationValidation, error) {
 	result := &GuidelinePublicationValidation{Valid: true, Errors: []GuidelineReviewIssue{}, Warnings: []GuidelineReviewIssue{}}
 	addError := func(code, message string, sectionID, blockID *uuid.UUID) {
-		result.Errors = append(result.Errors, GuidelineReviewIssue{Code: code, Message: message, SectionID: sectionID, BlockID: blockID})
+		result.Errors = append(result.Errors, GuidelineReviewIssue{Code: code, Message: message, Remediation: guidelineIssueRemediation(code), SectionID: sectionID, BlockID: blockID})
 		result.Valid = false
 	}
 	if strings.TrimSpace(version.OriginalFileKey) == "" {
@@ -621,9 +622,16 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_asset_alternative_text", Message: fmt.Sprintf("Image %s is missing alternative text.", asset.ID)})
 		}
 		if models.GuidelineAssetRequiresIndividualReview(asset) && asset.ReviewStatus != models.GuidelineBlockReviewed {
-			result.Errors = append(result.Errors, GuidelineReviewIssue{Code: "unreviewed_clinical_asset", Message: "A clinically sensitive image requires publisher review.", SectionID: asset.SectionID, AssetID: &current.ID})
+			result.Errors = append(result.Errors, GuidelineReviewIssue{Code: "unreviewed_clinical_asset", Message: "A clinically sensitive image requires publisher review.", Remediation: guidelineIssueRemediation("unreviewed_clinical_asset"), SectionID: asset.SectionID, AssetID: &current.ID})
 			result.Valid = false
 		}
+	}
+	completenessIssues, err := guidelinePublicationCompletenessIssues(tx, version, sections, blocks, assets)
+	if err != nil {
+		return nil, err
+	}
+	for _, issue := range completenessIssues {
+		addError(issue.Code, issue.Message, issue.SectionID, issue.BlockID)
 	}
 	if activeBlockCount == 0 {
 		addError("empty_document", "The document has no active content blocks.", nil, nil)
@@ -798,6 +806,261 @@ func guidelineStructureCounts(sections []models.GuidelineSection, blocks []model
 		}
 	}
 	return result
+}
+
+type guidelineReviewedSummary struct {
+	activeBlocks, reviewedBlocks, reviewedProse, reviewedParagraphs      int
+	reviewedSections, reviewedChapters, reviewedTables, reviewedHighRisk int
+}
+
+func guidelinePublicationCompletenessIssues(tx *gorm.DB, version *models.GuidelineVersion, sections []models.GuidelineSection, blocks []models.GuidelineContentBlock, assets []models.GuidelineAsset) ([]GuidelineReviewIssue, error) {
+	issues := []GuidelineReviewIssue{}
+	appendIssue := func(code, message string, sectionID *uuid.UUID) {
+		issues = append(issues, GuidelineReviewIssue{Code: code, Message: message, Remediation: guidelineIssueRemediation(code), SectionID: sectionID})
+	}
+
+	summary := guidelineReviewedContentSummary(sections, blocks)
+	activeProse := 0
+	reviewedByType := map[models.GuidelineBlockType]int{}
+	for _, block := range blocks {
+		if block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		if isGuidelineProseType(block.Type) {
+			activeProse++
+		}
+		if block.ReviewStatus == models.GuidelineBlockReviewed {
+			reviewedByType[block.Type]++
+		}
+	}
+	hasChapterHierarchy := false
+	rootCount := 0
+	for _, section := range sections {
+		if section.ParentID == nil {
+			rootCount++
+		}
+		if section.Level >= 2 {
+			hasChapterHierarchy = true
+		}
+	}
+	if rootCount >= 2 {
+		hasChapterHierarchy = true
+	}
+	if hasChapterHierarchy && activeProse >= 3 && summary.reviewedProse == 0 {
+		appendIssue("no_reviewed_prose", fmt.Sprintf("This structured guideline has %d prose blocks but none are reviewed for public display.", activeProse), nil)
+	}
+
+	if summary.reviewedBlocks > 0 && summary.reviewedBlocks < summary.activeBlocks && !guidelineHasReviewedFallback(version, assets) {
+		appendIssue("partial_without_original_document", fmt.Sprintf("Only %d of %d active blocks are reviewed, and no reviewed original PDF or offline fallback is available.", summary.reviewedBlocks, summary.activeBlocks), nil)
+	}
+
+	if summary.reviewedBlocks >= 10 && summary.reviewedProse <= 1 {
+		dominantType := models.GuidelineBlockType("")
+		dominantCount := 0
+		for blockType, count := range reviewedByType {
+			if !isGuidelineProseType(blockType) && count > dominantCount {
+				dominantType, dominantCount = blockType, count
+			}
+		}
+		if dominantCount*100 >= summary.reviewedBlocks*85 {
+			appendIssue("reviewed_content_imbalance", fmt.Sprintf("Reviewed content is dominated by %s blocks (%d of %d), with only %d reviewed prose blocks.", dominantType, dominantCount, summary.reviewedBlocks, summary.reviewedProse), nil)
+		}
+	}
+
+	children := map[uuid.UUID]bool{}
+	activeBySection := map[uuid.UUID]int{}
+	reviewedBySection := map[uuid.UUID]int{}
+	for _, section := range sections {
+		if section.ParentID != nil {
+			children[*section.ParentID] = true
+		}
+	}
+	for _, block := range blocks {
+		if block.SectionID == nil || block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		activeBySection[*block.SectionID]++
+		if block.ReviewStatus == models.GuidelineBlockReviewed {
+			reviewedBySection[*block.SectionID]++
+		}
+	}
+	clinicalLeaves, emptyLeaves := 0, []models.GuidelineSection{}
+	for _, section := range sections {
+		if children[section.ID] || section.Level <= 1 || guidelineLeafReviewExempt(section.Title) || activeBySection[section.ID] == 0 {
+			continue
+		}
+		clinicalLeaves++
+		if reviewedBySection[section.ID] == 0 {
+			emptyLeaves = append(emptyLeaves, section)
+		}
+	}
+	if clinicalLeaves >= 8 && len(emptyLeaves) >= 4 && len(emptyLeaves)*100 >= clinicalLeaves*40 {
+		first := emptyLeaves[0]
+		appendIssue("empty_clinical_leaf_sections", fmt.Sprintf("%d of %d content-bearing clinical leaf sections have no reviewed blocks; for example %q.", len(emptyLeaves), clinicalLeaves, first.Title), &first.ID)
+	}
+
+	var document models.GuidelineDocument
+	if err := tx.Select("id", "current_version_id").First(&document, "id = ?", version.DocumentID).Error; err != nil {
+		return nil, err
+	}
+	if document.CurrentVersionID != nil && *document.CurrentVersionID != version.ID {
+		var previousSections []models.GuidelineSection
+		if err := tx.Where("version_id = ?", *document.CurrentVersionID).Find(&previousSections).Error; err != nil {
+			return nil, err
+		}
+		var previousBlocks []models.GuidelineContentBlock
+		if err := tx.Where("version_id = ?", *document.CurrentVersionID).Find(&previousBlocks).Error; err != nil {
+			return nil, err
+		}
+		before := guidelineReviewedContentSummary(previousSections, previousBlocks)
+		reductions := []string{}
+		for _, metric := range []struct {
+			name                                    string
+			before, after, minimum, retainedPercent int
+		}{
+			{"reviewed blocks", before.reviewedBlocks, summary.reviewedBlocks, 20, 60},
+			{"reviewed paragraphs", before.reviewedParagraphs, summary.reviewedParagraphs, 10, 60},
+			{"reviewed sections", before.reviewedSections, summary.reviewedSections, 10, 60},
+			{"chapters with reviewed content", before.reviewedChapters, summary.reviewedChapters, 4, 60},
+			{"reviewed tables", before.reviewedTables, summary.reviewedTables, 4, 50},
+			{"reviewed high-risk blocks", before.reviewedHighRisk, summary.reviewedHighRisk, 4, 50},
+		} {
+			if metric.before >= metric.minimum && metric.after*100 < metric.before*metric.retainedPercent {
+				reductions = append(reductions, fmt.Sprintf("%s %d→%d", metric.name, metric.before, metric.after))
+			}
+		}
+		if len(reductions) > 0 {
+			appendIssue("reviewed_content_regression", "The candidate substantially reduces public reviewed coverage: "+strings.Join(reductions, ", ")+".", nil)
+		}
+	}
+	return issues, nil
+}
+
+func guidelineReviewedContentSummary(sections []models.GuidelineSection, blocks []models.GuidelineContentBlock) guidelineReviewedSummary {
+	result := guidelineReviewedSummary{}
+	reviewedSections := map[uuid.UUID]bool{}
+	for _, block := range blocks {
+		if block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		result.activeBlocks++
+		if block.ReviewStatus != models.GuidelineBlockReviewed {
+			continue
+		}
+		result.reviewedBlocks++
+		if block.SectionID != nil {
+			reviewedSections[*block.SectionID] = true
+		}
+		if isGuidelineProseType(block.Type) {
+			result.reviewedProse++
+		}
+		if block.Type == models.GuidelineBlockParagraph {
+			result.reviewedParagraphs++
+		}
+		if block.Type == models.GuidelineBlockTable {
+			result.reviewedTables++
+		}
+		if models.GuidelineBlockRequiresIndividualReview(block.Type) {
+			result.reviewedHighRisk++
+		}
+	}
+	result.reviewedSections = len(reviewedSections)
+	children := map[uuid.UUID][]uuid.UUID{}
+	roots := []models.GuidelineSection{}
+	byID := map[uuid.UUID]models.GuidelineSection{}
+	for _, section := range sections {
+		byID[section.ID] = section
+		if section.ParentID == nil {
+			roots = append(roots, section)
+		} else {
+			children[*section.ParentID] = append(children[*section.ParentID], section.ID)
+		}
+	}
+	chapters := roots
+	if len(roots) == 1 && roots[0].Level == 1 && len(children[roots[0].ID]) > 0 {
+		chapters = nil
+		for _, id := range children[roots[0].ID] {
+			chapters = append(chapters, byID[id])
+		}
+	}
+	memo, visiting := map[uuid.UUID]bool{}, map[uuid.UUID]bool{}
+	var subtreeReviewed func(uuid.UUID) bool
+	subtreeReviewed = func(id uuid.UUID) bool {
+		if value, ok := memo[id]; ok {
+			return value
+		}
+		if visiting[id] {
+			return false
+		}
+		visiting[id] = true
+		defer delete(visiting, id)
+		if reviewedSections[id] {
+			return true
+		}
+		for _, child := range children[id] {
+			if subtreeReviewed(child) {
+				memo[id] = true
+				return true
+			}
+		}
+		memo[id] = false
+		return false
+	}
+	for _, chapter := range chapters {
+		if subtreeReviewed(chapter.ID) {
+			result.reviewedChapters++
+		}
+	}
+	return result
+}
+
+func isGuidelineProseType(blockType models.GuidelineBlockType) bool {
+	return blockType == models.GuidelineBlockParagraph || blockType == models.GuidelineBlockOrderedList || blockType == models.GuidelineBlockUnorderedList
+}
+
+func guidelineHasReviewedFallback(version *models.GuidelineVersion, assets []models.GuidelineAsset) bool {
+	if strings.TrimSpace(version.OriginalFileKey) != "" {
+		return true
+	}
+	for _, asset := range assets {
+		if asset.ReviewStatus == models.GuidelineBlockReviewed && (asset.Type == models.GuidelineAssetOriginalPDF || asset.Type == models.GuidelineAssetOfflinePackage) {
+			return true
+		}
+	}
+	return false
+}
+
+func guidelineLeafReviewExempt(title string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(title))
+	for _, marker := range []string{"references", "bibliography", "table of contents", "contents", "index", "acknowledg", "foreword", "preface", "abbreviations", "glossary", "contributors"} {
+		if strings.Contains(normalized, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func guidelineIssueRemediation(code string) string {
+	switch code {
+	case "no_reviewed_prose":
+		return "Review and approve the authoritative paragraphs and lists, then rerun publication validation."
+	case "partial_without_original_document":
+		return "Complete block review or attach and review an original PDF or offline fallback before publishing partial content."
+	case "reviewed_content_imbalance":
+		return "Review representative prose and clinical content; confirm the public preview is not limited to one block type."
+	case "empty_clinical_leaf_sections":
+		return "Review content in the affected clinical leaf sections, or reject/remove sections that should not be published."
+	case "reviewed_content_regression":
+		return "Compare with the current publication and restore or review the missing content before replacing it."
+	case "missing_original_file":
+		return "Restore the authoritative original PDF in object storage or use a verified Markdown-only source."
+	case "unreviewed_clinical_asset":
+		return "Have an authorized publisher review the clinically sensitive asset."
+	case "unreviewed_high_risk_block":
+		return "Review this high-risk clinical block individually before publication."
+	default:
+		return "Resolve the referenced validation issue and rerun publication validation."
+	}
 }
 
 func guidelineTitlesCompatible(documentTitle, headingTitle string) bool {

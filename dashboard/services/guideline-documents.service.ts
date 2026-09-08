@@ -168,6 +168,7 @@ export interface GuidelineAssetRecord {
 export interface GuidelineReviewIssue {
   code: string;
   message: string;
+  remediation?: string;
   section_id?: string;
   block_id?: string;
   asset_id?: string;

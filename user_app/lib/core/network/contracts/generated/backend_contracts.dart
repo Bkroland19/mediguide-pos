@@ -6841,6 +6841,9 @@ final class ModelsGuidelineVersionManifest {
 
   String? get createdAt => value['created_at']?.toString();
 
+  int? get emptyLeafSectionCount =>
+      (value['empty_leaf_section_count'] as num?)?.toInt();
+
   String? get etag => value['etag']?.toString();
 
   String? get extractionQuality => value['extraction_quality']?.toString();
@@ -6867,7 +6870,18 @@ final class ModelsGuidelineVersionManifest {
 
   String? get id => value['id']?.toString();
 
+  int? get leafSectionCount => (value['leaf_section_count'] as num?)?.toInt();
+
   int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
+  int? get reviewedLeafSectionCount =>
+      (value['reviewed_leaf_section_count'] as num?)?.toInt();
+
+  int? get reviewedParagraphCount =>
+      (value['reviewed_paragraph_count'] as num?)?.toInt();
+
+  int? get reviewedSectionCount =>
+      (value['reviewed_section_count'] as num?)?.toInt();
 
   int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
 
@@ -10187,6 +10201,8 @@ final class ServicesGuidelineReviewIssue {
 
   String? get message => value['message']?.toString();
 
+  String? get remediation => value['remediation']?.toString();
+
   String? get sectionId => value['section_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
@@ -13431,6 +13447,9 @@ final class ServicesPublicGuidelineManifest {
 
   String? get checksum => value['checksum']?.toString();
 
+  int? get emptyLeafSectionCount =>
+      (value['empty_leaf_section_count'] as num?)?.toInt();
+
   String? get etag => value['etag']?.toString();
 
   String? get extractionQuality => value['extraction_quality']?.toString();
@@ -13455,9 +13474,20 @@ final class ServicesPublicGuidelineManifest {
 
   bool? get hasTables => value['has_tables'] as bool?;
 
+  int? get leafSectionCount => (value['leaf_section_count'] as num?)?.toInt();
+
   int? get packageVersion => (value['package_version'] as num?)?.toInt();
 
   String? get recommendedMode => value['recommended_mode']?.toString();
+
+  int? get reviewedLeafSectionCount =>
+      (value['reviewed_leaf_section_count'] as num?)?.toInt();
+
+  int? get reviewedParagraphCount =>
+      (value['reviewed_paragraph_count'] as num?)?.toInt();
+
+  int? get reviewedSectionCount =>
+      (value['reviewed_section_count'] as num?)?.toInt();
 
   int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
 

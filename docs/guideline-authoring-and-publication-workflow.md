@@ -254,6 +254,10 @@ authoritative publication validator. It checks, among other things:
   publication's chapters, sections, blocks, tables, or high-risk blocks;
 - typed block payloads and figure references are valid;
 - all required high-risk blocks and assets are reviewed;
+- meaningful chapter content includes reviewed prose rather than only tables;
+- a partial projection has a reviewed original PDF or offline fallback;
+- clinical leaf sections are not predominantly empty;
+- reviewed coverage has not substantially regressed from the current version;
 - the regeneration review is accepted.
 
 If the toast says **Publication needs review**, return to **Editorial Review**.
@@ -302,26 +306,27 @@ The failure is a workflow gap, not a chapter-parser defect:
    approval.
 2. Sections are structural records without review status, so the complete
    outline remains visible while its blocks await decisions.
-3. Regeneration acceptance and publication validation require individual
-   decisions for high-risk blocks. Ordinary draft prose does not currently
-   block publication.
+3. Regeneration acceptance requires individual decisions for high-risk blocks.
+   Publication validation now also blocks a meaningful document with no
+   reviewed prose, suspicious single-type review, or predominantly empty
+   clinical leaves.
 4. The public content service correctly exposes all current sections but only
    blocks marked `reviewed`.
-5. Manifest `block_count` counts reviewed blocks, while the current
-   `section_count` counts distinct sections represented by reviewed blocks
-   rather than every structural section. Phase 6 of the completeness work will
-   correct that contract.
+5. Manifest schema 2 defines `section_count` as every active structural
+   section and reports reviewed/leaf coverage separately through
+   `reviewed_section_count`, `leaf_section_count`,
+   `reviewed_leaf_section_count`, `empty_leaf_section_count`, `block_count`,
+   and `reviewed_paragraph_count`.
 6. Search and RAG use approved chunks from the current published version, so
    draft paragraph chunks remain unavailable. An absent original document or
    offline package then leaves no fallback for an empty section.
 
-`TestPartialReviewPublicationRegression` is the executable reproduction. Its
+`TestPartialReviewPublicationRegression` is the executable regression test. Its
 fixture contains one H1 wrapper, two H2 chapters, clinical H3 leaves, draft
 paragraph/list content, one reviewed table, and no original PDF. It documents
-that the current validator permits publication, the manifest reports only the
-reviewed table's section, the public API exposes no prose, and a clinical leaf
-is empty. The later publication-safeguard phase must invert the publication
-expectation in this test.
+that the validator rejects partial publication without a fallback, then reviews
+the missing prose, publishes successfully, and verifies the corrected manifest
+and public projection.
 
 ### Authoritative block-review policy
 
@@ -343,10 +348,19 @@ so the dashboard does not maintain a separate high-risk list.
   evidence, definitions, and clinical notes.
 - Clinically sensitive assets always require an individual review decision.
 
-Future bulk APIs must enforce the backend allowlist and must not trust client
-classification. This phase does not approve existing content, mutate a
-published version, add bulk approval or force acceptance, change manifest
-semantics, or weaken existing clinical-safety gates.
+Bulk APIs enforce the backend allowlist and never trust client classification.
+They do not approve existing content automatically, mutate a published version,
+or weaken existing clinical-safety gates.
+
+### Manifest repair for an existing publication
+
+Publishing regenerates manifest schema 2 automatically. To repair metadata for
+an already-published version after deploying the migration, an administrator
+with `guideline.publish` may call
+`POST /api/v2/guideline-versions/{versionId}/regenerate-manifest`. The operation
+does not change clinical content or the current version. It recalculates the
+manifest, checksum, ETag, offline capabilities, and completeness counts, and
+records `guideline.manifest.regenerated` in the audit log.
 
 ### Controlled low-risk bulk review
 

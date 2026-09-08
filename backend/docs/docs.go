@@ -8279,6 +8279,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/regenerate-manifest": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Regenerate completeness metadata for a published guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Published guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineVersionManifest"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}": {
             "get": {
                 "security": [
@@ -21066,6 +21124,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "empty_leaf_section_count": {
+                    "type": "integer"
+                },
                 "etag": {
                     "type": "string"
                 },
@@ -21105,7 +21166,19 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "leaf_section_count": {
+                    "type": "integer"
+                },
                 "package_version": {
+                    "type": "integer"
+                },
+                "reviewed_leaf_section_count": {
+                    "type": "integer"
+                },
+                "reviewed_paragraph_count": {
+                    "type": "integer"
+                },
+                "reviewed_section_count": {
                     "type": "integer"
                 },
                 "schema_version": {
@@ -24292,6 +24365,9 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
+                "remediation": {
+                    "type": "string"
+                },
                 "section_id": {
                     "type": "string"
                 }
@@ -27237,6 +27313,9 @@ const docTemplate = `{
                 "checksum": {
                     "type": "string"
                 },
+                "empty_leaf_section_count": {
+                    "type": "integer"
+                },
                 "etag": {
                     "type": "string"
                 },
@@ -27273,6 +27352,9 @@ const docTemplate = `{
                 "has_tables": {
                     "type": "boolean"
                 },
+                "leaf_section_count": {
+                    "type": "integer"
+                },
                 "package_version": {
                     "type": "integer"
                 },
@@ -27283,6 +27365,15 @@ const docTemplate = `{
                         "partial",
                         "original_document"
                     ]
+                },
+                "reviewed_leaf_section_count": {
+                    "type": "integer"
+                },
+                "reviewed_paragraph_count": {
+                    "type": "integer"
+                },
+                "reviewed_section_count": {
+                    "type": "integer"
                 },
                 "schema_version": {
                     "type": "integer"

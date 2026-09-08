@@ -560,6 +560,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/guideline-versions/:id/assets/:assetId", middleware.RequirePermission("guideline.asset.manage"), guidelineH.DeleteGuidelineAsset)
 		protected.POST("/guideline-versions/:id/assets/:assetId/review", middleware.RequirePermission("guideline.high_risk.approve"), guidelineH.ReviewGuidelineAsset)
 		protected.POST("/guideline-versions/:id/validate-publication", middleware.RequirePermission("guideline.publish"), guidelineH.ValidatePublication)
+		protected.POST("/guideline-versions/:id/regenerate-manifest", middleware.RequirePermission("guideline.publish"), guidelineH.RegenerateManifest)
 		protected.GET("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.write"), guidelineH.Sections)
 		protected.POST("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.markdown.edit"), guidelineH.CreateReviewSection)
 		protected.PUT("/guideline-versions/:id/sections/reorder", middleware.RequirePermission("guideline.markdown.edit"), guidelineH.ReorderReviewSections)

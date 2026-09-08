@@ -3396,6 +3396,8 @@ definitions:
         type: string
       created_at:
         type: string
+      empty_leaf_section_count:
+        type: integer
       etag:
         type: string
       extraction_quality:
@@ -3422,7 +3424,15 @@ definitions:
         type: boolean
       id:
         type: string
+      leaf_section_count:
+        type: integer
       package_version:
+        type: integer
+      reviewed_leaf_section_count:
+        type: integer
+      reviewed_paragraph_count:
+        type: integer
+      reviewed_section_count:
         type: integer
       schema_version:
         type: integer
@@ -5521,6 +5531,8 @@ definitions:
         type: string
       message:
         type: string
+      remediation:
+        type: string
       section_id:
         type: string
     type: object
@@ -7462,6 +7474,8 @@ definitions:
         type: integer
       checksum:
         type: string
+      empty_leaf_section_count:
+        type: integer
       etag:
         type: string
       extraction_quality:
@@ -7486,6 +7500,8 @@ definitions:
         type: boolean
       has_tables:
         type: boolean
+      leaf_section_count:
+        type: integer
       package_version:
         type: integer
       recommended_mode:
@@ -7494,6 +7510,12 @@ definitions:
         - partial
         - original_document
         type: string
+      reviewed_leaf_section_count:
+        type: integer
+      reviewed_paragraph_count:
+        type: integer
+      reviewed_section_count:
+        type: integer
       schema_version:
         type: integer
       section_count:
@@ -13661,6 +13683,43 @@ paths:
       summary: Regenerate structured content and RAG data from an exact Markdown revision
       tags:
       - guideline-markdown
+  /api/v2/guideline-versions/{id}/regenerate-manifest:
+    post:
+      parameters:
+      - description: Published guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GuidelineVersionManifest'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate completeness metadata for a published guideline version
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}:
     get:
       parameters:

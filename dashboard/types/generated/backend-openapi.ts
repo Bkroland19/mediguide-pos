@@ -2083,6 +2083,7 @@ export interface ModelsGuidelineVersionManifest {
   block_count?: number;
   checksum?: string;
   created_at?: string;
+  empty_leaf_section_count?: number;
   etag?: string;
   extraction_quality?: ModelsGuidelineExtractionQuality;
   figure_count?: number;
@@ -2096,7 +2097,11 @@ export interface ModelsGuidelineVersionManifest {
   has_original_pdf?: boolean;
   has_tables?: boolean;
   id?: string;
+  leaf_section_count?: number;
   package_version?: number;
+  reviewed_leaf_section_count?: number;
+  reviewed_paragraph_count?: number;
+  reviewed_section_count?: number;
   schema_version?: number;
   section_count?: number;
   table_count?: number;
@@ -3239,6 +3244,7 @@ export interface ServicesGuidelineReviewIssue {
   block_id?: string;
   code?: string;
   message?: string;
+  remediation?: string;
   section_id?: string;
 }
 
@@ -4286,6 +4292,7 @@ export interface ServicesPublicGuidelineManifest {
   algorithm_count?: number;
   block_count?: number;
   checksum?: string;
+  empty_leaf_section_count?: number;
   etag?: string;
   extraction_quality?: ModelsGuidelineExtractionQuality;
   figure_count?: number;
@@ -4298,8 +4305,12 @@ export interface ServicesPublicGuidelineManifest {
   has_offline_package?: boolean;
   has_original_pdf?: boolean;
   has_tables?: boolean;
+  leaf_section_count?: number;
   package_version?: number;
   recommended_mode?: ServicesPublicGuidelineManifestRecommendedModeEnum;
+  reviewed_leaf_section_count?: number;
+  reviewed_paragraph_count?: number;
+  reviewed_section_count?: number;
   schema_version?: number;
   section_count?: number;
   table_count?: number;

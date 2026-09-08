@@ -223,6 +223,85 @@ func TestGuidelinePublicationValidationRejectsUnsafeDraft(t *testing.T) {
 			t.Fatalf("missing validation issue %q: %#v", expected, validation.Errors)
 		}
 	}
+	for _, issue := range validation.Errors {
+		if issue.Remediation == "" {
+			t.Fatalf("validation issue %q has no remediation guidance", issue.Code)
+		}
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsTableOnlyReviewedProjection(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2", Status: "review_required", OriginalFileKey: "diabetes.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	sections := []models.GuidelineSection{
+		{VersionID: version.ID, Title: "Chapter 1", Slug: "chapter-1", Level: 2, SortOrder: 1},
+		{VersionID: version.ID, Title: "Chapter 2", Slug: "chapter-2", Level: 2, SortOrder: 2},
+		{VersionID: version.ID, Title: "Chapter 3", Slug: "chapter-3", Level: 2, SortOrder: 3},
+	}
+	if err := db.Create(&sections).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 10; index++ {
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &sections[index%3].ID, Type: models.GuidelineBlockTable, SortOrder: index, ContentJSON: []byte(`{"type":"table","columns":["A"],"rows":[["B"]],"footnotes":[]}`), SourceFingerprint: fmt.Sprintf("table-%d", index), ReviewStatus: models.GuidelineBlockReviewed}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	for index := range sections {
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &sections[index].ID, Type: models.GuidelineBlockParagraph, SortOrder: 20 + index, ContentJSON: []byte(`{"type":"paragraph","text":"Clinical prose"}`), SourceFingerprint: fmt.Sprintf("prose-%d", index), ReviewStatus: models.GuidelineBlockDraft}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, code := range []string{"no_reviewed_prose", "reviewed_content_imbalance"} {
+		if !hasGuidelineReviewIssue(validation.Errors, code) {
+			t.Fatalf("missing %s: %#v", code, validation.Errors)
+		}
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsMostlyEmptyClinicalLeaves(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guideline"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2", Status: "review_required", OriginalFileKey: "source.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 10; index++ {
+		section := models.GuidelineSection{VersionID: version.ID, Title: fmt.Sprintf("Clinical topic %d", index+1), Slug: fmt.Sprintf("clinical-topic-%d", index+1), Level: 2, SortOrder: index}
+		if err := db.Create(&section).Error; err != nil {
+			t.Fatal(err)
+		}
+		status := models.GuidelineBlockDraft
+		if index < 2 {
+			status = models.GuidelineBlockReviewed
+		}
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Clinical prose"}`), SourceFingerprint: fmt.Sprintf("p-%d", index), ReviewStatus: status}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "empty_clinical_leaf_sections") {
+		t.Fatalf("mostly empty clinical leaves were not blocked: %#v", validation.Errors)
+	}
 }
 
 func TestReviewWorkspaceExposesAuthoritativeBlockReviewPolicy(t *testing.T) {
@@ -474,7 +553,7 @@ func TestGuidelinePublicationValidationRejectsStructuralRegression(t *testing.T)
 			t.Fatal(err)
 		}
 		for blockIndex := 0; blockIndex < 2; blockIndex++ {
-			block := models.GuidelineContentBlock{VersionID: current.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, SortOrder: index*2 + blockIndex, ContentJSON: []byte(`{"type":"paragraph","text":"Current clinical content."}`), SourceFingerprint: fmt.Sprintf("current-%d-%d", index, blockIndex), ReviewStatus: models.GuidelineBlockDraft}
+			block := models.GuidelineContentBlock{VersionID: current.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, SortOrder: index*2 + blockIndex, ContentJSON: []byte(`{"type":"paragraph","text":"Current clinical content."}`), SourceFingerprint: fmt.Sprintf("current-%d-%d", index, blockIndex), ReviewStatus: models.GuidelineBlockReviewed}
 			if err := db.Create(&block).Error; err != nil {
 				t.Fatal(err)
 			}
@@ -505,7 +584,7 @@ func TestGuidelinePublicationValidationRejectsStructuralRegression(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "structural_regression") {
+	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "structural_regression") || !hasGuidelineReviewIssue(validation.Errors, "reviewed_content_regression") {
 		t.Fatalf("structural collapse passed publication validation: %#v", validation.Errors)
 	}
 }

@@ -59,7 +59,12 @@ export type PublicGuidelineManifest = {
   has_original_pdf: boolean;
   has_offline_package: boolean;
   section_count: number;
+  reviewed_section_count?: number;
+  leaf_section_count?: number;
+  reviewed_leaf_section_count?: number;
+  empty_leaf_section_count?: number;
   block_count: number;
+  reviewed_paragraph_count?: number;
   table_count: number;
   figure_count: number;
   algorithm_count: number;
@@ -580,6 +585,7 @@ function isManifest(value: unknown): value is PublicGuidelineManifest {
   if (!isRecord(value)) return false;
   return ["guideline_id", "version_id", "version", "extraction_quality", "checksum", "etag", "generated_at"].every((key) => isString(value[key]))
     && ["schema_version", "package_version", "section_count", "block_count", "table_count", "figure_count", "algorithm_count"].every((key) => isNumber(value[key]))
+    && ["reviewed_section_count", "leaf_section_count", "reviewed_leaf_section_count", "empty_leaf_section_count", "reviewed_paragraph_count"].every((key) => value[key] === undefined || isNumber(value[key]))
     && ["has_chapters", "has_key_points", "has_tables", "has_figures", "has_algorithms", "has_original_pdf", "has_offline_package"].every((key) => isBoolean(value[key]));
 }
 

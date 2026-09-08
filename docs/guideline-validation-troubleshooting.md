@@ -341,6 +341,39 @@ route, frequency, age group, or weight basis.
 
 ## Publication errors that block publishing
 
+### `no_reviewed_prose`
+
+The structured document contains meaningful paragraph or list content, but no
+prose is approved for public display. Review the authoritative paragraphs and
+lists, bulk-review only eligible low-risk content, and rerun validation.
+
+### `partial_without_original_document`
+
+Only part of the active projection is reviewed and neither a reviewed original
+PDF nor reviewed offline package is available. Complete block review or attach
+and review a source fallback before publishing.
+
+### `reviewed_content_imbalance`
+
+A conservative minimum sample is overwhelmingly represented by one non-prose
+block type, such as tables. Verify that paragraphs and lists were not omitted
+from review and inspect the publication preview before retrying.
+
+### `empty_clinical_leaf_sections`
+
+At least eight content-bearing clinical leaf sections were assessed and 40% or
+more (with at least four affected leaves) contain no reviewed blocks. Container
+headings and common front matter such as references, indexes, prefaces, and
+glossaries are excluded. Review the affected leaves or remove content that is
+not intended for publication.
+
+### `reviewed_content_regression`
+
+Compared with the current publication, the candidate retains less than a
+conservative threshold of reviewed blocks, paragraphs, sections, chapters,
+tables, or high-risk blocks. Compare versions and restore/review missing content
+before replacing the current publication.
+
 ### `missing_original_file`
 
 For a PDF-derived revision, the original PDF key is missing, the object cannot
