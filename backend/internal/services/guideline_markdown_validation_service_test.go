@@ -83,6 +83,33 @@ func TestValidateMarkdownDocumentAcceptsTrailingEmptyTableCells(t *testing.T) {
 	}
 }
 
+func TestValidateMarkdownDocumentResolvesRelativeImageByUniqueUploadedFilename(t *testing.T) {
+	filename := "clinical-algorithm.png"
+	content := "# Care\n\n![Clinical algorithm](images/clinical-algorithm.png)"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, []models.GuidelineAsset{{OriginalFilename: &filename}})
+	for _, issue := range result.Issues {
+		if issue.Code == "unresolved_asset_reference" {
+			t.Fatalf("uploaded image filename should resolve a relative Markdown path: %#v", result.Issues)
+		}
+	}
+}
+
+func TestValidateMarkdownDocumentDoesNotGuessAmbiguousUploadedFilename(t *testing.T) {
+	first := "chapter-1/clinical-algorithm.png"
+	second := "chapter-2/clinical-algorithm.png"
+	content := "# Care\n\n![Clinical algorithm](images/clinical-algorithm.png)"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, []models.GuidelineAsset{{OriginalFilename: &first}, {OriginalFilename: &second}})
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Code == "unresolved_asset_reference" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("duplicate uploaded basenames must require an explicit stable asset reference")
+	}
+}
+
 func TestValidateMarkdownDocumentKeepsEscapedAndCodePipesInTableCells(t *testing.T) {
 	content := "# Assessment\n\n| Label | Expression | Notes |\n| --- | --- | --- |\n| Choice | A \\| B | `x | y` |"
 	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
