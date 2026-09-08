@@ -314,3 +314,44 @@ jobs:
           MEDIGUIDE_IMAGES_PRELOADED=1 bash "${deploy_path}/infra/${deploy_script_name}" \
             "${release_version}" "${release_revision}" "${ghcr_owner}"
           REMOTE
+
+      - name: Collect bounded production database diagnostics
+        if: failure()
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          set +e
+          ssh_key="${HOME}/.ssh/mediguide_deploy"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh_options=(
+            -i "${ssh_key}"
+            -p "${DEPLOY_PORT}"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=15
+          )
+
+          ssh "${ssh_options[@]}" "${target}" bash <<'REMOTE'
+          set +e
+          postgres_id="$(docker ps -aq \
+            --filter label=com.docker.compose.project=mediguide \
+            --filter label=com.docker.compose.service=postgres | head -n 1)"
+          if [ -z "${postgres_id}" ]; then
+            echo "No MediGuide PostgreSQL container was found." >&2
+            exit 0
+          fi
+
+          echo "PostgreSQL container state:"
+          docker inspect --format \
+            'status={{.State.Status}} restart_count={{.RestartCount}} exit_code={{.State.ExitCode}} error={{.State.Error}}' \
+            "${postgres_id}"
+          echo "PostgreSQL health history:"
+          docker inspect --format '{{range .State.Health.Log}}{{.End}} exit={{.ExitCode}} {{printf "%.500s" .Output}}{{println}}{{end}}' \
+            "${postgres_id}"
+          echo "PostgreSQL startup logs (last 150 lines):"
+          docker logs --tail 150 "${postgres_id}" 2>&1
+          REMOTE

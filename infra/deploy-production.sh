@@ -114,7 +114,8 @@ deployment_failure_diagnostics() {
   echo "Production deployment failed; collecting bounded service diagnostics." >&2
   "${compose[@]}" ps >&2
   "${compose[@]}" logs --no-color --tail 150 \
-    api dashboard guidelines ai-worker ai-worker-loop ollama-pull-models >&2
+    postgres redis minio api dashboard guidelines ai-worker ai-worker-loop \
+    ollama-pull-models >&2
   exit "${exit_code}"
 }
 trap deployment_failure_diagnostics ERR

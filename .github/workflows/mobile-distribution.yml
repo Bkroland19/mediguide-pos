@@ -161,6 +161,9 @@ jobs:
 
       - name: Upload signed Android artifacts
         if: always()
+        # Firebase distribution is the release outcome. A transient GitHub
+        # artifact-storage failure must not turn a successful distribution red.
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: mediguide-firebase-android-${{ github.run_id }}
@@ -363,6 +366,9 @@ jobs:
 
       - name: Upload signed iOS artifacts
         if: always()
+        # Firebase/TestFlight distribution is the release outcome. Archiving a
+        # second copy in GitHub is useful but must remain non-blocking.
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: mediguide-signed-ios-${{ github.run_id }}
