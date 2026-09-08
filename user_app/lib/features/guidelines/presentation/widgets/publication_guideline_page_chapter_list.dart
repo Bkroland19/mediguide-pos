@@ -72,6 +72,7 @@ class _ChapterListState extends State<_ChapterList> {
               section.parentId == null || !byId.containsKey(section.parentId),
         )
         .toList(growable: false);
+    final displayRoots = guidelineChapterDisplayRoots(roots, children);
     final blocksBySection = <String, List<GuidelineBlock>>{};
     for (final block in widget.blocks) {
       final sectionId = block.sectionId;
@@ -153,7 +154,7 @@ class _ChapterListState extends State<_ChapterList> {
                 spacing: spacing,
                 runSpacing: AppSpacing.md,
                 children: [
-                  for (final root in roots)
+                  for (final root in displayRoots)
                     SizedBox(
                       width: width,
                       child: _ChapterCard(
@@ -179,6 +180,25 @@ class _ChapterListState extends State<_ChapterList> {
       ],
     );
   }
+}
+
+/// Returns the sections that should be rendered as chapter cards.
+///
+/// Markdown publications normally have a single H1 document-title wrapper,
+/// with their actual chapters represented by its H2 children. Curated legacy
+/// publications can instead expose chapters directly as roots. Supporting both
+/// shapes keeps the chapter browser consistent without changing source truth.
+List<PublicationSection> guidelineChapterDisplayRoots(
+  List<PublicationSection> roots,
+  Map<String, List<PublicationSection>> children,
+) {
+  if (roots.length != 1) return roots;
+  final documentRoot = roots.single;
+  final directChildren = children[documentRoot.id] ?? const [];
+  if (documentRoot.level == 1 && directChildren.isNotEmpty) {
+    return directChildren;
+  }
+  return roots;
 }
 
 class _ChapterCard extends StatelessWidget {

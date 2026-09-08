@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"mediguide/internal/models"
 
@@ -580,6 +581,13 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 	if err := tx.Where("version_id = ?", version.ID).Order("sort_order asc").Find(&blocks).Error; err != nil {
 		return nil, err
 	}
+	guardIssues, err := guidelinePublicationGuardIssues(tx, version, sections, blocks)
+	if err != nil {
+		return nil, err
+	}
+	for _, issue := range guardIssues {
+		addError(issue.Code, issue.Message, issue.SectionID, issue.BlockID)
+	}
 	activeBlockCount := 0
 	for _, block := range blocks {
 		if block.ReviewStatus != models.GuidelineBlockRejected {
@@ -635,6 +643,188 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 		result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_legacy_render", Message: "Extracted HTML or Markdown fallback is missing; structured output remains the publication source."})
 	}
 	return result, nil
+}
+
+var guidelineTemplateTitles = map[string]struct{}{
+	"guideline title":               {},
+	"emergency protocol title":      {},
+	"medication guideline title":    {},
+	"diagnostic guideline title":    {},
+	"procedure title":               {},
+	"public health guideline title": {},
+}
+
+const guidelineTemplatePlaceholder = "_add reviewed clinical content._"
+
+func guidelinePublicationGuardIssues(tx *gorm.DB, version *models.GuidelineVersion, sections []models.GuidelineSection, blocks []models.GuidelineContentBlock) ([]GuidelineReviewIssue, error) {
+	issues := []GuidelineReviewIssue{}
+	appendIssue := func(code, message string, sectionID, blockID *uuid.UUID) {
+		issues = append(issues, GuidelineReviewIssue{Code: code, Message: message, SectionID: sectionID, BlockID: blockID})
+	}
+
+	for _, section := range sections {
+		if _, placeholder := guidelineTemplateTitles[strings.ToLower(strings.TrimSpace(section.Title))]; placeholder {
+			current := section
+			appendIssue("template_placeholder", fmt.Sprintf("Replace the unchanged template heading %q before publication.", section.Title), &current.ID, nil)
+			break
+		}
+	}
+	for _, block := range blocks {
+		if block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		if strings.Contains(strings.ToLower(string(block.ContentJSON)), guidelineTemplatePlaceholder) {
+			current := block
+			appendIssue("template_placeholder", "Replace all '_Add reviewed clinical content._' placeholders before publication.", block.SectionID, &current.ID)
+			break
+		}
+	}
+
+	sectionByID := make(map[uuid.UUID]models.GuidelineSection, len(sections))
+	for _, section := range sections {
+		sectionByID[section.ID] = section
+	}
+	if version.CurrentMarkdownRevisionID != nil {
+		h1Count := 0
+		var h1 *models.GuidelineSection
+		for index := range sections {
+			section := &sections[index]
+			if section.Level == 1 {
+				h1Count++
+				h1 = section
+			}
+			if section.ParentID == nil {
+				if section.Level != 1 {
+					appendIssue("skipped_heading_level", fmt.Sprintf("Root heading %q must be H1, not H%d.", section.Title, section.Level), &section.ID, nil)
+				}
+				continue
+			}
+			if parent, ok := sectionByID[*section.ParentID]; ok && section.Level != parent.Level+1 {
+				appendIssue("skipped_heading_level", fmt.Sprintf("Heading %q must be exactly one level below %q.", section.Title, parent.Title), &section.ID, nil)
+			}
+		}
+		if h1Count != 1 {
+			appendIssue("invalid_document_root", fmt.Sprintf("Markdown publications require exactly one H1 document title; found %d.", h1Count), nil, nil)
+		}
+
+		var document models.GuidelineDocument
+		if err := tx.Select("id", "title", "current_version_id").First(&document, "id = ?", version.DocumentID).Error; err != nil {
+			return nil, err
+		}
+		if h1 != nil && !guidelineTitlesCompatible(document.Title, h1.Title) {
+			appendIssue("document_title_mismatch", fmt.Sprintf("The H1 title %q does not match guideline metadata %q.", h1.Title, document.Title), &h1.ID, nil)
+		}
+		if document.CurrentVersionID != nil && *document.CurrentVersionID != version.ID {
+			previousSections := []models.GuidelineSection{}
+			if err := tx.Where("version_id = ?", *document.CurrentVersionID).Find(&previousSections).Error; err != nil {
+				return nil, err
+			}
+			previousBlocks := []models.GuidelineContentBlock{}
+			if err := tx.Where("version_id = ?", *document.CurrentVersionID).Find(&previousBlocks).Error; err != nil {
+				return nil, err
+			}
+			before := guidelineStructureCounts(previousSections, previousBlocks)
+			after := guidelineStructureCounts(sections, blocks)
+			reductions := []string{}
+			for _, metric := range []struct {
+				name          string
+				before, after int
+				minimum       int
+			}{
+				{name: "chapters", before: before.chapters, after: after.chapters, minimum: 4},
+				{name: "sections", before: before.sections, after: after.sections, minimum: 10},
+				{name: "blocks", before: before.blocks, after: after.blocks, minimum: 10},
+				{name: "tables", before: before.tables, after: after.tables, minimum: 4},
+				{name: "high-risk blocks", before: before.highRisk, after: after.highRisk, minimum: 4},
+			} {
+				if metric.before >= metric.minimum && metric.after*2 < metric.before {
+					reductions = append(reductions, fmt.Sprintf("%s %d→%d", metric.name, metric.before, metric.after))
+				}
+			}
+			if len(reductions) > 0 {
+				appendIssue("structural_regression", "The candidate is less than half the current publication for: "+strings.Join(reductions, ", ")+". Restore the missing content or create a complete reviewed version.", nil, nil)
+			}
+		}
+	}
+	return issues, nil
+}
+
+type guidelineStructureSummary struct {
+	chapters, sections, blocks, tables, highRisk int
+}
+
+func guidelineStructureCounts(sections []models.GuidelineSection, blocks []models.GuidelineContentBlock) guidelineStructureSummary {
+	result := guidelineStructureSummary{sections: len(sections)}
+	roots := make([]models.GuidelineSection, 0)
+	childrenByParent := map[uuid.UUID]int{}
+	for _, section := range sections {
+		if section.ParentID == nil {
+			roots = append(roots, section)
+		} else {
+			childrenByParent[*section.ParentID]++
+		}
+	}
+	result.chapters = len(roots)
+	if len(roots) == 1 && roots[0].Level == 1 && childrenByParent[roots[0].ID] > 0 {
+		result.chapters = childrenByParent[roots[0].ID]
+	}
+	for _, block := range blocks {
+		if block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		result.blocks++
+		if block.Type == models.GuidelineBlockTable {
+			result.tables++
+		}
+		if highRiskGuidelineBlock(block.Type) {
+			result.highRisk++
+		}
+	}
+	return result
+}
+
+func guidelineTitlesCompatible(documentTitle, headingTitle string) bool {
+	document := normalizeGuidelineTitle(documentTitle)
+	heading := normalizeGuidelineTitle(headingTitle)
+	if len(document) <= 3 || len(heading) <= 3 {
+		return true
+	}
+	if strings.Contains(document, heading) || strings.Contains(heading, document) {
+		return true
+	}
+	ignored := map[string]bool{
+		"a": true, "an": true, "and": true, "clinical": true, "for": true,
+		"guideline": true, "guidelines": true, "in": true, "integrated": true,
+		"management": true, "of": true, "summary": true, "the": true, "uganda": true,
+	}
+	documentWords := []string{}
+	for _, word := range strings.Fields(document) {
+		if !ignored[word] {
+			documentWords = append(documentWords, word)
+		}
+	}
+	if len(documentWords) < 2 {
+		return false
+	}
+	headingWords := map[string]bool{}
+	for _, word := range strings.Fields(heading) {
+		headingWords[word] = true
+	}
+	for _, word := range documentWords {
+		if !headingWords[word] {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeGuidelineTitle(value string) string {
+	return strings.Join(strings.Fields(strings.Map(func(character rune) rune {
+		if unicode.IsLetter(character) || unicode.IsDigit(character) {
+			return unicode.ToLower(character)
+		}
+		return ' '
+	}, value)), " ")
 }
 
 func validateGuidelineBlockPayload(tx *gorm.DB, versionID uuid.UUID, blockType models.GuidelineBlockType, content json.RawMessage) error {

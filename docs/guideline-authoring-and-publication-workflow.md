@@ -106,6 +106,33 @@ For tables:
 - use the visual table editor for structural changes, but never change a
   clinical value merely to silence a warning.
 
+#### Standard chapter hierarchy
+
+Use one H1 document title, H2 for chapters or front matter, and progressively
+nested headings for content inside each chapter:
+
+```markdown
+# Guideline title
+
+## Introduction or front matter
+
+## Chapter 1: Chapter title
+
+### Major section
+
+#### Subsection
+```
+
+Do not skip heading levels. The structured extractor retains this hierarchy as
+section parent-child relationships. In the mobile chapter browser, a single H1
+is treated as the document wrapper and its H2 children become chapter cards.
+Curated legacy publications whose chapters are already roots remain supported.
+
+Templates provide structure only. Replace the template title and every
+`_Add reviewed clinical content._` marker before regeneration. Unchanged
+template headings, placeholder bodies, multiple document roots, title
+mismatches, and skipped levels block publication.
+
 ### 5. Assign reviewers and collaborate
 
 1. In the Markdown editor, select **Review & activity**.
@@ -221,6 +248,10 @@ authoritative publication validator. It checks, among other things:
 - the current Markdown revision matches the generated and accepted revision;
 - Markdown and HTML/source assets exist;
 - section hierarchy, ordering, levels, and slugs are valid;
+- no authoring-template title or placeholder remains;
+- the Markdown has exactly one H1 and an unbroken parent-child heading tree;
+- the candidate has not unexpectedly lost more than half of the current
+  publication's chapters, sections, blocks, tables, or high-risk blocks;
 - typed block payloads and figure references are valid;
 - all required high-risk blocks and assets are reviewed;
 - the regeneration review is accepted.
@@ -243,6 +274,16 @@ When validation succeeds:
 
 The previously published version remains public while a replacement is being
 edited and reviewed. A failed draft must not displace it.
+
+### Repairing an accidentally published template
+
+Do not edit the published version in place. Create a new version from the last
+complete published revision or the authoritative source, give it a newer
+version number, regenerate, review, accept, and publish it. Publishing the
+replacement updates the document's current version while retaining the bad
+version in immutable history for audit. Confirm the public manifest, chapter
+cards, representative clinical blocks, search results, and RAG citations after
+the replacement becomes current.
 
 ## What common notifications mean
 

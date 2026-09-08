@@ -130,10 +130,17 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 		}
 		if match := mdHeadingRE.FindStringSubmatch(line); match != nil {
 			level := len(match[1])
+			headingTitle := strings.TrimSpace(match[2])
 			if level == 1 {
 				h1++
+				if strings.TrimSpace(document.Title) != "" && !guidelineTitlesCompatible(document.Title, headingTitle) {
+					add("warning", "document_title_mismatch", fmt.Sprintf("The H1 title %q does not match guideline metadata %q; publication will be blocked until they are aligned.", headingTitle, document.Title), lineNo, 1, len(line)+1)
+				}
 			}
-			slug := markdownAnchor(match[2])
+			if _, placeholder := guidelineTemplateTitles[strings.ToLower(headingTitle)]; placeholder {
+				add("error", "template_placeholder", fmt.Sprintf("Replace the unchanged template heading %q.", headingTitle), lineNo, 1, len(line)+1)
+			}
+			slug := markdownAnchor(headingTitle)
 			anchors[slug] = true
 			if first, exists := headings[slug]; exists {
 				add("error", "duplicate_heading_anchor", fmt.Sprintf("Heading anchor %q duplicates line %d.", slug, first), lineNo, 1, len(line)+1)
@@ -191,6 +198,9 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 			uses["ref:"+strings.ToLower(match[1])] = lineNo
 		}
 		trimmed := strings.TrimSpace(line)
+		if strings.Contains(strings.ToLower(trimmed), guidelineTemplatePlaceholder) {
+			add("error", "template_placeholder", "Replace this template placeholder with reviewed clinical content.", lineNo, 1, len(line)+1)
+		}
 		if strings.HasPrefix(trimmed, "```") {
 			if fenceLine == 0 {
 				fenceLine = lineNo

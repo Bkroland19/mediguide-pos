@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -162,6 +163,156 @@ func TestGuidelinePublicationValidationAcceptsReviewedStructuredContent(t *testi
 	}
 	if !validation.Valid || len(validation.Errors) != 0 {
 		t.Fatalf("reviewed structured document failed validation: %#v", validation)
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsUnchangedTemplateContent(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Malaria in Adults"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID := uuid.New()
+	version := models.GuidelineVersion{
+		DocumentID: document.ID, Version: "2026.2", Status: "review_required",
+		OriginalFileKey: "source.pdf", ExtractionSchemaVersion: 1,
+		CurrentMarkdownRevisionID: &revisionID,
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	root := models.GuidelineSection{VersionID: version.ID, Title: "Emergency protocol title", Slug: "emergency-protocol-title", Level: 1, SortOrder: 0}
+	if err := db.Create(&root).Error; err != nil {
+		t.Fatal(err)
+	}
+	child := models.GuidelineSection{VersionID: version.ID, ParentID: &root.ID, Title: "Recognition criteria", Slug: "recognition-criteria", Level: 2, SortOrder: 1}
+	if err := db.Create(&child).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.GuidelineContentBlock{
+		{VersionID: version.ID, SectionID: &root.ID, Type: models.GuidelineBlockHeading, SortOrder: 0, ContentJSON: []byte(`{"type":"heading","text":"Emergency protocol title","level":1}`), SourceFingerprint: "h-1", ReviewStatus: models.GuidelineBlockDraft},
+		{VersionID: version.ID, SectionID: &child.ID, Type: models.GuidelineBlockParagraph, SortOrder: 1, ContentJSON: []byte(`{"type":"paragraph","text":"_Add reviewed clinical content._"}`), SourceFingerprint: "p-1", ReviewStatus: models.GuidelineBlockDraft},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "template_placeholder") || !hasGuidelineReviewIssue(validation.Errors, "document_title_mismatch") {
+		t.Fatalf("unchanged template passed publication validation: %#v", validation.Errors)
+	}
+}
+
+func TestGuidelineTitlesCompatibleAllowsExpandedClinicalTitles(t *testing.T) {
+	for _, test := range []struct {
+		document, heading string
+		want              bool
+	}{
+		{document: "Diabetes", heading: "Integrated Diabetes Management Guideline for Uganda", want: true},
+		{document: "Malaria in Adults", heading: "Clinical Management of Malaria in Ugandan Adults", want: true},
+		{document: "UCG", heading: "Uganda Clinical Guidelines 2023", want: true},
+		{document: "Malaria in Adults", heading: "Emergency protocol title", want: false},
+	} {
+		if got := guidelineTitlesCompatible(test.document, test.heading); got != test.want {
+			t.Errorf("guidelineTitlesCompatible(%q, %q) = %v, want %v", test.document, test.heading, got, test.want)
+		}
+	}
+}
+
+func TestGuidelinePublicationValidationAcceptsDocumentRootChapterHierarchy(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID := uuid.New()
+	version := models.GuidelineVersion{
+		DocumentID: document.ID, Version: "2026.1", Status: "review_required",
+		OriginalFileKey: "source.pdf", ExtractionSchemaVersion: 1,
+		CurrentMarkdownRevisionID: &revisionID,
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	root := models.GuidelineSection{VersionID: version.ID, Title: "Integrated Diabetes Management Guideline", Slug: "integrated-diabetes-management-guideline", Level: 1, SortOrder: 0}
+	chapter := models.GuidelineSection{VersionID: version.ID, Title: "Chapter 1: Diagnosis", Slug: "chapter-1-diagnosis", Level: 2, SortOrder: 1}
+	if err := db.Create(&root).Error; err != nil {
+		t.Fatal(err)
+	}
+	chapter.ParentID = &root.ID
+	if err := db.Create(&chapter).Error; err != nil {
+		t.Fatal(err)
+	}
+	subsection := models.GuidelineSection{VersionID: version.ID, ParentID: &chapter.ID, Title: "Diagnostic criteria", Slug: "diagnostic-criteria", Level: 3, SortOrder: 2}
+	if err := db.Create(&subsection).Error; err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &subsection.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Reviewed clinical content."}`), SourceFingerprint: "p-1", ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !validation.Valid {
+		t.Fatalf("valid document-root hierarchy was rejected: %#v", validation.Errors)
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsStructuralRegression(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	current := models.GuidelineVersion{DocumentID: document.ID, Version: "2026.1", Status: "published", OriginalFileKey: "current.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&current).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 12; index++ {
+		section := models.GuidelineSection{VersionID: current.ID, Title: fmt.Sprintf("Section %d", index+1), Slug: fmt.Sprintf("section-%d", index+1), Level: 1, SortOrder: index}
+		if err := db.Create(&section).Error; err != nil {
+			t.Fatal(err)
+		}
+		for blockIndex := 0; blockIndex < 2; blockIndex++ {
+			block := models.GuidelineContentBlock{VersionID: current.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, SortOrder: index*2 + blockIndex, ContentJSON: []byte(`{"type":"paragraph","text":"Current clinical content."}`), SourceFingerprint: fmt.Sprintf("current-%d-%d", index, blockIndex), ReviewStatus: models.GuidelineBlockDraft}
+			if err := db.Create(&block).Error; err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := db.Model(&document).Update("current_version_id", current.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID := uuid.New()
+	candidate := models.GuidelineVersion{DocumentID: document.ID, Version: "2026.2", Status: "review_required", OriginalFileKey: "candidate.pdf", ExtractionSchemaVersion: 1, CurrentMarkdownRevisionID: &revisionID}
+	if err := db.Create(&candidate).Error; err != nil {
+		t.Fatal(err)
+	}
+	root := models.GuidelineSection{VersionID: candidate.ID, Title: "Diabetes guideline", Slug: "diabetes-guideline", Level: 1, SortOrder: 0}
+	if err := db.Create(&root).Error; err != nil {
+		t.Fatal(err)
+	}
+	child := models.GuidelineSection{VersionID: candidate.ID, ParentID: &root.ID, Title: "Overview", Slug: "overview", Level: 2, SortOrder: 1}
+	if err := db.Create(&child).Error; err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{VersionID: candidate.ID, SectionID: &child.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Candidate clinical content."}`), SourceFingerprint: "candidate-1", ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(candidate.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "structural_regression") {
+		t.Fatalf("structural collapse passed publication validation: %#v", validation.Errors)
 	}
 }
 
