@@ -93,6 +93,8 @@ class _GuidelineOverviewState extends State<_GuidelineOverview> {
         // ===================================================================
         _GuidelineTabs(
           selectedIndex: _selectedTab,
+          hasChapters:
+              manifest.hasChapters && widget.content.sections.isNotEmpty,
           hasKeyPoints: keyRecommendations.isNotEmpty,
           hasTables: tables.isNotEmpty,
           onSelected: (index) {
@@ -110,6 +112,9 @@ class _GuidelineOverviewState extends State<_GuidelineOverview> {
         switch (_selectedTab) {
           1 => _ChapterList(
             sections: widget.content.sections,
+            blocks: widget.content.blocks,
+            currentSectionId: widget.currentSectionId,
+            readingProgress: widget.readingProgress,
             onSection: widget.onSection,
           ),
 

@@ -323,6 +323,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/guidelines/{id}/content": {
+            "get": {
+                "description": "Returns the complete section hierarchy and reviewed blocks in one response.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Get all reviewed structured content for a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineContentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/guidelines/{id}/figures": {
             "get": {
                 "produces": [
@@ -18801,6 +18830,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PublicGuidelineContentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicGuidelineContent"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PublicGuidelineEnvelope": {
             "type": "object",
             "properties": {
@@ -26838,6 +26878,23 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.PublicGuidelineContent": {
+            "type": "object",
+            "properties": {
+                "blocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineBlock"
+                    }
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineSection"
+                    }
                 }
             }
         },

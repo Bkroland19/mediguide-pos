@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"mediguide/internal/httpx"
+	"mediguide/internal/models"
 	"mediguide/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -31,11 +32,35 @@ type fakePublicGuidelineReader struct {
 type fakePublicGuidelineContent struct {
 	PublicGuidelineContentReader
 	download *services.PublicGuidelineAssetDownload
+	content  *services.PublicGuidelineContent
 	err      error
+}
+
+func (f fakePublicGuidelineContent) Content(context.Context, uuid.UUID) (*services.PublicGuidelineContent, error) {
+	return f.content, f.err
 }
 
 func (f fakePublicGuidelineContent) AssetDownload(context.Context, uuid.UUID, uuid.UUID, string) (*services.PublicGuidelineAssetDownload, error) {
 	return f.download, f.err
+}
+
+func TestPublicGuidelineContentReturnsBatchedProjection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	id := uuid.New()
+	sectionID := uuid.New()
+	fake := fakePublicGuidelineContent{content: &services.PublicGuidelineContent{
+		Sections: []services.PublicGuidelineSection{{ID: sectionID, Title: "Clinical care"}},
+		Blocks:   []services.PublicGuidelineBlock{{ID: uuid.New(), SectionID: &sectionID, Type: models.GuidelineBlockParagraph, Content: json.RawMessage(`{"text":"Reviewed content"}`)}},
+	}}
+	router := gin.New()
+	handler := PublicGuidelineHandler{Content: fake}
+	router.GET("/api/public/guidelines/:id/content", handler.ContentBundle)
+
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/public/guidelines/"+id.String()+"/content", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Reviewed content") {
+		t.Fatalf("unexpected content response %d: %s", response.Code, response.Body.String())
+	}
 }
 
 func (f *fakePublicGuidelineReader) List(_ context.Context, filter services.PublicGuidelineFilter) (*services.PageResult[services.PublicGuideline], error) {

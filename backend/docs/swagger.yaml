@@ -1980,6 +1980,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.PublicGuidelineContentEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicGuidelineContent'
+      success:
+        type: boolean
+    type: object
   handlers.PublicGuidelineEnvelope:
     properties:
       data:
@@ -7307,6 +7314,17 @@ definitions:
       type:
         $ref: '#/definitions/models.GuidelineBlockType'
     type: object
+  services.PublicGuidelineContent:
+    properties:
+      blocks:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineBlock'
+        type: array
+      sections:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineSection'
+        type: array
+    type: object
   services.PublicGuidelineFigure:
     properties:
       asset:
@@ -8480,6 +8498,26 @@ paths:
           schema:
             $ref: '#/definitions/httpx.Response'
       summary: Download a reviewed published guideline asset through the API
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/content:
+    get:
+      description: Returns the complete section hierarchy and reviewed blocks in one
+        response.
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineContentEnvelope'
+      summary: Get all reviewed structured content for a published guideline
       tags:
       - Public Guidelines
   /api/public/guidelines/{id}/figures:

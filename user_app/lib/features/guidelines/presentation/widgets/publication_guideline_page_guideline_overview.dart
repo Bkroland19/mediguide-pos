@@ -4,6 +4,8 @@ class _GuidelineOverview extends StatefulWidget {
   const _GuidelineOverview({
     required this.content,
     required this.isBookmarked,
+    required this.currentSectionId,
+    required this.readingProgress,
     required this.onRead,
     required this.onSection,
     required this.onOriginal,
@@ -12,6 +14,10 @@ class _GuidelineOverview extends StatefulWidget {
   final GuidelinePublicationContent content;
 
   final bool isBookmarked;
+
+  final String? currentSectionId;
+
+  final double? readingProgress;
 
   final VoidCallback onRead;
 

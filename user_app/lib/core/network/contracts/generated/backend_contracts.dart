@@ -4566,6 +4566,28 @@ final class HandlersPublicGuidelineAssetEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPublicGuidelineContentEnvelope {
+  HandlersPublicGuidelineContentEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPublicGuidelineContentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPublicGuidelineContentEnvelope(json);
+
+  static const schemaName = 'handlers.PublicGuidelineContentEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPublicGuidelineContent? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPublicGuidelineContent.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPublicGuidelineEnvelope {
   HandlersPublicGuidelineEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -13100,6 +13122,37 @@ final class ServicesPublicGuidelineBlock {
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicGuidelineContent {
+  ServicesPublicGuidelineContent(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicGuidelineContent.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicGuidelineContent(json);
+
+  static const schemaName = 'services.PublicGuidelineContent';
+  final Map<String, dynamic> value;
+
+  List<ServicesPublicGuidelineBlock> get blocks {
+    final raw = value['blocks'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicGuidelineBlock.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ServicesPublicGuidelineSection> get sections {
+    final raw = value['sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicGuidelineSection.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

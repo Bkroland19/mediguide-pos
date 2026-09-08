@@ -75,6 +75,15 @@ type PublicGuidelineSectionDetail struct {
 	Blocks  []PublicGuidelineBlock `json:"blocks"`
 }
 
+// PublicGuidelineContent is the complete reviewed structured projection used by
+// readers. Keeping sections and blocks in one response avoids one request per
+// section for large publications while the section endpoints remain available
+// for deep links and backwards-compatible clients.
+type PublicGuidelineContent struct {
+	Sections []PublicGuidelineSection `json:"sections"`
+	Blocks   []PublicGuidelineBlock   `json:"blocks"`
+}
+
 type PublicGuidelineTable struct {
 	ID        uuid.UUID                         `json:"id"`
 	SectionID *uuid.UUID                        `json:"section_id,omitempty"`
@@ -173,6 +182,33 @@ func (s PublicGuidelineService) Sections(ctx context.Context, guidelineID uuid.U
 		items = append(items, publicSection(row))
 	}
 	return NewPageResult(items, page, total), nil
+}
+
+func (s PublicGuidelineService) Content(ctx context.Context, guidelineID uuid.UUID) (*PublicGuidelineContent, error) {
+	if _, err := s.getVisibleRow(ctx, guidelineID); err != nil {
+		return nil, err
+	}
+	sectionQuery := s.publicSectionsQuery(ctx, guidelineID)
+	var sectionRows []models.GuidelineSection
+	if err := sectionQuery.Select("gs.*").Order("gs.sort_order ASC, gs.id ASC").Scan(&sectionRows).Error; err != nil {
+		return nil, err
+	}
+
+	blockQuery := s.publicBlocksQuery(ctx, guidelineID)
+	var blockRows []models.GuidelineContentBlock
+	if err := blockQuery.Select("gcb.*").Order("gcb.sort_order ASC, gcb.id ASC").Scan(&blockRows).Error; err != nil {
+		return nil, err
+	}
+
+	sections := make([]PublicGuidelineSection, 0, len(sectionRows))
+	for _, row := range sectionRows {
+		sections = append(sections, publicSection(row))
+	}
+	blocks := make([]PublicGuidelineBlock, 0, len(blockRows))
+	for _, row := range blockRows {
+		blocks = append(blocks, publicBlock(row))
+	}
+	return &PublicGuidelineContent{Sections: sections, Blocks: blocks}, nil
 }
 
 func (s PublicGuidelineService) Section(ctx context.Context, guidelineID, sectionID uuid.UUID) (*PublicGuidelineSectionDetail, error) {
@@ -309,8 +345,7 @@ func (s PublicGuidelineService) publicSectionsQuery(ctx context.Context, guideli
 	return s.DB.WithContext(ctx).Table("guideline_sections AS gs").
 		Joins("JOIN guideline_versions AS gv ON gv.id = gs.version_id AND gv.deleted_at IS NULL AND lower(gv.status) = 'published'").
 		Joins("JOIN guideline_documents AS gd ON gd.id = gv.document_id AND gd.current_version_id = gv.id AND gd.deleted_at IS NULL").
-		Where("gs.deleted_at IS NULL AND gd.id = ?", guidelineID).
-		Where("EXISTS (SELECT 1 FROM guideline_content_blocks b WHERE b.section_id = gs.id AND b.version_id = gv.id AND b.review_status = ? AND b.deleted_at IS NULL)", models.GuidelineBlockReviewed)
+		Where("gs.deleted_at IS NULL AND gd.id = ?", guidelineID)
 }
 
 func (s PublicGuidelineService) publicBlocksQuery(ctx context.Context, guidelineID uuid.UUID) *gorm.DB {
