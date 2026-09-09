@@ -16,6 +16,7 @@ import {
 } from "../../../lib/markdown/search";
 import { SecureMarkdown } from "./SecureMarkdown";
 import { GuidelineAssistant } from "./GuidelineAssistant";
+import { bookReaderPublicationGuidance } from "./book-reader-publication-guidance";
 
 export type SupplementalReaderView =
   | "overview"
@@ -55,6 +56,7 @@ export function BookGuidelineReader({
   const searchIndex = useMemo(() => buildMarkdownSearchIndex(markdown.content), [markdown.content]);
   const results = useMemo(() => searchMarkdown(searchIndex, query), [query, searchIndex]);
   const content = useMemo(() => removeLeadingTitle(markdown.content, guideline.title), [guideline.title, markdown.content]);
+  const publicationGuidance = bookReaderPublicationGuidance(partial, manifest?.has_original_pdf === true);
 
   useEffect(() => {
     const elements = headings
@@ -143,10 +145,10 @@ export function BookGuidelineReader({
             </dl>
             <div className="book-reader-links">
               {supplementalViews.map((view) => <button type="button" key={view} onClick={() => onSelectView(view)}>{viewLabel(view)}</button>)}
-              {manifest?.has_original_pdf !== false && <button type="button" onClick={() => onOpenOriginal()}>Original PDF</button>}
+              {publicationGuidance.showOriginal && <button type="button" onClick={() => onOpenOriginal()}>Original PDF</button>}
             </div>
           </header>
-          {partial && <div className="partial-extraction-notice" role="status">Some supplemental structured content is unavailable. This published Markdown remains searchable; use the original document as the fidelity reference.</div>}
+          {publicationGuidance.partialNotice && <div className="partial-extraction-notice" role="status">{publicationGuidance.partialNotice}</div>}
           <div className="markdown-content book-markdown"><SecureMarkdown content={content} /></div>
         </article>
       </main>

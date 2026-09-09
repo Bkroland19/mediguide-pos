@@ -38,7 +38,7 @@ compared with the authoritative source.
 
    ```bash
    MEDIGUIDE_API_URL=https://api.example.org \
-   MEDIGUIDE_ACCESS_TOKEN='<reviewer-token>' \
+   MEDIGUIDE_REPORT_TOKEN='<reviewer-token>' \
    ./scripts/prepare-guideline-recovery.sh \
      --source-version-id '<published-version-uuid>' \
      --new-version '2026.10.01'
@@ -48,6 +48,21 @@ compared with the authoritative source.
    correct. The helper duplicates the immutable published Markdown, queues one
    regeneration, waits up to 15 minutes, and writes a JSON completeness report
    in the current directory. It stops before every clinical decision.
+
+   ```bash
+   MEDIGUIDE_API_URL=https://api.example.org \
+   MEDIGUIDE_REPORT_TOKEN='<reviewer-token>' \
+   MEDIGUIDE_MARKDOWN_EDIT_TOKEN='<editor-token>' \
+   MEDIGUIDE_REGENERATION_TOKEN='<regenerator-token>' \
+   ./scripts/prepare-guideline-recovery.sh \
+     --source-version-id '<published-version-uuid>' \
+     --new-version '2026.10.01' \
+     --execute
+   ```
+
+   The distinct tokens preserve the role separation described above. For local
+   development only, one administrator token may be supplied through
+   `MEDIGUIDE_ACCESS_TOKEN` as a fallback for all three operations.
 
 Do not store access tokens in shell history, documentation, commits, CI logs,
 or report attachments. Prefer an injected environment secret.

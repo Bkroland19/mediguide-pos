@@ -55,6 +55,8 @@ describe("GuidelineBulkReviewPanel", () => {
   afterEach(cleanup);
 
   it("filters, reports progress, and excludes high-risk blocks from selection", async () => {
+    const getReviewBlocks = vi.mocked(GuidelineDocumentsService.getReviewBlocks);
+    const user = userEvent.setup();
     renderPanel();
     expect(await screen.findByText("Pending low risk")).toBeInTheDocument();
     expect(screen.getByLabelText("Status")).toBeInTheDocument();
@@ -64,6 +66,69 @@ describe("GuidelineBulkReviewPanel", () => {
     expect(screen.getByRole("checkbox", { name: "Select paragraph block" })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "Select table block" })).not.toBeInTheDocument();
     expect(screen.getByText("individual review")).toBeInTheDocument();
+    expectMetric("Total", "12");
+    expectMetric("Reviewed", "4");
+    expectMetric("Pending low risk", "6");
+    expectMetric("Pending high risk", "2");
+    expectMetric("Rejected", "0");
+    expectMetric("Reviewed sections", "3");
+    expectMetric("Empty clinical leaves", "5");
+
+    await user.selectOptions(screen.getByLabelText("Status"), "pending");
+    await user.selectOptions(screen.getByLabelText("Risk"), "pending-high-risk");
+    await user.selectOptions(screen.getByLabelText("Block type"), "paragraph");
+    await user.selectOptions(screen.getByLabelText("Section or chapter"), "section-1");
+    await waitFor(() => expect(getReviewBlocks).toHaveBeenCalledWith("version-1", {
+      page: 1,
+      per_page: 50,
+      status: "pending",
+      risk: "pending-high-risk",
+      block_type: "paragraph",
+      section_id: "section-1",
+    }));
+  });
+
+  it("loads every page when selecting low-risk blocks in the current section", async () => {
+    const user = userEvent.setup();
+    const secondParagraph = { ...paragraph, id: "block-paragraph-2", sort_order: 2 };
+    vi.mocked(GuidelineDocumentsService.getReviewBlocks).mockImplementation(async (_versionId, filters) => {
+      if (filters.per_page === 100) {
+        return {
+          items: filters.page === 1 ? [paragraph] : [secondParagraph],
+          page: filters.page || 1,
+          per_page: 100,
+          total_items: 2,
+          total_pages: 2,
+          markdown_revision_id: "revision-1",
+          regeneration_job_id: "job-1",
+          progress: {
+            total_blocks: 2, reviewed_blocks: 0, pending_low_risk_blocks: 2,
+            pending_high_risk_blocks: 0, rejected_blocks: 0,
+            sections_with_reviewed_content: 0, empty_clinical_leaf_sections: 1,
+          },
+        };
+      }
+      return {
+        items: [paragraph], page: 1, per_page: 50, total_items: 1, total_pages: 1,
+        markdown_revision_id: "revision-1", regeneration_job_id: "job-1",
+        progress: {
+          total_blocks: 2, reviewed_blocks: 0, pending_low_risk_blocks: 2,
+          pending_high_risk_blocks: 0, rejected_blocks: 0,
+          sections_with_reviewed_content: 0, empty_clinical_leaf_sections: 1,
+        },
+      };
+    });
+    renderPanel();
+    await screen.findByRole("checkbox", { name: "Select paragraph block" });
+    await user.selectOptions(screen.getByLabelText("Section or chapter"), "section-1");
+    await user.click(screen.getByRole("button", { name: "Select all low risk in section" }));
+    await waitFor(() => expect(screen.getByText("2 selected")).toBeInTheDocument());
+    expect(GuidelineDocumentsService.getReviewBlocks).toHaveBeenCalledWith("version-1", {
+      page: 1, per_page: 100, risk: "low-risk-pending", block_type: "all", section_id: "section-1",
+    });
+    expect(GuidelineDocumentsService.getReviewBlocks).toHaveBeenCalledWith("version-1", {
+      page: 2, per_page: 100, risk: "low-risk-pending", block_type: "all", section_id: "section-1",
+    });
   });
 
   it("requires attestation and sends exact revision identities", async () => {
@@ -125,4 +190,10 @@ function renderPanel() {
       />
     </QueryClientProvider>,
   );
+}
+
+function expectMetric(label: string, value: string) {
+  const metric = screen.getByText(label).parentElement;
+  expect(metric).not.toBeNull();
+  expect(within(metric as HTMLElement).getByText(value)).toBeInTheDocument();
 }

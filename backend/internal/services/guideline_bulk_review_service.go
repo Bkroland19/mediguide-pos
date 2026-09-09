@@ -263,12 +263,16 @@ func guidelineReviewProgress(db *gorm.DB, versionID uuid.UUID) (GuidelineReviewP
 		return GuidelineReviewProgress{}, err
 	}
 	var sections []models.GuidelineSection
-	if err := db.Select("id", "parent_id", "level").Where("version_id = ? AND deleted_at IS NULL", versionID).Find(&sections).Error; err != nil {
+	if err := db.Select("id", "parent_id", "level", "title").Where("version_id = ? AND deleted_at IS NULL", versionID).Find(&sections).Error; err != nil {
 		return GuidelineReviewProgress{}, err
 	}
 	progress := GuidelineReviewProgress{TotalBlocks: int64(len(blocks))}
 	reviewedSections := map[uuid.UUID]bool{}
+	activeBySection := map[uuid.UUID]int{}
 	for _, block := range blocks {
+		if block.SectionID != nil && block.ReviewStatus != models.GuidelineBlockRejected {
+			activeBySection[*block.SectionID]++
+		}
 		switch block.ReviewStatus {
 		case models.GuidelineBlockReviewed:
 			progress.ReviewedBlocks++
@@ -293,7 +297,7 @@ func guidelineReviewProgress(db *gorm.DB, versionID uuid.UUID) (GuidelineReviewP
 		}
 	}
 	for _, section := range sections {
-		if !parents[section.ID] && section.Level > 1 && !reviewedSections[section.ID] {
+		if !parents[section.ID] && section.Level > 1 && !guidelineLeafReviewExempt(section.Title) && activeBySection[section.ID] > 0 && !reviewedSections[section.ID] {
 			progress.EmptyClinicalLeafSections++
 		}
 	}

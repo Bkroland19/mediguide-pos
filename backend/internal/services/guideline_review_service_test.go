@@ -33,9 +33,18 @@ func TestBulkReviewBlocksApprovesOnlyEligibleBlocksAtomically(t *testing.T) {
 	if err := db.Create(&section).Error; err != nil {
 		t.Fatal(err)
 	}
+	emptyStructuralLeaf := models.GuidelineSection{VersionID: version.ID, Title: "Overview", Slug: "overview", Level: 2}
+	exemptLeaf := models.GuidelineSection{VersionID: version.ID, Title: "References", Slug: "references", Level: 2}
+	if err := db.Create(&emptyStructuralLeaf).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&exemptLeaf).Error; err != nil {
+		t.Fatal(err)
+	}
 	blocks := []models.GuidelineContentBlock{
 		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Verified prose"}`), SourceFingerprint: "p", ReviewStatus: models.GuidelineBlockDraft},
 		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockUnorderedList, ContentJSON: []byte(`{"type":"unordered_list","items":["Verified item"]}`), SourceFingerprint: "l", ReviewStatus: models.GuidelineBlockDraft},
+		{VersionID: version.ID, SectionID: &exemptLeaf.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Citation"}`), SourceFingerprint: "r", ReviewStatus: models.GuidelineBlockDraft},
 	}
 	if err := db.Create(&blocks).Error; err != nil {
 		t.Fatal(err)
@@ -53,7 +62,7 @@ func TestBulkReviewBlocksApprovesOnlyEligibleBlocksAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(page.Items) != 1 || page.TotalItems != 2 || page.TotalPages != 2 || page.Progress.PendingLowRiskBlocks != 2 || page.Progress.EmptyClinicalLeafSections != 1 {
+	if len(page.Items) != 1 || page.TotalItems != 2 || page.TotalPages != 2 || page.Progress.PendingLowRiskBlocks != 3 || page.Progress.EmptyClinicalLeafSections != 1 {
 		t.Fatalf("unexpected paginated review queue: %#v", page)
 	}
 	if page.MarkdownRevisionID == nil || *page.MarkdownRevisionID != revisionID || page.RegenerationJobID == nil || *page.RegenerationJobID != jobID {
