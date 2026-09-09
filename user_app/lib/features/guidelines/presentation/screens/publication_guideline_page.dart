@@ -24,6 +24,7 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
+import 'package:user_app/features/guidelines/presentation/widgets/publication_guideline_page_empty_section.dart';
 import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
 import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 
@@ -47,7 +48,6 @@ part '../widgets/publication_guideline_page_reader_bottom_action.dart';
 part '../widgets/publication_guideline_page_overview.dart';
 part '../widgets/publication_guideline_page_original_document_reader.dart';
 part '../widgets/publication_guideline_page_section_header_delegate.dart';
-part '../widgets/publication_guideline_page_empty_section.dart';
 
 class PublicationGuidelinePage extends ConsumerStatefulWidget {
   const PublicationGuidelinePage({
@@ -641,7 +641,7 @@ class _PublicationGuidelinePageState
                         AppSpacing.gapMd,
 
                         if (blocks.isEmpty)
-                          _EmptyReviewedSection(
+                          PublicationEmptyReviewedSection(
                             hasOriginalDocument: value.manifest.hasOriginalPdf,
                             reviewedDescendants: _reviewedDescendants(
                               section.id,

@@ -61,6 +61,20 @@ func TestGuidelineBulkReviewRequiresGuidelineReviewPermission(t *testing.T) {
 	}
 }
 
+func TestGuidelineCompletenessReportRequiresGuidelineReviewPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, endpoint := range []string{"/review/report", "/review/report/export"} {
+		router := gin.New()
+		router.Use(claimsForReviewTest([]string{"guideline.read"}))
+		router.GET(endpoint, middleware.RequirePermission("guideline.review"), func(c *gin.Context) { c.Status(http.StatusOK) })
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, endpoint, nil))
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("reader accessed %s: status=%d", endpoint, response.Code)
+		}
+	}
+}
+
 func TestRegenerationAcceptanceRequiresHighRiskPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

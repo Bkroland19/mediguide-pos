@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/lib/toast";
 import { GuidelineBulkReviewPanel } from "@/components/guidelines/guideline-bulk-review-panel";
+import { GuidelineCompletenessReport } from "@/components/guidelines/guideline-completeness-report";
 import {
   guidelineDocumentsQueryKey,
   GuidelineBlockType,
@@ -750,6 +751,8 @@ export default function GuidelineReviewPage() {
         onSelectBlock={selectBlock}
         onReviewed={refresh}
       />
+
+      <GuidelineCompletenessReport versionId={versionId} />
 
       <Tabs defaultValue="workspace" className="lg:hidden">
         <TabsList className="grid grid-cols-3">

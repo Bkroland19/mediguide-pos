@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -17,6 +18,77 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// CompletenessReport godoc
+// @Summary Get a read-only guideline publication completeness report
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Success 200 {object} services.GuidelineCompletenessReport
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/completeness-report [get]
+func (h GuidelineHandler) CompletenessReport(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	report, err := h.Service.GuidelineCompletenessReport(versionID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, report)
+}
+
+// ExportCompletenessReport godoc
+// @Summary Export a read-only guideline completeness report
+// @Tags guideline-review
+// @Produce application/json,text/csv
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param format query string false "Export format: json or csv" Enums(json,csv) default(json)
+// @Success 200 {file} binary
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/completeness-report/export [get]
+func (h GuidelineHandler) ExportCompletenessReport(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	report, err := h.Service.GuidelineCompletenessReport(versionID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	format := strings.ToLower(strings.TrimSpace(c.DefaultQuery("format", "json")))
+	filename := "guideline-completeness-" + versionID.String()
+	switch format {
+	case "json":
+		data, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			reviewError(c, err)
+			return
+		}
+		c.Header("Content-Disposition", `attachment; filename="`+filename+`.json"`)
+		c.Data(http.StatusOK, "application/json; charset=utf-8", data)
+	case "csv":
+		data, err := services.GuidelineCompletenessReportCSV(report)
+		if err != nil {
+			reviewError(c, err)
+			return
+		}
+		c.Header("Content-Disposition", `attachment; filename="`+filename+`.csv"`)
+		c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
+	default:
+		httpx.Error(c, http.StatusBadRequest, "format must be json or csv")
+	}
+}
 
 // RegenerateManifest godoc
 // @Summary Regenerate completeness metadata for a published guideline version

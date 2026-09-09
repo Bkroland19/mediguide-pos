@@ -69,7 +69,12 @@ describe("public guideline API client", () => {
       has_original_pdf: true,
       has_offline_package: true,
       section_count: 7,
+      reviewed_section_count: 5,
+      leaf_section_count: 4,
+      reviewed_leaf_section_count: 3,
+      empty_leaf_section_count: 1,
       block_count: 42,
+      reviewed_paragraph_count: 31,
       table_count: 0,
       figure_count: 0,
       algorithm_count: 0,
@@ -85,7 +90,12 @@ describe("public guideline API client", () => {
       .mockResolvedValueOnce(new Response(null, { status: 304 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await getPublicGuidelineManifest("guideline/id")).toEqual(manifest);
+    const first = await getPublicGuidelineManifest("guideline/id");
+    expect(first).toEqual(manifest);
+    expect(first.section_count).toBe(7);
+    expect(first.reviewed_section_count).toBe(5);
+    expect(first.reviewed_leaf_section_count).toBe(3);
+    expect(first.empty_leaf_section_count).toBe(1);
     expect(await getPublicGuidelineManifest("guideline/id")).toEqual(manifest);
     expect(String(fetchMock.mock.calls[0][0])).toContain("guideline%2Fid/manifest");
     const secondOptions = fetchMock.mock.calls[1][1] as RequestInit;

@@ -239,6 +239,85 @@ export interface GuidelineBulkReviewResult {
   }>;
 }
 
+export interface GuidelineCompletenessReport {
+  generated_at: string;
+  read_only: boolean;
+  guideline_id: string;
+  guideline_title: string;
+  version_id: string;
+  version: string;
+  version_status: string;
+  total_blocks: number;
+  active_blocks: number;
+  reviewed_blocks: number;
+  reviewed_percentage: number;
+  block_counts: Array<{
+    block_type: string;
+    total: number;
+    draft: number;
+    reviewed: number;
+    rejected: number;
+  }>;
+  sections: {
+    total_sections: number;
+    reviewed_sections: number;
+    leaf_sections: number;
+    reviewed_leaf_sections: number;
+    empty_leaf_sections: number;
+  };
+  empty_leaf_sections: Array<{
+    id: string;
+    title: string;
+    level: number;
+    active_block_count: number;
+    review_exempt: boolean;
+  }>;
+  sources: {
+    original_pdf_available: boolean;
+    original_pdf_reviewed: boolean;
+    offline_package_available: boolean;
+    offline_package_reviewed: boolean;
+    reviewed_fallback_available: boolean;
+  };
+  regeneration: {
+    current_markdown_revision_id?: string;
+    structured_markdown_revision_id?: string;
+    published_markdown_revision_id?: string;
+    latest_job_id?: string;
+    latest_job_status?: string;
+    latest_job_stage?: string;
+    review_id?: string;
+    review_status?: string;
+    review_revision_id?: string;
+    review_job_id?: string;
+    accepted_by?: string;
+    accepted_at?: string;
+    identities_match: boolean;
+  };
+  rag: {
+    total_chunks: number;
+    approved_chunks: number;
+    draft_chunks: number;
+    rejected_chunks: number;
+    reviewed_blocks_with_chunks: number;
+    reviewed_blocks_without_chunks: number;
+    embedding_column_available: boolean;
+    embedded_approved_chunks: number;
+    missing_approved_embeddings: number;
+    reviewed_block_chunks: number;
+    embedded_reviewed_block_chunks: number;
+    missing_reviewed_embeddings: number;
+    ready: boolean;
+  };
+  current_comparison?: {
+    current_version_id: string;
+    current_version: string;
+    same_version: boolean;
+    metrics: Array<{ name: string; current: number; candidate: number; delta: number }>;
+  };
+  validation: GuidelinePublicationValidation;
+}
+
 export interface UpdateGuidelineSectionInput {
   title?: string;
   slug?: string;
@@ -485,6 +564,26 @@ export class GuidelineDocumentsService {
       `/api/v2/guideline-versions/${versionId}/validate-publication`,
       { method: "POST" },
     );
+  }
+
+  static async getCompletenessReport(
+    versionId: string,
+  ): Promise<GuidelineCompletenessReport> {
+    return getBackendClient().request<GuidelineCompletenessReport>(
+      `/api/v2/guideline-versions/${versionId}/completeness-report`,
+      { method: "GET" },
+    );
+  }
+
+  static async downloadCompletenessReport(
+    versionId: string,
+    format: "json" | "csv",
+  ): Promise<void> {
+    const blob = await getBackendClient().request<Blob>(
+      `/api/v2/guideline-versions/${versionId}/completeness-report/export`,
+      { method: "GET", query: { format }, responseType: "blob" },
+    );
+    downloadBlob(blob, `guideline-completeness-${versionId}.${format}`);
   }
 
   static async updateReviewSection(

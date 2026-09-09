@@ -465,3 +465,23 @@ For individual validation codes and recovery instructions, see
 For implementation details, see
 [`markdown-authoring-workspace.md`](markdown-authoring-workspace.md) and
 [`guideline-publication-architecture.md`](guideline-publication-architecture.md).
+
+## Completeness report and recovery gate
+
+Before accepting a regenerated projection or publishing a large guideline,
+open **Publication completeness** in Editorial Review. The read-only report
+combines block counts by type/state, reviewed percentage, total and reviewed
+section/leaf counts, empty leaves, reviewed fallback availability, exact
+revision/job acceptance identity, RAG chunks/embeddings, validation issues, and
+the difference from the current published version. Export JSON for an audit
+attachment or CSV for spreadsheet review. Both exports require
+`guideline.review`; neither endpoint changes the version.
+
+The recovery order is fixed: duplicate the immutable published Markdown into
+a newer draft, regenerate, inspect the completeness report, review low-risk
+content explicitly, review high-risk content individually, accept the exact
+revision/job, validate, preview, and only then publish. The helper
+`scripts/prepare-guideline-recovery.sh` safely automates only duplication,
+regeneration, polling, and report export. It never reviews, accepts, or
+publishes content. See
+[`guideline-partial-publication-recovery-runbook.md`](guideline-partial-publication-recovery-runbook.md).

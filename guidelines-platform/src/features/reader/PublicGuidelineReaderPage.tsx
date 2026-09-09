@@ -38,6 +38,8 @@ import {
   StructuredAlgorithm,
   StructuredTable,
 } from "./components/GuidelineBlockRenderer";
+import { EmptyReviewedSection } from "./components/EmptyReviewedSection";
+import { reviewedDescendants } from "./components/empty-reviewed-section";
 
 type ReaderView = "read" | SupplementalReaderView;
 
@@ -637,30 +639,7 @@ function SectionReader({
             onOpenSourcePage={onOpenSourcePage}
           />
         ))
-      ) : (
-        descendants.length > 0 ? (
-          <div className="library-state">
-            <h2>Reviewed content in this chapter</h2>
-            <p>This is a container section. Continue to a reviewed subsection.</p>
-            {descendants.map((section) => (
-              <button className="button button-outline" key={section.id} onClick={() => onSelect(section.id)}>
-                {section.title}
-              </button>
-            ))}
-          </div>
-        ) : data.manifest?.has_original_pdf ? (
-          <div className="library-state">
-            <h2>0 reviewed blocks</h2>
-            <p>No approved structured content is available for this section.</p>
-            <button className="button button-outline" onClick={onOpenOriginal}>Open original document</button>
-          </div>
-        ) : (
-          <ContentState
-            title="0 reviewed blocks"
-            message="This section has not yet been published as reviewed content."
-          />
-        )
-      )}
+      ) : <EmptyReviewedSection hasOriginalDocument={Boolean(data.manifest?.has_original_pdf)} descendants={descendants} onSection={onSelect} onOpenOriginal={onOpenOriginal} />}
     </article>
   );
 }
@@ -845,26 +824,6 @@ function algorithmFromBlock(block: PublicGuidelineBlock): PublicGuidelineAlgorit
   };
 }
 
-function reviewedDescendants(
-  sectionId: string,
-  sections: PublicGuidelineSection[],
-  blocks: PublicGuidelineBlock[],
-) {
-  const children = new Map<string, PublicGuidelineSection[]>();
-  for (const section of sections) {
-    if (!section.parent_id) continue;
-    children.set(section.parent_id, [...(children.get(section.parent_id) ?? []), section]);
-  }
-  const reviewedSectionIds = new Set(blocks.map((block) => block.section_id).filter((id): id is string => Boolean(id)));
-  const queue = [...(children.get(sectionId) ?? [])];
-  const descendants: PublicGuidelineSection[] = [];
-  while (queue.length) {
-    const section = queue.shift()!;
-    if (reviewedSectionIds.has(section.id)) descendants.push(section);
-    queue.push(...(children.get(section.id) ?? []));
-  }
-  return descendants.slice(0, 12);
-}
 function Meta({ label, value }: { label: string; value?: string }) {
   return value ? (
     <div>

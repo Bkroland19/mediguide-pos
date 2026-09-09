@@ -3149,6 +3149,106 @@ export interface ServicesGuidelineCollectionItemInput {
   sort_order?: number;
 }
 
+export interface ServicesGuidelineCompletenessBlockCount {
+  block_type?: string;
+  draft?: number;
+  rejected?: number;
+  reviewed?: number;
+  total?: number;
+}
+
+export interface ServicesGuidelineCompletenessComparison {
+  current_version?: string;
+  current_version_id?: string;
+  metrics?: ServicesGuidelineCompletenessMetric[];
+  same_version?: boolean;
+}
+
+export interface ServicesGuidelineCompletenessEmptySection {
+  active_block_count?: number;
+  id?: string;
+  level?: number;
+  review_exempt?: boolean;
+  title?: string;
+}
+
+export interface ServicesGuidelineCompletenessMetric {
+  candidate?: number;
+  current?: number;
+  delta?: number;
+  name?: string;
+}
+
+export interface ServicesGuidelineCompletenessRAG {
+  approved_chunks?: number;
+  draft_chunks?: number;
+  embedded_approved_chunks?: number;
+  embedded_reviewed_block_chunks?: number;
+  embedding_column_available?: boolean;
+  missing_approved_embeddings?: number;
+  missing_reviewed_embeddings?: number;
+  ready?: boolean;
+  rejected_chunks?: number;
+  reviewed_block_chunks?: number;
+  reviewed_blocks_with_chunks?: number;
+  reviewed_blocks_without_chunks?: number;
+  total_chunks?: number;
+}
+
+export interface ServicesGuidelineCompletenessRegeneration {
+  accepted_at?: string;
+  accepted_by?: string;
+  current_markdown_revision_id?: string;
+  identities_match?: boolean;
+  latest_job_id?: string;
+  latest_job_stage?: string;
+  latest_job_status?: string;
+  published_markdown_revision_id?: string;
+  review_id?: string;
+  review_job_id?: string;
+  review_revision_id?: string;
+  review_status?: string;
+  structured_markdown_revision_id?: string;
+}
+
+export interface ServicesGuidelineCompletenessReport {
+  active_blocks?: number;
+  block_counts?: ServicesGuidelineCompletenessBlockCount[];
+  current_comparison?: ServicesGuidelineCompletenessComparison;
+  empty_leaf_sections?: ServicesGuidelineCompletenessEmptySection[];
+  generated_at?: string;
+  guideline_id?: string;
+  guideline_title?: string;
+  rag?: ServicesGuidelineCompletenessRAG;
+  read_only?: boolean;
+  regeneration?: ServicesGuidelineCompletenessRegeneration;
+  reviewed_blocks?: number;
+  reviewed_percentage?: number;
+  sections?: ServicesGuidelineCompletenessSectionSummary;
+  sources?: ServicesGuidelineCompletenessSources;
+  total_blocks?: number;
+  validation?: ServicesGuidelinePublicationValidation;
+  version?: string;
+  version_id?: string;
+  version_status?: string;
+}
+
+export interface ServicesGuidelineCompletenessSectionSummary {
+  empty_leaf_sections?: number;
+  leaf_sections?: number;
+  reviewed_leaf_sections?: number;
+  reviewed_sections?: number;
+  total_sections?: number;
+}
+
+export interface ServicesGuidelineCompletenessSources {
+  offline_package_available?: boolean;
+  offline_package_reviewed?: boolean;
+  original_pdf_available?: boolean;
+  original_pdf_reviewed?: boolean;
+  reviewed_fallback_available?: boolean;
+}
+
 export interface ServicesGuidelineDownloadDTO {
   asset_type?: string;
   downloaded_at?: string;
@@ -4823,3 +4923,11 @@ export interface ServicesUserView {
   updated_at?: string;
   verified?: boolean;
 }
+
+/**
+ * Export format: json or csv
+ * @default "json"
+ */
+export type V2GuidelineVersionsCompletenessReportExportListParamsFormatEnum =
+  | "json"
+  | "csv";

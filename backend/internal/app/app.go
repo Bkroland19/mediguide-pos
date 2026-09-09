@@ -550,6 +550,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), rateLimiter.Limit(middleware.Policy("guideline-publish", 10, time.Hour, 0), middleware.UserIdentity), guidelineH.Publish)
 		protected.GET("/guideline-versions/:id/review", middleware.RequirePermission("guideline.review"), guidelineH.ReviewWorkspace)
 		protected.GET("/guideline-versions/:id/review-blocks", middleware.RequirePermission("guideline.review"), guidelineH.ListReviewBlocks)
+		protected.GET("/guideline-versions/:id/completeness-report", middleware.RequirePermission("guideline.review"), guidelineH.CompletenessReport)
+		protected.GET("/guideline-versions/:id/completeness-report/export", middleware.RequirePermission("guideline.review"), guidelineH.ExportCompletenessReport)
 		protected.GET("/guideline-versions/:id/extraction-status", middleware.RequirePermission("guideline.markdown.read"), guidelineH.ExtractionStatus)
 		protected.GET("/guideline-versions/:id/preview", middleware.RequirePermission("guideline.markdown.read"), guidelineH.PreviewVersion)
 		protected.POST("/guideline-versions/:id/assets", middleware.RequirePermission("guideline.asset.manage"), rateLimiter.Limit(middleware.Policy("guideline-asset-upload", 60, time.Hour, 10), middleware.UserIdentity), guidelineH.CreateGuidelineAsset)

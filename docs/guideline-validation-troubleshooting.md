@@ -606,3 +606,31 @@ When reporting an unresolved issue, provide:
 
 Do not include access tokens, passwords, Firebase credentials, MinIO secrets, or
 unredacted patient information.
+
+## Completeness report diagnosis
+
+Use `GET /api/v2/guideline-versions/{id}/completeness-report` before changing
+review state. The response is explicitly `read_only: true`. Important fields:
+
+- `reviewed_percentage` uses active (non-rejected) blocks as its denominator.
+- `sections.total_sections` is the complete structure;
+  `reviewed_sections` is the subset with direct reviewed blocks.
+- `empty_leaf_sections` lists leaves with no reviewed blocks and identifies
+  known structural exceptions such as references or indexes.
+- `sources.reviewed_fallback_available` is true only for a legacy authoritative
+  PDF or a reviewed original-PDF/offline-package asset.
+- `regeneration.identities_match` confirms that the current Markdown,
+  structured Markdown, latest regeneration job, and regeneration review refer
+  to the same immutable projection.
+- `rag.ready` requires every reviewed block to have chunks and every one of
+  those candidate chunks to have an embedding. `approved_chunks` separately
+  reports what is publicly searchable now. A false value is a publication/retrieval readiness
+  signal, not permission to expose draft chunks.
+- `current_comparison` shows coverage deltas against the document's current
+  published version.
+
+Export with `/completeness-report/export?format=json` or `format=csv`. If a
+report fails to load, confirm the user has `guideline.review`, the requested
+version exists, and migrations include the regeneration-review tables. Do not
+repair counts with direct SQL; correct review state through Editorial Review
+and regenerate derived manifests/packages through supported operations.

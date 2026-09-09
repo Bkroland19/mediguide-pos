@@ -304,6 +304,58 @@ func TestGuidelinePublicationValidationRejectsMostlyEmptyClinicalLeaves(t *testi
 	}
 }
 
+func TestGuidelinePublicationValidationRejectsPartialWithoutReviewedFallback(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2026.10.01", Status: "review_required", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, Title: "Diagnosis", Slug: "diagnosis", Level: 2}
+	if err := db.Create(&section).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.GuidelineContentBlock{
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Reviewed"}`), ReviewStatus: models.GuidelineBlockReviewed},
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Pending"}`), ReviewStatus: models.GuidelineBlockDraft},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatalf("partial publication without fallback was not blocked: %#v", validation.Errors)
+	}
+
+	asset := models.GuidelineAsset{VersionID: version.ID, Type: models.GuidelineAssetOriginalPDF, MIMEType: "application/pdf", StorageKey: "source.pdf", Checksum: "sum", SizeBytes: 1, ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&asset).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err = (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatal("an unreviewed PDF incorrectly satisfied the fallback gate")
+	}
+	if err := db.Model(&asset).Update("review_status", models.GuidelineBlockReviewed).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err = (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatalf("reviewed PDF did not satisfy fallback gate: %#v", validation.Errors)
+	}
+}
+
 func TestReviewWorkspaceExposesAuthoritativeBlockReviewPolicy(t *testing.T) {
 	db := guidelineReviewTestDB(t)
 	document := models.GuidelineDocument{Title: "Clinical guidance"}
@@ -750,7 +802,7 @@ func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.GuidelineDocument{}, &models.GuidelineVersion{}, &models.GuidelineSection{},
 		&models.GuidelineContentBlock{}, &models.GuidelineAsset{}, &models.GuidelineChunk{}, &models.AuditLog{},
-		&models.IngestionJob{}, &models.GuidelineMarkdownRevision{},
+		&models.IngestionJob{}, &models.GuidelineMarkdownRevision{}, &models.GuidelineRegenerationReview{},
 	); err != nil {
 		t.Fatal(err)
 	}
