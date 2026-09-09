@@ -2,7 +2,7 @@ name: user_app
 description: "MediGuide Mobile Application"
 publish_to: "none"
 
-version: 2.1.1+53
+version: 2.1.2+54
 
 # ============================================================
 # ENVIRONMENT
