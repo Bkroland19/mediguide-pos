@@ -8,18 +8,17 @@ import {
 
 import {
   getPublicGuideline,
+  getPublicGuidelineContent,
   getPublicGuidelineManifest,
   getPublicGuidelineMarkdown,
   getPublicGuidelineOriginal,
   getPublicGuidelineSection,
-  listPublicGuidelineAlgorithms,
   listPublicGuidelineFigures,
-  listPublicGuidelineSections,
-  listPublicGuidelineTables,
   PublicApiError,
   type PublicGuideline,
   type PublicAICitation,
   type PublicGuidelineAlgorithm,
+  type PublicGuidelineBlock,
   type PublicGuidelineFigure,
   type PublicGuidelineManifest,
   type PublicGuidelineSection,
@@ -39,6 +38,8 @@ import {
   StructuredAlgorithm,
   StructuredTable,
 } from "./components/GuidelineBlockRenderer";
+import { EmptyReviewedSection } from "./components/EmptyReviewedSection";
+import { reviewedDescendants } from "./components/empty-reviewed-section";
 
 type ReaderView = "read" | SupplementalReaderView;
 
@@ -46,6 +47,7 @@ type ReaderData = {
   guideline: PublicGuideline;
   manifest?: PublicGuidelineManifest;
   sections: PublicGuidelineSection[];
+  blocks: PublicGuidelineBlock[];
   tables: PublicGuidelineTable[];
   figures: PublicGuidelineFigure[];
   algorithms: PublicGuidelineAlgorithm[];
@@ -112,7 +114,12 @@ export function PublicGuidelineReaderPage() {
     )
       return;
     const controller = new AbortController();
-    getPublicGuidelineSection(guidelineId, selectedSectionId, controller.signal)
+    getPublicGuidelineSection(
+      guidelineId,
+      selectedSectionId,
+      state.data.manifest!,
+      controller.signal,
+    )
       .then((detail) =>
         setSectionState({
           status: "ready",
@@ -247,8 +254,10 @@ export function PublicGuidelineReaderPage() {
 
         {data.partial && (
           <div className="partial-extraction-notice" role="status">
-            Some structured content is unavailable. The original document
-            remains the fidelity reference.
+            {data.manifest?.reviewed_section_count ?? 0} of {data.manifest?.section_count ?? data.sections.length} sections contain reviewed content.
+            {data.manifest?.has_original_pdf
+              ? " The original document remains available as the fidelity reference."
+              : " Unreviewed content is not publicly available."}
           </div>
         )}
 
@@ -276,6 +285,7 @@ export function PublicGuidelineReaderPage() {
                 )}
                 onSelect={selectSection}
                 onOpenSourcePage={(page) => openOriginal(guidelineId, page)}
+                onOpenOriginal={() => openOriginal(guidelineId)}
               />
             )}
             {view === "tables" && (
@@ -309,9 +319,10 @@ async function loadReaderData(
 ): Promise<ReaderData> {
   const guideline = await getPublicGuideline(id, signal);
   let manifest: PublicGuidelineManifest | undefined;
-  let partial = false;
+  let partial: boolean;
   try {
     manifest = await getPublicGuidelineManifest(id, signal);
+    partial = manifest.extraction_quality === "partially_reviewed";
   } catch (error) {
     if (signal.aborted) throw error;
     if (error instanceof PublicApiError && error.kind === "rate-limited")
@@ -324,53 +335,35 @@ async function loadReaderData(
     manifest.section_count > 0;
   let sections: PublicGuidelineSection[] = [];
   let tables: PublicGuidelineTable[] = [];
+  let blocks: PublicGuidelineBlock[] = [];
   let figures: PublicGuidelineFigure[] = [];
   let algorithms: PublicGuidelineAlgorithm[] = [];
   if (structured && manifest) {
-    const requests: Array<Promise<unknown>> = [
-      listPublicGuidelineSections(id, signal),
-    ];
-    if (manifest.has_tables)
-      requests.push(listPublicGuidelineTables(id, signal));
+    const requests: Array<Promise<unknown>> = [getPublicGuidelineContent(id, manifest, signal)];
     if (manifest.has_figures)
       requests.push(listPublicGuidelineFigures(id, signal));
-    if (manifest.has_algorithms)
-      requests.push(listPublicGuidelineAlgorithms(id, signal));
     const results = await Promise.allSettled(requests);
-    let cursor = 0;
-    const sectionResult = results[cursor++];
-    if (sectionResult.status === "fulfilled")
-      sections = (
-        sectionResult.value as Awaited<
-          ReturnType<typeof listPublicGuidelineSections>
-        >
-      ).items;
-    else partial = true;
-    if (manifest.has_tables) {
-      const result = results[cursor++];
-      if (result.status === "fulfilled")
-        tables = (
-          result.value as Awaited<ReturnType<typeof listPublicGuidelineTables>>
-        ).items;
-      else partial = true;
+    const contentResult = results[0];
+    if (contentResult.status === "fulfilled") {
+      const content = contentResult.value as Awaited<ReturnType<typeof getPublicGuidelineContent>>;
+      sections = content.sections;
+      blocks = content.blocks;
+      tables = content.blocks.filter((block) => block.type === "table").map(tableFromBlock);
+      algorithms = content.blocks.filter((block) => block.type === "algorithm").map(algorithmFromBlock);
+    } else {
+      partial = true;
     }
     if (manifest.has_figures) {
-      const result = results[cursor++];
+      const result = results[1];
       if (result.status === "fulfilled")
         figures = (
           result.value as Awaited<ReturnType<typeof listPublicGuidelineFigures>>
         ).items;
       else partial = true;
     }
-    if (manifest.has_algorithms) {
-      const result = results[cursor];
-      if (result.status === "fulfilled")
-        algorithms = (
-          result.value as Awaited<
-            ReturnType<typeof listPublicGuidelineAlgorithms>
-          >
-        ).items;
-      else partial = true;
+    const currentManifest = await getPublicGuidelineManifest(id, signal);
+    if (publicationIdentity(currentManifest) !== publicationIdentity(manifest)) {
+      throw new PublicApiError("invalid-response");
     }
   }
   let markdown: PublicMarkdown | undefined;
@@ -387,6 +380,7 @@ async function loadReaderData(
     guideline,
     manifest,
     sections,
+    blocks,
     tables,
     figures,
     algorithms,
@@ -421,7 +415,7 @@ function GuidelineHero({
                 Read guideline
               </a>
             )}
-            {manifest?.has_original_pdf !== false && (
+            {manifest?.has_original_pdf === true && (
               <button
                 className="button button-outline"
                 type="button"
@@ -570,17 +564,23 @@ function SectionReader({
   state,
   onSelect,
   onOpenSourcePage,
+  onOpenOriginal,
 }: {
   data: ReaderData;
   state: SectionDisplayState;
   onSelect: (id: string) => void;
   onOpenSourcePage: (page: number) => void;
+  onOpenOriginal: () => void;
 }) {
   if (data.sections.length === 0)
     return (
       <ContentState
         title="Structured chapters are unavailable"
-        message="Use the compatibility or original-document view for this publication."
+        message={
+          data.manifest?.has_original_pdf
+            ? "Open the original document to read this publication."
+            : "This publication does not yet contain reviewed structured chapters."
+        }
       />
     );
   if (state.status === "idle")
@@ -589,9 +589,8 @@ function SectionReader({
         <span className="eyebrow">Chapters</span>
         <h2>Select a section</h2>
         <p>
-          This publication has {data.sections.length} reviewed section
-          {data.sections.length === 1 ? "" : "s"}. Its navigation follows the
-          structure of the uploaded document.
+          This publication has {data.manifest?.section_count ?? data.sections.length} section
+          {(data.manifest?.section_count ?? data.sections.length) === 1 ? "" : "s"}, including {data.manifest?.reviewed_section_count ?? 0} with reviewed content. Its navigation follows the structure of the uploaded document.
         </p>
         <button
           className="button button-primary"
@@ -607,10 +606,19 @@ function SectionReader({
     return (
       <ContentState
         title="Section unavailable"
-        message="This section could not be loaded. Choose another section or use the original document."
+        message={
+          data.manifest?.has_original_pdf
+            ? "This section could not be loaded. Choose another section or open the original document."
+            : "This section could not be loaded. Choose another reviewed section and try again."
+        }
       />
     );
   const figures = new Map(data.figures.map((figure) => [figure.id, figure]));
+  const descendants = reviewedDescendants(
+    state.detail.section.id,
+    data.sections,
+    data.blocks,
+  );
   return (
     <article className="structured-section">
       <header>
@@ -631,12 +639,7 @@ function SectionReader({
             onOpenSourcePage={onOpenSourcePage}
           />
         ))
-      ) : (
-        <ContentState
-          title="No reviewed blocks"
-          message="Use the original document for this section."
-        />
-      )}
+      ) : <EmptyReviewedSection hasOriginalDocument={Boolean(data.manifest?.has_original_pdf)} descendants={descendants} onSection={onSelect} onOpenOriginal={onOpenOriginal} />}
     </article>
   );
 }
@@ -786,6 +789,41 @@ function ContentState({ title, message }: { title: string; message: string }) {
     </div>
   );
 }
+
+function publicationIdentity(manifest: PublicGuidelineManifest) {
+  return `${manifest.guideline_id}:${manifest.version_id}:${manifest.package_version}:${manifest.checksum}`;
+}
+
+function tableFromBlock(block: PublicGuidelineBlock): PublicGuidelineTable {
+  return {
+    id: block.id, section_id: block.section_id, sort_order: block.sort_order,
+    page_start: block.page_start, page_end: block.page_end,
+    content: {
+      type: "table",
+      title: typeof block.content.title === "string" ? block.content.title : undefined,
+      columns: Array.isArray(block.content.columns) ? block.content.columns.map(String) : [],
+      rows: Array.isArray(block.content.rows) ? block.content.rows.map((row) => Array.isArray(row) ? row.map(String) : []) : [],
+      footnotes: Array.isArray(block.content.footnotes) ? block.content.footnotes.map(String) : [],
+    },
+  };
+}
+
+function algorithmFromBlock(block: PublicGuidelineBlock): PublicGuidelineAlgorithm {
+  const nodes = Array.isArray(block.content.nodes) ? block.content.nodes : [];
+  return {
+    id: block.id, section_id: block.section_id, sort_order: block.sort_order,
+    page_start: block.page_start, page_end: block.page_end,
+    content: {
+      type: "algorithm",
+      title: typeof block.content.title === "string" ? block.content.title : undefined,
+      nodes: nodes.filter((node): node is Record<string, unknown> => typeof node === "object" && node !== null).map((node) => ({
+        id: String(node.id ?? ""), label: String(node.label ?? ""), kind: String(node.kind ?? ""),
+        next: Array.isArray(node.next) ? node.next.map(String) : undefined,
+      })),
+    },
+  };
+}
+
 function Meta({ label, value }: { label: string; value?: string }) {
   return value ? (
     <div>

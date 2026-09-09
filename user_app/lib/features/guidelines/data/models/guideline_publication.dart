@@ -74,7 +74,12 @@ abstract class GuidelineManifest with _$GuidelineManifest {
     @Default(false)
     bool hasOfflinePackage,
     @JsonKey(name: 'section_count') @Default(0) int sectionCount,
+    @JsonKey(name: 'reviewed_section_count') @Default(0) int reviewedSectionCount,
+    @JsonKey(name: 'leaf_section_count') @Default(0) int leafSectionCount,
+    @JsonKey(name: 'reviewed_leaf_section_count') @Default(0) int reviewedLeafSectionCount,
+    @JsonKey(name: 'empty_leaf_section_count') @Default(0) int emptyLeafSectionCount,
     @JsonKey(name: 'block_count') @Default(0) int blockCount,
+    @JsonKey(name: 'reviewed_paragraph_count') @Default(0) int reviewedParagraphCount,
     @JsonKey(name: 'table_count') @Default(0) int tableCount,
     @JsonKey(name: 'figure_count') @Default(0) int figureCount,
     @JsonKey(name: 'algorithm_count') @Default(0) int algorithmCount,

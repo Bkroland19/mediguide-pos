@@ -10,10 +10,14 @@ final class GuidelinePublicationRepository {
 
   static const _publicationType = 'guideline_publication';
   static const _contentType = 'guideline_publication_content';
+  static const _contentIndexType = 'guideline_publication_content_index';
   static const _ttl = Duration(hours: 24);
 
   final BackendApiService _api;
   final LocalCacheService _cache;
+
+  String get _cacheScope =>
+      'public:${Uri.parse(AppConfig.current.apiBaseUrl).normalizePath().toString().toLowerCase()}';
 
   Future<PaginatedResponse<GuidelinePublication>> publications({
     int page = 1,
@@ -40,7 +44,7 @@ final class GuidelinePublicationRepository {
       await _bestEffortCache(
         () => _cache.putMany(
           type: _publicationType,
-          scope: 'public',
+          scope: _cacheScope,
           ttl: _ttl,
           entities: items.map(
             (item) => CachedEntityInput(
@@ -64,7 +68,7 @@ final class GuidelinePublicationRepository {
     } catch (_) {
       final cached = await _cache.list(
         type: _publicationType,
-        scope: 'public',
+        scope: _cacheScope,
         search: search.trim().isNotEmpty ? search : programArea,
         limit: programArea.trim().isEmpty ? perPage : 1000,
         offset: programArea.trim().isEmpty
@@ -101,10 +105,15 @@ final class GuidelinePublicationRepository {
       throw ArgumentError.value(guidelineId, 'guidelineId', 'is required');
     }
 
+    GuidelineManifest? requestedManifest;
     try {
+      var manifestResponse = await _public(
+        '/api/public/guidelines/$id/manifest',
+      );
+      var manifest = _manifestFromContract(_data(manifestResponse));
+      requestedManifest = manifest;
       final results = await Future.wait<Map<String, dynamic>>([
         _public('/api/public/guidelines/$id'),
-        _public('/api/public/guidelines/$id/manifest'),
         _structuredContent(id),
         _public(
           '/api/public/guidelines/$id/figures',
@@ -112,14 +121,23 @@ final class GuidelinePublicationRepository {
         ),
       ]);
       final publication = _publicationFromContract(_data(results[0]));
-      final manifest = _manifestFromContract(_data(results[1]));
+      final structured = _data(results[1]);
+      _verifyContentIdentity(structured, manifest);
+      manifestResponse = await _public('/api/public/guidelines/$id/manifest');
+      final currentManifest = _manifestFromContract(_data(manifestResponse));
+      if (_publicationIdentity(currentManifest) !=
+          _publicationIdentity(manifest)) {
+        throw const GuidelinePublicationVersionMismatch();
+      }
+      manifest = currentManifest;
+      requestedManifest = manifest;
       final sections =
           _maps(
-              _data(results[2])['sections'],
+              structured['sections'],
             ).map(_sectionFromContract).toList(growable: false)
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       final figureAssets = <String, GuidelineAsset>{};
-      for (final row in _maps(_data(results[3])['items'])) {
+      for (final row in _maps(_data(results[2])['items'])) {
         final blockId = row['id']?.toString() ?? '';
         final asset = _map(row['asset']);
         if (blockId.isNotEmpty && asset.isNotEmpty) {
@@ -127,7 +145,7 @@ final class GuidelinePublicationRepository {
         }
       }
 
-      final blocks = _maps(_data(results[2])['blocks'])
+      final blocks = _maps(structured['blocks'])
           .map(
             (row) => _block(
               ServicesPublicGuidelineBlock.fromJson(row),
@@ -143,10 +161,11 @@ final class GuidelinePublicationRepository {
         sections: sections,
         blocks: blocks,
       );
+      final cacheId = _publicationIdentity(manifest);
       await _cache.put(
         type: _contentType,
-        id: id,
-        scope: 'public',
+        id: cacheId,
+        scope: _cacheScope,
         ttl: _ttl,
         version: manifest.version,
         data: <String, dynamic>{
@@ -162,12 +181,33 @@ final class GuidelinePublicationRepository {
           ...blocks.map(_blockText),
         ].join(' '),
       );
+      await _cache.put(
+        type: _contentIndexType,
+        id: id,
+        scope: _cacheScope,
+        ttl: _ttl,
+        version: manifest.version,
+        data: {'cache_id': cacheId},
+      );
       return value;
+    } on GuidelinePublicationVersionMismatch {
+      rethrow;
     } catch (_) {
+      final index = await _cache.get(
+        type: _contentIndexType,
+        id: id,
+        scope: _cacheScope,
+      );
+      final cacheId = index?['cache_id']?.toString() ?? '';
+      if (cacheId.isEmpty) rethrow;
+      if (requestedManifest != null &&
+          cacheId != _publicationIdentity(requestedManifest)) {
+        throw const GuidelinePublicationVersionMismatch();
+      }
       final cached = await _cache.get(
         type: _contentType,
-        id: id,
-        scope: 'public',
+        id: cacheId,
+        scope: _cacheScope,
       );
       if (cached == null) rethrow;
       return GuidelinePublicationContent(
@@ -210,7 +250,7 @@ final class GuidelinePublicationRepository {
     } catch (_) {
       final cached = await _cache.list(
         type: _contentType,
-        scope: 'public',
+        scope: _cacheScope,
         search: normalized,
         limit: 100,
       );
@@ -262,59 +302,40 @@ final class GuidelinePublicationRepository {
     return data.isEmpty ? null : _assetFromContract(data);
   }
 
-  Future<Map<String, dynamic>> _structuredContent(String guidelineId) async {
-    try {
-      return await _public('/api/public/guidelines/$guidelineId/content');
-    } catch (_) {
-      // Supports a rolling deployment where a newer app briefly reaches an
-      // older API. Pagination removes the former 500-section truncation; small
-      // batches keep the compatibility path from flooding the server.
-      final sections = <Map<String, dynamic>>[];
-      var page = 1;
-      var totalPages = 1;
-      do {
-        final response = await _public(
-          '/api/public/guidelines/$guidelineId/sections',
-          query: {
-            'page': '$page',
-            'per_page': '500',
-            'sort': 'sort_order',
-            'order': 'asc',
-          },
-        );
-        final data = _data(response);
-        sections.addAll(_maps(data['items']));
-        totalPages = _integer(data['total_pages'], 1);
-        page++;
-      } while (page <= totalPages);
-
-      final blocks = <Map<String, dynamic>>[];
-      for (var offset = 0; offset < sections.length; offset += 12) {
-        final end = offset + 12 < sections.length
-            ? offset + 12
-            : sections.length;
-        final responses = await Future.wait(
-          sections.sublist(offset, end).map((section) {
-            final sectionId = section['id']?.toString() ?? '';
-            return _public(
-              '/api/public/guidelines/$guidelineId/sections/$sectionId',
-            );
-          }),
-        );
-        for (final response in responses) {
-          blocks.addAll(_maps(_data(response)['blocks']));
-        }
-      }
-      return {
-        'data': {'sections': sections, 'blocks': blocks},
-      };
-    }
-  }
+  Future<Map<String, dynamic>> _structuredContent(String guidelineId) =>
+      _public('/api/public/guidelines/$guidelineId/content');
 
   Future<Map<String, dynamic>> _public(
     String path, {
     Map<String, String>? query,
   }) => _api.requestJson(path, method: 'GET', query: query, includeAuth: false);
+}
+
+final class GuidelinePublicationVersionMismatch implements Exception {
+  const GuidelinePublicationVersionMismatch();
+
+  @override
+  String toString() =>
+      'The guideline publication changed while content was loading. Retry to load the current version.';
+}
+
+String _publicationIdentity(GuidelineManifest manifest) => [
+  manifest.guidelineId,
+  manifest.versionId,
+  manifest.packageVersion,
+  manifest.checksum,
+].join(':');
+
+void _verifyContentIdentity(
+  Map<String, dynamic> content,
+  GuidelineManifest manifest,
+) {
+  if (content['guideline_id']?.toString() != manifest.guidelineId ||
+      content['version_id']?.toString() != manifest.versionId ||
+      _integer(content['package_version'], -1) != manifest.packageVersion ||
+      content['checksum']?.toString() != manifest.checksum) {
+    throw const GuidelinePublicationVersionMismatch();
+  }
 }
 
 Future<void> _bestEffortCache(Future<void> Function() write) async {
@@ -411,7 +432,12 @@ GuidelineManifest _manifestFromContract(Map<String, dynamic> json) {
     hasOriginalPdf: dto.hasOriginalPdf ?? false,
     hasOfflinePackage: dto.hasOfflinePackage ?? false,
     sectionCount: dto.sectionCount ?? 0,
+    reviewedSectionCount: dto.reviewedSectionCount ?? 0,
+    leafSectionCount: dto.leafSectionCount ?? 0,
+    reviewedLeafSectionCount: dto.reviewedLeafSectionCount ?? 0,
+    emptyLeafSectionCount: dto.emptyLeafSectionCount ?? 0,
     blockCount: dto.blockCount ?? 0,
+    reviewedParagraphCount: dto.reviewedParagraphCount ?? 0,
     tableCount: dto.tableCount ?? 0,
     figureCount: dto.figureCount ?? 0,
     algorithmCount: dto.algorithmCount ?? 0,

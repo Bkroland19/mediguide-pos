@@ -25,28 +25,33 @@ type PublicGuidelineContentQuery struct {
 }
 
 type PublicGuidelineManifest struct {
-	GuidelineID       uuid.UUID                         `json:"guideline_id"`
-	VersionID         uuid.UUID                         `json:"version_id"`
-	Version           string                            `json:"version"`
-	SchemaVersion     int                               `json:"schema_version"`
-	PackageVersion    int                               `json:"package_version"`
-	ExtractionQuality models.GuidelineExtractionQuality `json:"extraction_quality"`
-	RecommendedMode   string                            `json:"recommended_mode" enums:"structured,partial,original_document"`
-	HasChapters       bool                              `json:"has_chapters"`
-	HasKeyPoints      bool                              `json:"has_key_points"`
-	HasTables         bool                              `json:"has_tables"`
-	HasFigures        bool                              `json:"has_figures"`
-	HasAlgorithms     bool                              `json:"has_algorithms"`
-	HasOriginalPDF    bool                              `json:"has_original_pdf"`
-	HasOfflinePackage bool                              `json:"has_offline_package"`
-	SectionCount      int                               `json:"section_count"`
-	BlockCount        int                               `json:"block_count"`
-	TableCount        int                               `json:"table_count"`
-	FigureCount       int                               `json:"figure_count"`
-	AlgorithmCount    int                               `json:"algorithm_count"`
-	Checksum          string                            `json:"checksum"`
-	ETag              string                            `json:"etag"`
-	GeneratedAt       time.Time                         `json:"generated_at"`
+	GuidelineID              uuid.UUID                         `json:"guideline_id"`
+	VersionID                uuid.UUID                         `json:"version_id"`
+	Version                  string                            `json:"version"`
+	SchemaVersion            int                               `json:"schema_version"`
+	PackageVersion           int                               `json:"package_version"`
+	ExtractionQuality        models.GuidelineExtractionQuality `json:"extraction_quality"`
+	RecommendedMode          string                            `json:"recommended_mode" enums:"structured,partial,original_document"`
+	HasChapters              bool                              `json:"has_chapters"`
+	HasKeyPoints             bool                              `json:"has_key_points"`
+	HasTables                bool                              `json:"has_tables"`
+	HasFigures               bool                              `json:"has_figures"`
+	HasAlgorithms            bool                              `json:"has_algorithms"`
+	HasOriginalPDF           bool                              `json:"has_original_pdf"`
+	HasOfflinePackage        bool                              `json:"has_offline_package"`
+	SectionCount             int                               `json:"section_count"`
+	ReviewedSectionCount     int                               `json:"reviewed_section_count"`
+	LeafSectionCount         int                               `json:"leaf_section_count"`
+	ReviewedLeafSectionCount int                               `json:"reviewed_leaf_section_count"`
+	EmptyLeafSectionCount    int                               `json:"empty_leaf_section_count"`
+	BlockCount               int                               `json:"block_count"`
+	ReviewedParagraphCount   int                               `json:"reviewed_paragraph_count"`
+	TableCount               int                               `json:"table_count"`
+	FigureCount              int                               `json:"figure_count"`
+	AlgorithmCount           int                               `json:"algorithm_count"`
+	Checksum                 string                            `json:"checksum"`
+	ETag                     string                            `json:"etag"`
+	GeneratedAt              time.Time                         `json:"generated_at"`
 }
 
 type PublicGuidelineSection struct {
@@ -71,8 +76,12 @@ type PublicGuidelineBlock struct {
 }
 
 type PublicGuidelineSectionDetail struct {
-	Section PublicGuidelineSection `json:"section"`
-	Blocks  []PublicGuidelineBlock `json:"blocks"`
+	GuidelineID    uuid.UUID              `json:"guideline_id"`
+	VersionID      uuid.UUID              `json:"version_id"`
+	PackageVersion int                    `json:"package_version"`
+	Checksum       string                 `json:"checksum"`
+	Section        PublicGuidelineSection `json:"section"`
+	Blocks         []PublicGuidelineBlock `json:"blocks"`
 }
 
 // PublicGuidelineContent is the complete reviewed structured projection used by
@@ -80,8 +89,12 @@ type PublicGuidelineSectionDetail struct {
 // section for large publications while the section endpoints remain available
 // for deep links and backwards-compatible clients.
 type PublicGuidelineContent struct {
-	Sections []PublicGuidelineSection `json:"sections"`
-	Blocks   []PublicGuidelineBlock   `json:"blocks"`
+	GuidelineID    uuid.UUID                `json:"guideline_id"`
+	VersionID      uuid.UUID                `json:"version_id"`
+	PackageVersion int                      `json:"package_version"`
+	Checksum       string                   `json:"checksum"`
+	Sections       []PublicGuidelineSection `json:"sections"`
+	Blocks         []PublicGuidelineBlock   `json:"blocks"`
 }
 
 type PublicGuidelineTable struct {
@@ -185,18 +198,25 @@ func (s PublicGuidelineService) Sections(ctx context.Context, guidelineID uuid.U
 }
 
 func (s PublicGuidelineService) Content(ctx context.Context, guidelineID uuid.UUID) (*PublicGuidelineContent, error) {
-	if _, err := s.getVisibleRow(ctx, guidelineID); err != nil {
-		return nil, err
-	}
-	sectionQuery := s.publicSectionsQuery(ctx, guidelineID)
+	var manifest models.GuidelineVersionManifest
 	var sectionRows []models.GuidelineSection
-	if err := sectionQuery.Select("gs.*").Order("gs.sort_order ASC, gs.id ASC").Scan(&sectionRows).Error; err != nil {
-		return nil, err
-	}
-
-	blockQuery := s.publicBlocksQuery(ctx, guidelineID)
 	var blockRows []models.GuidelineContentBlock
-	if err := blockQuery.Select("gcb.*").Order("gcb.sort_order ASC, gcb.id ASC").Scan(&blockRows).Error; err != nil {
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := visibleManifestQuery(tx, guidelineID).Take(&manifest).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrPublicGuidelineNotFound
+			}
+			return err
+		}
+		if err := tx.Where("version_id = ? AND deleted_at IS NULL", manifest.VersionID).
+			Order("sort_order ASC, id ASC").Find(&sectionRows).Error; err != nil {
+			return err
+		}
+		return tx.Where("version_id = ? AND deleted_at IS NULL AND review_status = ?", manifest.VersionID, models.GuidelineBlockReviewed).
+			Where("section_id IS NULL OR EXISTS (SELECT 1 FROM guideline_sections active_section WHERE active_section.id = guideline_content_blocks.section_id AND active_section.version_id = ? AND active_section.deleted_at IS NULL)", manifest.VersionID).
+			Order("sort_order ASC, id ASC").Find(&blockRows).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -208,29 +228,53 @@ func (s PublicGuidelineService) Content(ctx context.Context, guidelineID uuid.UU
 	for _, row := range blockRows {
 		blocks = append(blocks, publicBlock(row))
 	}
-	return &PublicGuidelineContent{Sections: sections, Blocks: blocks}, nil
+	return &PublicGuidelineContent{
+		GuidelineID: guidelineID, VersionID: manifest.VersionID,
+		PackageVersion: manifest.PackageVersion, Checksum: manifest.Checksum,
+		Sections: sections, Blocks: blocks,
+	}, nil
 }
 
 func (s PublicGuidelineService) Section(ctx context.Context, guidelineID, sectionID uuid.UUID) (*PublicGuidelineSectionDetail, error) {
+	var manifest models.GuidelineVersionManifest
 	var section models.GuidelineSection
-	err := s.publicSectionsQuery(ctx, guidelineID).Select("gs.*").Where("gs.id = ?", sectionID).Take(&section).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrPublicGuidelineNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
 	var rows []models.GuidelineContentBlock
-	if err := s.publicBlocksQuery(ctx, guidelineID).
-		Where("gcb.section_id = ?", sectionID).
-		Order("gcb.sort_order ASC, gcb.id ASC").Select("gcb.*").Scan(&rows).Error; err != nil {
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := visibleManifestQuery(tx, guidelineID).Take(&manifest).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrPublicGuidelineNotFound
+			}
+			return err
+		}
+		if err := tx.Where("id = ? AND version_id = ? AND deleted_at IS NULL", sectionID, manifest.VersionID).Take(&section).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrPublicGuidelineNotFound
+			}
+			return err
+		}
+		return tx.Where("version_id = ? AND section_id = ? AND deleted_at IS NULL AND review_status = ?", manifest.VersionID, sectionID, models.GuidelineBlockReviewed).
+			Order("sort_order ASC, id ASC").Find(&rows).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 	blocks := make([]PublicGuidelineBlock, 0, len(rows))
 	for _, row := range rows {
 		blocks = append(blocks, publicBlock(row))
 	}
-	return &PublicGuidelineSectionDetail{Section: publicSection(section), Blocks: blocks}, nil
+	return &PublicGuidelineSectionDetail{
+		GuidelineID: guidelineID, VersionID: manifest.VersionID,
+		PackageVersion: manifest.PackageVersion, Checksum: manifest.Checksum,
+		Section: publicSection(section), Blocks: blocks,
+	}, nil
+}
+
+func visibleManifestQuery(db *gorm.DB, guidelineID uuid.UUID) *gorm.DB {
+	return db.Table("guideline_version_manifests AS gvm").
+		Joins("JOIN guideline_versions AS gv ON gv.id = gvm.version_id AND gv.deleted_at IS NULL AND lower(gv.status) = 'published'").
+		Joins("JOIN guideline_documents AS gd ON gd.id = gvm.guideline_id AND gd.current_version_id = gv.id AND gd.deleted_at IS NULL").
+		Where("gvm.deleted_at IS NULL AND gd.id = ?", guidelineID).
+		Select("gvm.*")
 }
 
 func (s PublicGuidelineService) Tables(ctx context.Context, guidelineID uuid.UUID, input PublicGuidelineContentQuery) (*PageResult[PublicGuidelineTable], error) {
@@ -435,8 +479,11 @@ func publicManifest(row *models.GuidelineVersionManifest) *PublicGuidelineManife
 		HasKeyPoints:    row.HasKeyPoints, HasTables: row.HasTables, HasFigures: row.HasFigures,
 		HasAlgorithms: row.HasAlgorithms, HasOriginalPDF: row.HasOriginalPDF,
 		HasOfflinePackage: row.HasOfflinePackage, SectionCount: row.SectionCount,
+		ReviewedSectionCount: row.ReviewedSectionCount, LeafSectionCount: row.LeafSectionCount,
+		ReviewedLeafSectionCount: row.ReviewedLeafSectionCount, EmptyLeafSectionCount: row.EmptyLeafSectionCount,
 		BlockCount: row.BlockCount, TableCount: row.TableCount, FigureCount: row.FigureCount,
-		AlgorithmCount: row.AlgorithmCount, Checksum: row.Checksum, ETag: row.ETag,
+		ReviewedParagraphCount: row.ReviewedParagraphCount,
+		AlgorithmCount:         row.AlgorithmCount, Checksum: row.Checksum, ETag: row.ETag,
 		GeneratedAt: row.GeneratedAt,
 	}
 }

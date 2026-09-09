@@ -61,10 +61,13 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 46); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 47); err != nil {
 		t.Fatal(err)
 	}
 	var count int
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'guideline_version_manifests' AND column_name IN ('reviewed_section_count','leaf_section_count','reviewed_leaf_section_count','empty_leaf_section_count','reviewed_paragraph_count')`, schema).Scan(&count); err != nil || count != 5 {
+		t.Fatalf("guideline completeness columns missing after up/down/up: count=%d err=%v", count, err)
+	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'outbreaks' AND column_name = 'lock_version'`, schema).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("outbreak lock_version missing after up/down/up: count=%d err=%v", count, err)
 	}

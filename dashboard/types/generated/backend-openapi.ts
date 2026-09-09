@@ -2083,6 +2083,7 @@ export interface ModelsGuidelineVersionManifest {
   block_count?: number;
   checksum?: string;
   created_at?: string;
+  empty_leaf_section_count?: number;
   etag?: string;
   extraction_quality?: ModelsGuidelineExtractionQuality;
   figure_count?: number;
@@ -2096,7 +2097,11 @@ export interface ModelsGuidelineVersionManifest {
   has_original_pdf?: boolean;
   has_tables?: boolean;
   id?: string;
+  leaf_section_count?: number;
   package_version?: number;
+  reviewed_leaf_section_count?: number;
+  reviewed_paragraph_count?: number;
+  reviewed_section_count?: number;
   schema_version?: number;
   section_count?: number;
   table_count?: number;
@@ -2399,12 +2404,22 @@ export interface ServicesAskRequest {
 export interface ServicesAskResponse {
   answer?: string;
   citations?: ServicesCitation[];
+  coverage_notice?: string;
+  search_scope?: string;
   session_id?: string;
 }
 
 export interface ServicesAssignGuidelineReviewerInput {
   due_at?: string;
   reviewer_id: string;
+}
+
+export interface ServicesBulkReviewGuidelineBlocksInput {
+  block_ids: string[];
+  confirmation: string;
+  expected_markdown_revision_id: string;
+  expected_regeneration_job_id: string;
+  status: ModelsGuidelineBlockReviewStatus;
 }
 
 export interface ServicesCalculatorDefinitionDTO {
@@ -3074,6 +3089,29 @@ export interface ServicesGuidelineBlockOrderInput {
   sort_order?: number;
 }
 
+export interface ServicesGuidelineBlockReviewPolicy {
+  bulk_review_eligible_types?: ModelsGuidelineBlockType[];
+  conditional_risk_types?: ModelsGuidelineBlockType[];
+  high_risk_types?: ModelsGuidelineBlockType[];
+  ineligible_bulk_types?: ModelsGuidelineBlockType[];
+}
+
+export interface ServicesGuidelineBulkReviewReason {
+  block_id?: string;
+  code?: string;
+  message?: string;
+  type?: ModelsGuidelineBlockType;
+}
+
+export interface ServicesGuidelineBulkReviewResult {
+  reasons?: ServicesGuidelineBulkReviewReason[];
+  rejected_count?: number;
+  reviewed_count?: number;
+  reviewed_ids?: string[];
+  skipped_count?: number;
+  skipped_ids?: string[];
+}
+
 export interface ServicesGuidelineCategoryInput {
   color?: string;
   description?: string;
@@ -3109,6 +3147,106 @@ export interface ServicesGuidelineCollectionItemDTO {
 export interface ServicesGuidelineCollectionItemInput {
   guideline_id: string;
   sort_order?: number;
+}
+
+export interface ServicesGuidelineCompletenessBlockCount {
+  block_type?: string;
+  draft?: number;
+  rejected?: number;
+  reviewed?: number;
+  total?: number;
+}
+
+export interface ServicesGuidelineCompletenessComparison {
+  current_version?: string;
+  current_version_id?: string;
+  metrics?: ServicesGuidelineCompletenessMetric[];
+  same_version?: boolean;
+}
+
+export interface ServicesGuidelineCompletenessEmptySection {
+  active_block_count?: number;
+  id?: string;
+  level?: number;
+  review_exempt?: boolean;
+  title?: string;
+}
+
+export interface ServicesGuidelineCompletenessMetric {
+  candidate?: number;
+  current?: number;
+  delta?: number;
+  name?: string;
+}
+
+export interface ServicesGuidelineCompletenessRAG {
+  approved_chunks?: number;
+  draft_chunks?: number;
+  embedded_approved_chunks?: number;
+  embedded_reviewed_block_chunks?: number;
+  embedding_column_available?: boolean;
+  missing_approved_embeddings?: number;
+  missing_reviewed_embeddings?: number;
+  ready?: boolean;
+  rejected_chunks?: number;
+  reviewed_block_chunks?: number;
+  reviewed_blocks_with_chunks?: number;
+  reviewed_blocks_without_chunks?: number;
+  total_chunks?: number;
+}
+
+export interface ServicesGuidelineCompletenessRegeneration {
+  accepted_at?: string;
+  accepted_by?: string;
+  current_markdown_revision_id?: string;
+  identities_match?: boolean;
+  latest_job_id?: string;
+  latest_job_stage?: string;
+  latest_job_status?: string;
+  published_markdown_revision_id?: string;
+  review_id?: string;
+  review_job_id?: string;
+  review_revision_id?: string;
+  review_status?: string;
+  structured_markdown_revision_id?: string;
+}
+
+export interface ServicesGuidelineCompletenessReport {
+  active_blocks?: number;
+  block_counts?: ServicesGuidelineCompletenessBlockCount[];
+  current_comparison?: ServicesGuidelineCompletenessComparison;
+  empty_leaf_sections?: ServicesGuidelineCompletenessEmptySection[];
+  generated_at?: string;
+  guideline_id?: string;
+  guideline_title?: string;
+  rag?: ServicesGuidelineCompletenessRAG;
+  read_only?: boolean;
+  regeneration?: ServicesGuidelineCompletenessRegeneration;
+  reviewed_blocks?: number;
+  reviewed_percentage?: number;
+  sections?: ServicesGuidelineCompletenessSectionSummary;
+  sources?: ServicesGuidelineCompletenessSources;
+  total_blocks?: number;
+  validation?: ServicesGuidelinePublicationValidation;
+  version?: string;
+  version_id?: string;
+  version_status?: string;
+}
+
+export interface ServicesGuidelineCompletenessSectionSummary {
+  empty_leaf_sections?: number;
+  leaf_sections?: number;
+  reviewed_leaf_sections?: number;
+  reviewed_sections?: number;
+  total_sections?: number;
+}
+
+export interface ServicesGuidelineCompletenessSources {
+  offline_package_available?: boolean;
+  offline_package_reviewed?: boolean;
+  original_pdf_available?: boolean;
+  original_pdf_reviewed?: boolean;
+  reviewed_fallback_available?: boolean;
 }
 
 export interface ServicesGuidelineDownloadDTO {
@@ -3187,6 +3325,17 @@ export interface ServicesGuidelineReviewAssignmentView {
   version_id?: string;
 }
 
+export interface ServicesGuidelineReviewBlocksPage {
+  items?: ModelsGuidelineContentBlock[];
+  markdown_revision_id?: string;
+  page?: number;
+  per_page?: number;
+  progress?: ServicesGuidelineReviewProgress;
+  regeneration_job_id?: string;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesGuidelineReviewCommentInput {
   block_id?: string;
   body?: string;
@@ -3197,11 +3346,23 @@ export interface ServicesGuidelineReviewIssue {
   block_id?: string;
   code?: string;
   message?: string;
+  remediation?: string;
   section_id?: string;
+}
+
+export interface ServicesGuidelineReviewProgress {
+  empty_clinical_leaf_sections?: number;
+  pending_high_risk_blocks?: number;
+  pending_low_risk_blocks?: number;
+  rejected_blocks?: number;
+  reviewed_blocks?: number;
+  sections_with_reviewed_content?: number;
+  total_blocks?: number;
 }
 
 export interface ServicesGuidelineReviewWorkspace {
   assets?: ModelsGuidelineAsset[];
+  block_review_policy?: ServicesGuidelineBlockReviewPolicy;
   blocks?: ModelsGuidelineContentBlock[];
   extraction_warnings?: string[];
   sections?: ModelsGuidelineSection[];
@@ -4216,7 +4377,11 @@ export interface ServicesPublicGuidelineBlock {
 
 export interface ServicesPublicGuidelineContent {
   blocks?: ServicesPublicGuidelineBlock[];
+  checksum?: string;
+  guideline_id?: string;
+  package_version?: number;
   sections?: ServicesPublicGuidelineSection[];
+  version_id?: string;
 }
 
 export interface ServicesPublicGuidelineFigure {
@@ -4233,6 +4398,7 @@ export interface ServicesPublicGuidelineManifest {
   algorithm_count?: number;
   block_count?: number;
   checksum?: string;
+  empty_leaf_section_count?: number;
   etag?: string;
   extraction_quality?: ModelsGuidelineExtractionQuality;
   figure_count?: number;
@@ -4245,8 +4411,12 @@ export interface ServicesPublicGuidelineManifest {
   has_offline_package?: boolean;
   has_original_pdf?: boolean;
   has_tables?: boolean;
+  leaf_section_count?: number;
   package_version?: number;
   recommended_mode?: ServicesPublicGuidelineManifestRecommendedModeEnum;
+  reviewed_leaf_section_count?: number;
+  reviewed_paragraph_count?: number;
+  reviewed_section_count?: number;
   schema_version?: number;
   section_count?: number;
   table_count?: number;
@@ -4272,7 +4442,11 @@ export interface ServicesPublicGuidelineSection {
 
 export interface ServicesPublicGuidelineSectionDetail {
   blocks?: ServicesPublicGuidelineBlock[];
+  checksum?: string;
+  guideline_id?: string;
+  package_version?: number;
   section?: ServicesPublicGuidelineSection;
+  version_id?: string;
 }
 
 export interface ServicesPublicGuidelineTable {
@@ -4749,3 +4923,11 @@ export interface ServicesUserView {
   updated_at?: string;
   verified?: boolean;
 }
+
+/**
+ * Export format: json or csv
+ * @default "json"
+ */
+export type V2GuidelineVersionsCompletenessReportExportListParamsFormatEnum =
+  | "json"
+  | "csv";

@@ -168,6 +168,7 @@ export interface GuidelineAssetRecord {
 export interface GuidelineReviewIssue {
   code: string;
   message: string;
+  remediation?: string;
   section_id?: string;
   block_id?: string;
   asset_id?: string;
@@ -184,7 +185,136 @@ export interface GuidelineReviewWorkspace {
   sections: GuidelineSectionRecord[];
   blocks: GuidelineContentBlockRecord[];
   assets: GuidelineAssetRecord[];
+  block_review_policy?: {
+    high_risk_types: GuidelineBlockType[];
+    bulk_review_eligible_types: GuidelineBlockType[];
+    conditional_risk_types: GuidelineBlockType[];
+    ineligible_bulk_types: GuidelineBlockType[];
+  };
   extraction_warnings: string[];
+  validation: GuidelinePublicationValidation;
+}
+
+export interface GuidelineReviewProgress {
+  total_blocks: number;
+  reviewed_blocks: number;
+  pending_low_risk_blocks: number;
+  pending_high_risk_blocks: number;
+  rejected_blocks: number;
+  sections_with_reviewed_content: number;
+  empty_clinical_leaf_sections: number;
+}
+
+export interface GuidelineReviewBlocksPage {
+  items: GuidelineContentBlockRecord[];
+  page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  progress: GuidelineReviewProgress;
+  markdown_revision_id?: string;
+  regeneration_job_id?: string;
+}
+
+export interface GuidelineReviewBlocksFilter {
+  page?: number;
+  per_page?: number;
+  status?: "all" | "pending" | "reviewed" | "rejected";
+  risk?: "all" | "low-risk-pending" | "high-risk" | "pending-high-risk";
+  block_type?: GuidelineBlockType | "all";
+  section_id?: string;
+}
+
+export interface GuidelineBulkReviewResult {
+  reviewed_count: number;
+  skipped_count: number;
+  rejected_count: number;
+  reviewed_ids: string[];
+  skipped_ids: string[];
+  reasons: Array<{
+    code: string;
+    message: string;
+    block_id?: string;
+    type?: GuidelineBlockType;
+  }>;
+}
+
+export interface GuidelineCompletenessReport {
+  generated_at: string;
+  read_only: boolean;
+  guideline_id: string;
+  guideline_title: string;
+  version_id: string;
+  version: string;
+  version_status: string;
+  total_blocks: number;
+  active_blocks: number;
+  reviewed_blocks: number;
+  reviewed_percentage: number;
+  block_counts: Array<{
+    block_type: string;
+    total: number;
+    draft: number;
+    reviewed: number;
+    rejected: number;
+  }>;
+  sections: {
+    total_sections: number;
+    reviewed_sections: number;
+    leaf_sections: number;
+    reviewed_leaf_sections: number;
+    empty_leaf_sections: number;
+  };
+  empty_leaf_sections: Array<{
+    id: string;
+    title: string;
+    level: number;
+    active_block_count: number;
+    review_exempt: boolean;
+  }>;
+  sources: {
+    original_pdf_available: boolean;
+    original_pdf_reviewed: boolean;
+    offline_package_available: boolean;
+    offline_package_reviewed: boolean;
+    reviewed_fallback_available: boolean;
+  };
+  regeneration: {
+    current_markdown_revision_id?: string;
+    structured_markdown_revision_id?: string;
+    published_markdown_revision_id?: string;
+    latest_job_id?: string;
+    latest_job_status?: string;
+    latest_job_stage?: string;
+    review_id?: string;
+    review_status?: string;
+    review_revision_id?: string;
+    review_job_id?: string;
+    accepted_by?: string;
+    accepted_at?: string;
+    identities_match: boolean;
+  };
+  rag: {
+    total_chunks: number;
+    approved_chunks: number;
+    draft_chunks: number;
+    rejected_chunks: number;
+    reviewed_blocks_with_chunks: number;
+    reviewed_blocks_without_chunks: number;
+    embedding_column_available: boolean;
+    embedded_approved_chunks: number;
+    missing_approved_embeddings: number;
+    reviewed_block_chunks: number;
+    embedded_reviewed_block_chunks: number;
+    missing_reviewed_embeddings: number;
+    ready: boolean;
+  };
+  current_comparison?: {
+    current_version_id: string;
+    current_version: string;
+    same_version: boolean;
+    metrics: Array<{ name: string; current: number; candidate: number; delta: number }>;
+  };
   validation: GuidelinePublicationValidation;
 }
 
@@ -391,6 +521,42 @@ export class GuidelineDocumentsService {
     );
   }
 
+  static async getReviewBlocks(
+    versionId: string,
+    filters: GuidelineReviewBlocksFilter,
+  ): Promise<GuidelineReviewBlocksPage> {
+    return getBackendClient().request<GuidelineReviewBlocksPage>(
+      `/api/v2/guideline-versions/${versionId}/review-blocks`,
+      {
+        method: "GET",
+        query: {
+          page: filters.page,
+          per_page: filters.per_page,
+          status: filters.status,
+          risk: filters.risk,
+          block_type: filters.block_type,
+          section_id: filters.section_id,
+        },
+      },
+    );
+  }
+
+  static async bulkReviewBlocks(
+    versionId: string,
+    payload: {
+      block_ids: string[];
+      status: "reviewed";
+      confirmation: string;
+      expected_markdown_revision_id: string;
+      expected_regeneration_job_id: string;
+    },
+  ): Promise<GuidelineBulkReviewResult> {
+    return getBackendClient().request<GuidelineBulkReviewResult>(
+      `/api/v2/guideline-versions/${versionId}/blocks/bulk-review`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  }
+
   static async validatePublication(
     versionId: string,
   ): Promise<GuidelinePublicationValidation> {
@@ -398,6 +564,26 @@ export class GuidelineDocumentsService {
       `/api/v2/guideline-versions/${versionId}/validate-publication`,
       { method: "POST" },
     );
+  }
+
+  static async getCompletenessReport(
+    versionId: string,
+  ): Promise<GuidelineCompletenessReport> {
+    return getBackendClient().request<GuidelineCompletenessReport>(
+      `/api/v2/guideline-versions/${versionId}/completeness-report`,
+      { method: "GET" },
+    );
+  }
+
+  static async downloadCompletenessReport(
+    versionId: string,
+    format: "json" | "csv",
+  ): Promise<void> {
+    const blob = await getBackendClient().request<Blob>(
+      `/api/v2/guideline-versions/${versionId}/completeness-report/export`,
+      { method: "GET", query: { format }, responseType: "blob" },
+    );
+    downloadBlob(blob, `guideline-completeness-${versionId}.${format}`);
   }
 
   static async updateReviewSection(

@@ -3396,6 +3396,8 @@ definitions:
         type: string
       created_at:
         type: string
+      empty_leaf_section_count:
+        type: integer
       etag:
         type: string
       extraction_quality:
@@ -3422,7 +3424,15 @@ definitions:
         type: boolean
       id:
         type: string
+      leaf_section_count:
+        type: integer
       package_version:
+        type: integer
+      reviewed_leaf_section_count:
+        type: integer
+      reviewed_paragraph_count:
+        type: integer
+      reviewed_section_count:
         type: integer
       schema_version:
         type: integer
@@ -3979,6 +3989,10 @@ definitions:
         items:
           $ref: '#/definitions/services.Citation'
         type: array
+      coverage_notice:
+        type: string
+      search_scope:
+        type: string
       session_id:
         type: string
     type: object
@@ -3990,6 +4004,27 @@ definitions:
         type: string
     required:
     - reviewer_id
+    type: object
+  services.BulkReviewGuidelineBlocksInput:
+    properties:
+      block_ids:
+        items:
+          type: string
+        type: array
+      confirmation:
+        type: string
+      expected_markdown_revision_id:
+        type: string
+      expected_regeneration_job_id:
+        type: string
+      status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+    required:
+    - block_ids
+    - confirmation
+    - expected_markdown_revision_id
+    - expected_regeneration_job_id
+    - status
     type: object
   services.CalculatorDefinitionDTO:
     properties:
@@ -5206,6 +5241,57 @@ definitions:
     required:
     - id
     type: object
+  services.GuidelineBlockReviewPolicy:
+    properties:
+      bulk_review_eligible_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      conditional_risk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      high_risk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+      ineligible_bulk_types:
+        items:
+          $ref: '#/definitions/models.GuidelineBlockType'
+        type: array
+    type: object
+  services.GuidelineBulkReviewReason:
+    properties:
+      block_id:
+        type: string
+      code:
+        type: string
+      message:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
+  services.GuidelineBulkReviewResult:
+    properties:
+      reasons:
+        items:
+          $ref: '#/definitions/services.GuidelineBulkReviewReason'
+        type: array
+      rejected_count:
+        type: integer
+      reviewed_count:
+        type: integer
+      reviewed_ids:
+        items:
+          type: string
+        type: array
+      skipped_count:
+        type: integer
+      skipped_ids:
+        items:
+          type: string
+        type: array
+    type: object
   services.GuidelineCategoryInput:
     properties:
       color:
@@ -5268,6 +5354,185 @@ definitions:
         type: integer
     required:
     - guideline_id
+    type: object
+  services.GuidelineCompletenessBlockCount:
+    properties:
+      block_type:
+        type: string
+      draft:
+        type: integer
+      rejected:
+        type: integer
+      reviewed:
+        type: integer
+      total:
+        type: integer
+    type: object
+  services.GuidelineCompletenessComparison:
+    properties:
+      current_version:
+        type: string
+      current_version_id:
+        type: string
+      metrics:
+        items:
+          $ref: '#/definitions/services.GuidelineCompletenessMetric'
+        type: array
+      same_version:
+        type: boolean
+    type: object
+  services.GuidelineCompletenessEmptySection:
+    properties:
+      active_block_count:
+        type: integer
+      id:
+        type: string
+      level:
+        type: integer
+      review_exempt:
+        type: boolean
+      title:
+        type: string
+    type: object
+  services.GuidelineCompletenessMetric:
+    properties:
+      candidate:
+        type: integer
+      current:
+        type: integer
+      delta:
+        type: integer
+      name:
+        type: string
+    type: object
+  services.GuidelineCompletenessRAG:
+    properties:
+      approved_chunks:
+        type: integer
+      draft_chunks:
+        type: integer
+      embedded_approved_chunks:
+        type: integer
+      embedded_reviewed_block_chunks:
+        type: integer
+      embedding_column_available:
+        type: boolean
+      missing_approved_embeddings:
+        type: integer
+      missing_reviewed_embeddings:
+        type: integer
+      ready:
+        type: boolean
+      rejected_chunks:
+        type: integer
+      reviewed_block_chunks:
+        type: integer
+      reviewed_blocks_with_chunks:
+        type: integer
+      reviewed_blocks_without_chunks:
+        type: integer
+      total_chunks:
+        type: integer
+    type: object
+  services.GuidelineCompletenessRegeneration:
+    properties:
+      accepted_at:
+        type: string
+      accepted_by:
+        type: string
+      current_markdown_revision_id:
+        type: string
+      identities_match:
+        type: boolean
+      latest_job_id:
+        type: string
+      latest_job_stage:
+        type: string
+      latest_job_status:
+        type: string
+      published_markdown_revision_id:
+        type: string
+      review_id:
+        type: string
+      review_job_id:
+        type: string
+      review_revision_id:
+        type: string
+      review_status:
+        type: string
+      structured_markdown_revision_id:
+        type: string
+    type: object
+  services.GuidelineCompletenessReport:
+    properties:
+      active_blocks:
+        type: integer
+      block_counts:
+        items:
+          $ref: '#/definitions/services.GuidelineCompletenessBlockCount'
+        type: array
+      current_comparison:
+        $ref: '#/definitions/services.GuidelineCompletenessComparison'
+      empty_leaf_sections:
+        items:
+          $ref: '#/definitions/services.GuidelineCompletenessEmptySection'
+        type: array
+      generated_at:
+        type: string
+      guideline_id:
+        type: string
+      guideline_title:
+        type: string
+      rag:
+        $ref: '#/definitions/services.GuidelineCompletenessRAG'
+      read_only:
+        type: boolean
+      regeneration:
+        $ref: '#/definitions/services.GuidelineCompletenessRegeneration'
+      reviewed_blocks:
+        type: integer
+      reviewed_percentage:
+        type: number
+      sections:
+        $ref: '#/definitions/services.GuidelineCompletenessSectionSummary'
+      sources:
+        $ref: '#/definitions/services.GuidelineCompletenessSources'
+      total_blocks:
+        type: integer
+      validation:
+        $ref: '#/definitions/services.GuidelinePublicationValidation'
+      version:
+        type: string
+      version_id:
+        type: string
+      version_status:
+        type: string
+    type: object
+  services.GuidelineCompletenessSectionSummary:
+    properties:
+      empty_leaf_sections:
+        type: integer
+      leaf_sections:
+        type: integer
+      reviewed_leaf_sections:
+        type: integer
+      reviewed_sections:
+        type: integer
+      total_sections:
+        type: integer
+    type: object
+  services.GuidelineCompletenessSources:
+    properties:
+      offline_package_available:
+        type: boolean
+      offline_package_reviewed:
+        type: boolean
+      original_pdf_available:
+        type: boolean
+      original_pdf_reviewed:
+        type: boolean
+      reviewed_fallback_available:
+        type: boolean
     type: object
   services.GuidelineDownloadDTO:
     properties:
@@ -5411,6 +5676,27 @@ definitions:
       version_id:
         type: string
     type: object
+  services.GuidelineReviewBlocksPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineContentBlock'
+        type: array
+      markdown_revision_id:
+        type: string
+      page:
+        type: integer
+      per_page:
+        type: integer
+      progress:
+        $ref: '#/definitions/services.GuidelineReviewProgress'
+      regeneration_job_id:
+        type: string
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.GuidelineReviewCommentInput:
     properties:
       block_id:
@@ -5428,8 +5714,27 @@ definitions:
         type: string
       message:
         type: string
+      remediation:
+        type: string
       section_id:
         type: string
+    type: object
+  services.GuidelineReviewProgress:
+    properties:
+      empty_clinical_leaf_sections:
+        type: integer
+      pending_high_risk_blocks:
+        type: integer
+      pending_low_risk_blocks:
+        type: integer
+      rejected_blocks:
+        type: integer
+      reviewed_blocks:
+        type: integer
+      sections_with_reviewed_content:
+        type: integer
+      total_blocks:
+        type: integer
     type: object
   services.GuidelineReviewWorkspace:
     properties:
@@ -5437,6 +5742,8 @@ definitions:
         items:
           $ref: '#/definitions/models.GuidelineAsset'
         type: array
+      block_review_policy:
+        $ref: '#/definitions/services.GuidelineBlockReviewPolicy'
       blocks:
         items:
           $ref: '#/definitions/models.GuidelineContentBlock'
@@ -7320,10 +7627,18 @@ definitions:
         items:
           $ref: '#/definitions/services.PublicGuidelineBlock'
         type: array
+      checksum:
+        type: string
+      guideline_id:
+        type: string
+      package_version:
+        type: integer
       sections:
         items:
           $ref: '#/definitions/services.PublicGuidelineSection'
         type: array
+      version_id:
+        type: string
     type: object
   services.PublicGuidelineFigure:
     properties:
@@ -7350,6 +7665,8 @@ definitions:
         type: integer
       checksum:
         type: string
+      empty_leaf_section_count:
+        type: integer
       etag:
         type: string
       extraction_quality:
@@ -7374,6 +7691,8 @@ definitions:
         type: boolean
       has_tables:
         type: boolean
+      leaf_section_count:
+        type: integer
       package_version:
         type: integer
       recommended_mode:
@@ -7382,6 +7701,12 @@ definitions:
         - partial
         - original_document
         type: string
+      reviewed_leaf_section_count:
+        type: integer
+      reviewed_paragraph_count:
+        type: integer
+      reviewed_section_count:
+        type: integer
       schema_version:
         type: integer
       section_count:
@@ -7418,8 +7743,16 @@ definitions:
         items:
           $ref: '#/definitions/services.PublicGuidelineBlock'
         type: array
+      checksum:
+        type: string
+      guideline_id:
+        type: string
+      package_version:
+        type: integer
       section:
         $ref: '#/definitions/services.PublicGuidelineSection'
+      version_id:
+        type: string
     type: object
   services.PublicGuidelineTable:
     properties:
@@ -12844,6 +13177,43 @@ paths:
       summary: Approve or reject an extracted guideline block
       tags:
       - guideline-review
+  /api/v2/guideline-versions/{id}/blocks/bulk-review:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Explicit low-risk review attestation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.BulkReviewGuidelineBlocksInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineBulkReviewResult'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Approve a verified selection of low-risk guideline blocks
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/blocks/reorder:
     put:
       consumes:
@@ -12929,6 +13299,85 @@ paths:
       summary: List chunks for a guideline version
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/completeness-report:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineCompletenessReport'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a read-only guideline publication completeness report
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/completeness-report/export:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: json
+        description: 'Export format: json or csv'
+        enum:
+        - json
+        - csv
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Export a read-only guideline completeness report
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/duplicate:
     post:
       consumes:
@@ -13512,6 +13961,43 @@ paths:
       summary: Regenerate structured content and RAG data from an exact Markdown revision
       tags:
       - guideline-markdown
+  /api/v2/guideline-versions/{id}/regenerate-manifest:
+    post:
+      parameters:
+      - description: Published guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GuidelineVersionManifest'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate completeness metadata for a published guideline version
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}:
     get:
       parameters:
@@ -13783,6 +14269,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Load a guideline version editorial review workspace
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/review-blocks:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: 'Review status: all, pending, reviewed, rejected'
+        in: query
+        name: status
+        type: string
+      - description: 'Risk filter: all, low-risk-pending, high-risk, pending-high-risk'
+        in: query
+        name: risk
+        type: string
+      - description: Block type
+        in: query
+        name: block_type
+        type: string
+      - description: Section ID
+        format: uuid
+        in: query
+        name: section_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineReviewBlocksPage'
+      security:
+      - BearerAuth: []
+      summary: List and filter guideline blocks for editorial review
       tags:
       - guideline-review
   /api/v2/guideline-versions/{id}/review-comments:

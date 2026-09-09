@@ -78,6 +78,8 @@ final class RagRepository implements RagAssistant {
     return response.copyWith(
       answer: answer,
       sessionId: returnedSession,
+      searchScope: response.searchScope.trim(),
+      coverageNotice: response.coverageNotice.trim(),
       citations: response.citations
           .map(
             (citation) => citation.copyWith(

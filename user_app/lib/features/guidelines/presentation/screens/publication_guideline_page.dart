@@ -24,6 +24,7 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
+import 'package:user_app/features/guidelines/presentation/widgets/publication_guideline_page_empty_section.dart';
 import 'package:user_app/features/library/presentation/widgets/save_to_collection_sheet.dart';
 import 'package:user_app/features/library/presentation/utils/collection_messages.dart';
 
@@ -640,7 +641,19 @@ class _PublicationGuidelinePageState
                         AppSpacing.gapMd,
 
                         if (blocks.isEmpty)
-                          const Text('No reviewed content is available here.')
+                          PublicationEmptyReviewedSection(
+                            hasOriginalDocument: value.manifest.hasOriginalPdf,
+                            reviewedDescendants: _reviewedDescendants(
+                              section.id,
+                              sections,
+                              value.blocks,
+                            ),
+                            onSection: (id) {
+                              setState(() => _selectedSectionId = id);
+                              unawaited(_recordSectionProgress(sections, id));
+                            },
+                            onOpenOriginal: () => _openOriginal(context),
+                          )
                         else
                           for (final block in blocks) ...[
                             PublicationBlockView(
@@ -755,6 +768,26 @@ class _PublicationGuidelinePageState
     }
 
     return result;
+  }
+
+  List<PublicationSection> _reviewedDescendants(
+    String root,
+    List<PublicationSection> sections,
+    List<GuidelineBlock> blocks,
+  ) {
+    final descendantIds = _sectionAndDescendants(sections, root)..remove(root);
+    final reviewedIds = blocks
+        .map((block) => block.sectionId)
+        .whereType<String>()
+        .toSet();
+    return sections
+        .where(
+          (section) =>
+              descendantIds.contains(section.id) &&
+              reviewedIds.contains(section.id),
+        )
+        .take(12)
+        .toList(growable: false);
   }
 
   Future<void> _recordSectionProgress(

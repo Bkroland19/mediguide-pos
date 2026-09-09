@@ -36,6 +36,7 @@ func TestGenerateGuidelineVersionManifestUsesReviewedContentOnly(t *testing.T) {
 		VersionID: version.ID, Type: models.GuidelineAssetOfflinePackage,
 		MIMEType: "application/zip", Checksum: "package-checksum",
 		StorageKey: "guidelines/version/offline.zip", SizeBytes: 2048,
+		ReviewStatus: models.GuidelineBlockReviewed,
 	}).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +59,7 @@ func TestGenerateGuidelineVersionManifestUsesReviewedContentOnly(t *testing.T) {
 	if !manifest.HasOriginalPDF || !manifest.HasOfflinePackage {
 		t.Fatalf("asset capabilities missing: %#v", manifest)
 	}
-	if manifest.SectionCount != 2 || manifest.BlockCount != 5 || manifest.TableCount != 1 || manifest.FigureCount != 1 || manifest.AlgorithmCount != 1 {
+	if manifest.SectionCount != 2 || manifest.ReviewedSectionCount != 2 || manifest.LeafSectionCount != 2 || manifest.ReviewedLeafSectionCount != 2 || manifest.EmptyLeafSectionCount != 0 || manifest.BlockCount != 5 || manifest.ReviewedParagraphCount != 0 || manifest.TableCount != 1 || manifest.FigureCount != 1 || manifest.AlgorithmCount != 1 {
 		t.Fatalf("unexpected reviewed counts: %#v", manifest)
 	}
 	if len(manifest.Checksum) != 64 || manifest.ETag != `"sha256-`+manifest.Checksum+`"` {
@@ -98,8 +99,28 @@ func TestGenerateGuidelineVersionManifestHidesUnreviewedCapabilities(t *testing.
 	if manifest.ExtractionQuality != models.GuidelineExtractionUnreviewed {
 		t.Fatalf("unexpected quality: %s", manifest.ExtractionQuality)
 	}
-	if manifest.HasAlgorithms || manifest.HasChapters || manifest.BlockCount != 0 || manifest.AlgorithmCount != 0 {
+	if manifest.HasAlgorithms || !manifest.HasChapters || manifest.BlockCount != 0 || manifest.AlgorithmCount != 0 || manifest.SectionCount != 2 || manifest.ReviewedSectionCount != 0 || manifest.EmptyLeafSectionCount != 2 {
 		t.Fatalf("unreviewed content leaked into capabilities: %#v", manifest)
+	}
+}
+
+func TestGenerateGuidelineVersionManifestExcludesRejectedBlocksFromQuality(t *testing.T) {
+	db := guidelineManifestTestDB(t)
+	_, version, sections := guidelineManifestFixture(t, db)
+	reviewer, reviewedAt := uuid.New(), time.Now().UTC()
+	blocks := []models.GuidelineContentBlock{
+		reviewedBlock(version.ID, sections[0].ID, models.GuidelineBlockParagraph, reviewer, reviewedAt),
+		{VersionID: version.ID, SectionID: &sections[1].ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Rejected"}`), ReviewStatus: models.GuidelineBlockRejected},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := generateGuidelineVersionManifest(db, version.ID, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.ExtractionQuality != models.GuidelineExtractionReviewed || manifest.BlockCount != 1 {
+		t.Fatalf("rejected content affected public quality: %#v", manifest)
 	}
 }
 
@@ -111,6 +132,26 @@ func TestGenerateGuidelineVersionManifestRequiresPublishedVersion(t *testing.T) 
 	}
 	if _, err := generateGuidelineVersionManifest(db, version.ID, time.Now().UTC()); err != ErrGuidelineManifestUnavailable {
 		t.Fatalf("expected unavailable manifest error, got %v", err)
+	}
+}
+
+func TestRegenerateManifestForAdminIsAudited(t *testing.T) {
+	db := guidelineManifestTestDB(t)
+	_, version, _ := guidelineManifestFixture(t, db)
+	actor := uuid.New()
+	manifest, err := (GuidelineService{DB: db}).RegenerateManifestForAdmin(version.ID, actor, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.SchemaVersion != models.GuidelineManifestSchemaVersion || manifest.PackageVersion != models.GuidelinePackageFormatVersion {
+		t.Fatalf("manifest was not upgraded: %#v", manifest)
+	}
+	var audit models.AuditLog
+	if err := db.Where("action = ? AND entity_id = ?", "guideline.manifest.regenerated", version.ID.String()).First(&audit).Error; err != nil {
+		t.Fatal(err)
+	}
+	if audit.ActorID != actor.String() || audit.IPAddress != "127.0.0.1" {
+		t.Fatalf("unexpected manifest audit: %#v", audit)
 	}
 }
 
@@ -127,6 +168,7 @@ func guidelineManifestTestDB(t *testing.T) *gorm.DB {
 		&models.GuidelineContentBlock{},
 		&models.GuidelineAsset{},
 		&models.GuidelineVersionManifest{},
+		&models.AuditLog{},
 	); err != nil {
 		t.Fatal(err)
 	}

@@ -29,6 +29,9 @@ final class RagApi extends BackendApiService {
       'data': {
         'answer': 'Use the malaria treatment guideline.',
         'session_id': 'session-1',
+        'search_scope': 'current_published_reviewed_content',
+        'coverage_notice':
+            'Only approved content in current published guideline versions was searched.',
         'citations': [
           {
             'chunk_id': 'chunk-1',
@@ -102,6 +105,8 @@ void main() {
     expect(answer.citations.single.guidelineId, 'guideline-1');
     expect(answer.citations.single.sectionId, 'section-2');
     expect(answer.answerWithSources, contains('pages 120–122'));
+    expect(answer.searchScope, 'current_published_reviewed_content');
+    expect(answer.answerWithSources, contains('Only approved content'));
     expect(
       RagAnswer.fromJson(answer.toJson()),
       answer,

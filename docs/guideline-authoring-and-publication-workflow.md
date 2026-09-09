@@ -254,6 +254,10 @@ authoritative publication validator. It checks, among other things:
   publication's chapters, sections, blocks, tables, or high-risk blocks;
 - typed block payloads and figure references are valid;
 - all required high-risk blocks and assets are reviewed;
+- meaningful chapter content includes reviewed prose rather than only tables;
+- a partial projection has a reviewed original PDF or offline fallback;
+- clinical leaf sections are not predominantly empty;
+- reviewed coverage has not substantially regressed from the current version;
 - the regeneration review is accepted.
 
 If the toast says **Publication needs review**, return to **Editorial Review**.
@@ -284,6 +288,146 @@ replacement updates the document's current version while retaining the bad
 version in immutable history for audit. Confirm the public manifest, chapter
 cards, representative clinical blocks, search results, and RAG citations after
 the replacement becomes current.
+
+## Partially reviewed publication audit
+
+This audit records the empty-section failure reproduced from Diabetes
+`2026.09.01` on 8 September 2026. The public manifest contained 16 reviewed
+blocks and reported 15 sections containing reviewed content, while the public
+hierarchy contained 310 structural sections. All 16 public blocks were tables;
+there were no reviewed paragraphs. The clinical leaf section `1.1. Global
+prevalence of diabetes` consequently had no public body content.
+
+The failure is a workflow gap, not a chapter-parser defect:
+
+1. Markdown regeneration in `ai-worker/app/repositories/guideline_repo.py`
+   deletes the previous generated projection and creates every regenerated
+   block and chunk as `draft`. This correctly avoids automatic clinical
+   approval.
+2. Sections are structural records without review status, so the complete
+   outline remains visible while its blocks await decisions.
+3. Regeneration acceptance requires individual decisions for high-risk blocks.
+   Publication validation now also blocks a meaningful document with no
+   reviewed prose, suspicious single-type review, or predominantly empty
+   clinical leaves.
+4. The public content service correctly exposes all current sections but only
+   blocks marked `reviewed`.
+5. Manifest schema 2 defines `section_count` as every active structural
+   section and reports reviewed/leaf coverage separately through
+   `reviewed_section_count`, `leaf_section_count`,
+   `reviewed_leaf_section_count`, `empty_leaf_section_count`, `block_count`,
+   and `reviewed_paragraph_count`.
+6. Search and RAG use approved chunks from the current published version, so
+   draft paragraph chunks remain unavailable. An absent original document or
+   offline package then leaves no fallback for an empty section.
+
+`TestPartialReviewPublicationRegression` is the executable regression test. Its
+fixture contains one H1 wrapper, two H2 chapters, clinical H3 leaves, draft
+paragraph/list content, one reviewed table, and no original PDF. It documents
+that the validator rejects partial publication without a fallback, then reviews
+the missing prose, publishes successfully, and verifies the corrected manifest
+and public projection.
+
+### Authoritative block-review policy
+
+Block risk classification is defined once in
+`backend/internal/models/guideline_block_review_policy.go`. Publication
+validation and regeneration review use that policy directly, and the
+authenticated Editorial Review workspace exposes it as `block_review_policy`
+so the dashboard does not maintain a separate high-risk list.
+
+- High risk and individually reviewed: tables, recommendations, warnings,
+  cautions, contraindications, dosages, procedures, algorithms, algorithm
+  references, and referral criteria.
+- Low risk and eligible for a future controlled bulk operation: paragraphs,
+  headings, ordered lists, unordered lists, references, and page breaks.
+- Conditional: figures. The referenced asset determines clinical sensitivity,
+  and figures are never bulk-review eligible.
+- Ineligible for bulk review: unknown blocks and conservative clinical types
+  not explicitly admitted to the low-risk allowlist, including key points,
+  evidence, definitions, and clinical notes.
+- Clinically sensitive assets always require an individual review decision.
+
+Bulk APIs enforce the backend allowlist and never trust client classification.
+They do not approve existing content automatically, mutate a published version,
+or weaken existing clinical-safety gates.
+
+### Manifest repair for an existing publication
+
+Publishing regenerates manifest schema 2 automatically. To repair metadata for
+an already-published version after deploying the migration, an administrator
+with `guideline.publish` may call
+`POST /api/v2/guideline-versions/{versionId}/regenerate-manifest`. The operation
+does not change clinical content or the current version. It recalculates the
+manifest, checksum, ETag, offline capabilities, and completeness counts, and
+records `guideline.manifest.regenerated` in the audit log.
+
+### Controlled low-risk bulk review
+
+Editorial Review provides a paginated bulk-review queue for large guidelines.
+Reviewers can filter by review state, risk, block type, and section; select
+eligible blocks on the visible page or across the selected section; and approve
+at most 500 blocks in one operation. Selection IDs remain stable while moving
+between pages. High-risk, conditional, unknown, and otherwise ineligible blocks
+never display bulk-selection controls.
+
+Approval requires the reviewer to explicitly attest that every selected block
+was checked against the authoritative source. The dashboard sends the exact
+current Markdown revision and regeneration job identities to
+`POST /api/v2/guideline-versions/{id}/blocks/bulk-review`. The backend repeats
+all eligibility checks, rejects stale identities and mixed eligible/ineligible
+selections atomically, and refuses published, superseded, or archived versions.
+It never trusts the UI's classification.
+
+Successful approval records `reviewed_by` and `reviewed_at`, synchronizes each
+associated chunk to the draft review state, and writes one immutable audit event
+with the version, revision, regeneration job, reviewer, selected block IDs,
+counts by type, previous/resulting states, and the confirmation text. Chunks do
+not become `approved` or searchable at review time. Publication promotes only
+chunks belonging to reviewed blocks, preserving the existing RAG safety gate.
+
+The companion `GET /api/v2/guideline-versions/{id}/review-blocks` endpoint
+provides server-side filters, pagination, exact review identities, and progress
+metrics for total, reviewed, pending low-risk, pending high-risk and rejected
+blocks, sections with reviewed content, and empty leaf sections. If a stale
+review is rejected, reload the workspace and re-check the affected blocks
+against the newly generated source before trying again.
+
+### Public reader, cache, and RAG guarantees
+
+Public readers use the following terminology consistently:
+
+- `N sections` is the full published structure.
+- `N sections with reviewed content` is the subset containing at least one
+  approved block.
+- `0 reviewed blocks` never means the source section was empty; it means no
+  structured body block in that section is approved for public display.
+
+An empty leaf section says that reviewed content has not yet been published.
+It offers **Open original document** only when the manifest confirms that an
+original PDF exists. An empty container with reviewed descendants links to
+those subsections instead of presenting the chapter as broken. Partial-reader
+notices state the reviewed-section coverage and never imply that unreviewed
+content is available.
+
+The public content response stores sections and reviewed blocks as one atomic
+snapshot. Its identity is the tuple `guideline_id`, `version_id`,
+`package_version`, and manifest `checksum`. Web and mobile clients cache by
+that complete tuple, invalidate the prior snapshot when the manifest changes,
+and reject any response whose identity differs from the manifest. Mobile cache
+scopes also include the configured API host, preventing incompatible
+environment data from sharing a cache. A downloaded package is marked
+`updateAvailable` when a newer current publication is discovered and is no
+longer treated as the current ready package.
+
+Bulk review alone does not make content searchable. At publication the backend
+first demotes every chunk in the version, then promotes only chunks belonging
+to blocks that are still reviewed. Reviewed chunks must have generated
+embeddings before publication. Public search and both assistant retrieval paths
+join through the document's exact current published version; draft, rejected,
+deleted, and superseded chunks are excluded. Assistant responses include the
+`current_published_reviewed_content` search scope and a coverage notice stating
+that unreviewed content was not searched.
 
 ## What common notifications mean
 
@@ -321,3 +465,23 @@ For individual validation codes and recovery instructions, see
 For implementation details, see
 [`markdown-authoring-workspace.md`](markdown-authoring-workspace.md) and
 [`guideline-publication-architecture.md`](guideline-publication-architecture.md).
+
+## Completeness report and recovery gate
+
+Before accepting a regenerated projection or publishing a large guideline,
+open **Publication completeness** in Editorial Review. The read-only report
+combines block counts by type/state, reviewed percentage, total and reviewed
+section/leaf counts, empty leaves, reviewed fallback availability, exact
+revision/job acceptance identity, RAG chunks/embeddings, validation issues, and
+the difference from the current published version. Export JSON for an audit
+attachment or CSV for spreadsheet review. Both exports require
+`guideline.review`; neither endpoint changes the version.
+
+The recovery order is fixed: duplicate the immutable published Markdown into
+a newer draft, regenerate, inspect the completeness report, review low-risk
+content explicitly, review high-risk content individually, accept the exact
+revision/job, validate, preview, and only then publish. The helper
+`scripts/prepare-guideline-recovery.sh` safely automates only duplication,
+regeneration, polling, and report export. It never reviews, accepts, or
+publishes content. See
+[`guideline-partial-publication-recovery-runbook.md`](guideline-partial-publication-recovery-runbook.md).

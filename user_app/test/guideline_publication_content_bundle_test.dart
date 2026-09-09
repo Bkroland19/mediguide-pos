@@ -18,9 +18,59 @@ void main() {
     expect(api.paths.where((path) => path.endsWith('/content')), hasLength(1));
     expect(api.paths.where((path) => path.contains('/sections')), isEmpty);
   });
+
+  test('rejects a stale content bundle from another version', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GuidelinePublicationRepository(
+      _ContentBundleApi(staleContent: true),
+      store.cache,
+    );
+
+    await expectLater(
+      repository.content('guideline-1'),
+      throwsA(isA<GuidelinePublicationVersionMismatch>()),
+    );
+  });
+
+  test('does not combine a new manifest with an older cached bundle', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    await GuidelinePublicationRepository(
+      _ContentBundleApi(),
+      store.cache,
+    ).content('guideline-1');
+    final repository = GuidelinePublicationRepository(
+      _ContentBundleApi(
+        manifestVersion: 'version-2',
+        packageVersion: 3,
+        checksum: 'checksum-2',
+        contentError: true,
+      ),
+      store.cache,
+    );
+
+    await expectLater(
+      repository.content('guideline-1'),
+      throwsA(isA<GuidelinePublicationVersionMismatch>()),
+    );
+  });
 }
 
 final class _ContentBundleApi extends BackendApiService {
+  _ContentBundleApi({
+    this.staleContent = false,
+    this.manifestVersion = 'version-1',
+    this.packageVersion = 2,
+    this.checksum = 'checksum-1',
+    this.contentError = false,
+  });
+
+  final bool staleContent;
+  final String manifestVersion;
+  final int packageVersion;
+  final String checksum;
+  final bool contentError;
   final paths = <String>[];
 
   @override
@@ -36,18 +86,26 @@ final class _ContentBundleApi extends BackendApiService {
       return {
         'data': {
           'guideline_id': 'guideline-1',
-          'version_id': 'version-1',
+          'version_id': manifestVersion,
           'version': '1',
           'recommended_mode': 'structured',
           'has_chapters': true,
           'section_count': 2,
           'block_count': 1,
+          'schema_version': 2,
+          'package_version': packageVersion,
+          'checksum': checksum,
         },
       };
     }
     if (path.endsWith('/content')) {
+      if (contentError) throw StateError('content unavailable');
       return {
         'data': {
+          'guideline_id': 'guideline-1',
+          'version_id': staleContent ? 'version-old' : manifestVersion,
+          'package_version': staleContent ? 1 : packageVersion,
+          'checksum': staleContent ? 'checksum-old' : checksum,
           'sections': [
             {
               'id': 'parent',

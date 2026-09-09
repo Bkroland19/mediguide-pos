@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -12,6 +13,169 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestBulkReviewBlocksApprovesOnlyEligibleBlocksAtomically(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID, jobID := uuid.New(), uuid.New()
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", CurrentMarkdownRevisionID: &revisionID, StructuredMarkdownRevisionID: &revisionID}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision := models.GuidelineMarkdownRevision{Base: models.Base{ID: revisionID}, DocumentID: document.ID, VersionID: version.ID, RevisionNumber: 1, StorageKey: "source.md", Checksum: "sum", SourceType: "upload", IsCurrent: true, RegenerationJobID: &jobID}
+	if err := db.Create(&revision).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, Title: "Care", Slug: "care", Level: 2}
+	if err := db.Create(&section).Error; err != nil {
+		t.Fatal(err)
+	}
+	emptyStructuralLeaf := models.GuidelineSection{VersionID: version.ID, Title: "Overview", Slug: "overview", Level: 2}
+	exemptLeaf := models.GuidelineSection{VersionID: version.ID, Title: "References", Slug: "references", Level: 2}
+	if err := db.Create(&emptyStructuralLeaf).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&exemptLeaf).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.GuidelineContentBlock{
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Verified prose"}`), SourceFingerprint: "p", ReviewStatus: models.GuidelineBlockDraft},
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockUnorderedList, ContentJSON: []byte(`{"type":"unordered_list","items":["Verified item"]}`), SourceFingerprint: "l", ReviewStatus: models.GuidelineBlockDraft},
+		{VersionID: version.ID, SectionID: &exemptLeaf.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Citation"}`), SourceFingerprint: "r", ReviewStatus: models.GuidelineBlockDraft},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := range blocks {
+		chunk := models.GuidelineChunk{DocumentID: document.ID, VersionID: version.ID, SectionID: &section.ID, BlockID: &blocks[index].ID, ReviewStatus: "rejected"}
+		if err := db.Create(&chunk).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	service := GuidelineService{DB: db}
+	page, err := service.ListReviewBlocks(version.ID, GuidelineReviewBlocksFilter{
+		Page: PageInput{Page: 1, PerPage: 1}, Risk: "low-risk-pending", SectionID: &section.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.TotalItems != 2 || page.TotalPages != 2 || page.Progress.PendingLowRiskBlocks != 3 || page.Progress.EmptyClinicalLeafSections != 1 {
+		t.Fatalf("unexpected paginated review queue: %#v", page)
+	}
+	if page.MarkdownRevisionID == nil || *page.MarkdownRevisionID != revisionID || page.RegenerationJobID == nil || *page.RegenerationJobID != jobID {
+		t.Fatalf("review identities missing: %#v", page)
+	}
+	reviewer := uuid.New()
+	result, err := service.BulkReviewBlocks(version.ID, reviewer, "127.0.0.1", BulkReviewGuidelineBlocksInput{
+		BlockIDs: []uuid.UUID{blocks[0].ID, blocks[1].ID}, Status: models.GuidelineBlockReviewed,
+		Confirmation: GuidelineBulkReviewConfirmation, ExpectedMarkdownRevisionID: revisionID, ExpectedRegenerationJobID: jobID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ReviewedCount != 2 || result.RejectedCount != 0 {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+	var reviewed []models.GuidelineContentBlock
+	if err := db.Where("id IN ?", result.ReviewedIDs).Find(&reviewed).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, block := range reviewed {
+		if block.ReviewStatus != models.GuidelineBlockReviewed || block.ReviewedBy == nil || *block.ReviewedBy != reviewer || block.ReviewedAt == nil {
+			t.Fatalf("missing review provenance: %#v", block)
+		}
+	}
+	var draftChunks int64
+	if err := db.Model(&models.GuidelineChunk{}).Where("version_id = ? AND review_status = 'draft'", version.ID).Count(&draftChunks).Error; err != nil {
+		t.Fatal(err)
+	}
+	if draftChunks != 2 {
+		t.Fatalf("chunks not synchronized: %d", draftChunks)
+	}
+	var audit models.AuditLog
+	if err := db.Where("action = ? AND entity_id = ?", "guideline.blocks.bulk_reviewed", version.ID.String()).First(&audit).Error; err != nil {
+		t.Fatal(err)
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal([]byte(audit.MetadataJSON), &metadata); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"version_id", "revision_id", "regeneration_job_id", "reviewer_id", "block_ids", "counts_by_type", "previous_states", "resulting_states", "confirmation"} {
+		if _, ok := metadata[key]; !ok {
+			t.Errorf("audit metadata missing %s: %s", key, audit.MetadataJSON)
+		}
+	}
+}
+
+func TestBulkReviewBlocksRejectsIneligibleSelectionWithoutPartialUpdate(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID, jobID := uuid.New(), uuid.New()
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", CurrentMarkdownRevisionID: &revisionID, StructuredMarkdownRevisionID: &revisionID}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.GuidelineMarkdownRevision{Base: models.Base{ID: revisionID}, DocumentID: document.ID, VersionID: version.ID, RevisionNumber: 1, StorageKey: "source.md", Checksum: "sum", SourceType: "upload", IsCurrent: true, RegenerationJobID: &jobID}).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.GuidelineContentBlock{
+		{VersionID: version.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Prose"}`), SourceFingerprint: "p", ReviewStatus: models.GuidelineBlockDraft},
+		{VersionID: version.ID, Type: models.GuidelineBlockTable, ContentJSON: []byte(`{"type":"table","columns":["A"],"rows":[["B"]],"footnotes":[]}`), SourceFingerprint: "t", ReviewStatus: models.GuidelineBlockDraft},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	result, err := (GuidelineService{DB: db}).BulkReviewBlocks(version.ID, uuid.New(), "", BulkReviewGuidelineBlocksInput{BlockIDs: []uuid.UUID{blocks[0].ID, blocks[1].ID}, Status: models.GuidelineBlockReviewed, Confirmation: GuidelineBulkReviewConfirmation, ExpectedMarkdownRevisionID: revisionID, ExpectedRegenerationJobID: jobID})
+	if !errors.Is(err, ErrGuidelineBulkReviewRejected) || result.RejectedCount != 2 || len(result.Reasons) != 1 || result.Reasons[0].Code != "block_ineligible" {
+		t.Fatalf("expected atomic rejection, result=%#v err=%v", result, err)
+	}
+	var changed int64
+	if err := db.Model(&models.GuidelineContentBlock{}).Where("version_id = ? AND review_status = ?", version.ID, models.GuidelineBlockReviewed).Count(&changed).Error; err != nil {
+		t.Fatal(err)
+	}
+	if changed != 0 {
+		t.Fatalf("partial update occurred: %d", changed)
+	}
+}
+
+func TestBulkReviewBlocksRejectsStaleAndImmutableVersions(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	revisionID, jobID := uuid.New(), uuid.New()
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", CurrentMarkdownRevisionID: &revisionID, StructuredMarkdownRevisionID: &revisionID}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.GuidelineMarkdownRevision{Base: models.Base{ID: revisionID}, DocumentID: document.ID, VersionID: version.ID, RevisionNumber: 1, StorageKey: "source.md", Checksum: "sum", SourceType: "upload", IsCurrent: true, RegenerationJobID: &jobID}).Error; err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{VersionID: version.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Prose"}`), SourceFingerprint: "p", ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+	base := BulkReviewGuidelineBlocksInput{BlockIDs: []uuid.UUID{block.ID}, Status: models.GuidelineBlockReviewed, Confirmation: GuidelineBulkReviewConfirmation, ExpectedMarkdownRevisionID: uuid.New(), ExpectedRegenerationJobID: jobID}
+	result, err := (GuidelineService{DB: db}).BulkReviewBlocks(version.ID, uuid.New(), "", base)
+	if !errors.Is(err, ErrGuidelineBulkReviewRejected) || result.Reasons[0].Code != "stale_markdown_revision" {
+		t.Fatalf("stale revision accepted: %#v %v", result, err)
+	}
+	if err := db.Model(&version).Update("status", "published").Error; err != nil {
+		t.Fatal(err)
+	}
+	base.ExpectedMarkdownRevisionID = revisionID
+	_, err = (GuidelineService{DB: db}).BulkReviewBlocks(version.ID, uuid.New(), "", base)
+	if !errors.Is(err, ErrPublishedVersionImmutable) {
+		t.Fatalf("published version mutated: %v", err)
+	}
+}
 
 func TestGuidelinePublicationValidationRejectsUnsafeDraft(t *testing.T) {
 	db := guidelineReviewTestDB(t)
@@ -68,6 +232,176 @@ func TestGuidelinePublicationValidationRejectsUnsafeDraft(t *testing.T) {
 			t.Fatalf("missing validation issue %q: %#v", expected, validation.Errors)
 		}
 	}
+	for _, issue := range validation.Errors {
+		if issue.Remediation == "" {
+			t.Fatalf("validation issue %q has no remediation guidance", issue.Code)
+		}
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsTableOnlyReviewedProjection(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2", Status: "review_required", OriginalFileKey: "diabetes.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	sections := []models.GuidelineSection{
+		{VersionID: version.ID, Title: "Chapter 1", Slug: "chapter-1", Level: 2, SortOrder: 1},
+		{VersionID: version.ID, Title: "Chapter 2", Slug: "chapter-2", Level: 2, SortOrder: 2},
+		{VersionID: version.ID, Title: "Chapter 3", Slug: "chapter-3", Level: 2, SortOrder: 3},
+	}
+	if err := db.Create(&sections).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 10; index++ {
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &sections[index%3].ID, Type: models.GuidelineBlockTable, SortOrder: index, ContentJSON: []byte(`{"type":"table","columns":["A"],"rows":[["B"]],"footnotes":[]}`), SourceFingerprint: fmt.Sprintf("table-%d", index), ReviewStatus: models.GuidelineBlockReviewed}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	for index := range sections {
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &sections[index].ID, Type: models.GuidelineBlockParagraph, SortOrder: 20 + index, ContentJSON: []byte(`{"type":"paragraph","text":"Clinical prose"}`), SourceFingerprint: fmt.Sprintf("prose-%d", index), ReviewStatus: models.GuidelineBlockDraft}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, code := range []string{"no_reviewed_prose", "reviewed_content_imbalance"} {
+		if !hasGuidelineReviewIssue(validation.Errors, code) {
+			t.Fatalf("missing %s: %#v", code, validation.Errors)
+		}
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsMostlyEmptyClinicalLeaves(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guideline"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2", Status: "review_required", OriginalFileKey: "source.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 10; index++ {
+		section := models.GuidelineSection{VersionID: version.ID, Title: fmt.Sprintf("Clinical topic %d", index+1), Slug: fmt.Sprintf("clinical-topic-%d", index+1), Level: 2, SortOrder: index}
+		if err := db.Create(&section).Error; err != nil {
+			t.Fatal(err)
+		}
+		status := models.GuidelineBlockDraft
+		if index < 2 {
+			status = models.GuidelineBlockReviewed
+		}
+		block := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Clinical prose"}`), SourceFingerprint: fmt.Sprintf("p-%d", index), ReviewStatus: status}
+		if err := db.Create(&block).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "empty_clinical_leaf_sections") {
+		t.Fatalf("mostly empty clinical leaves were not blocked: %#v", validation.Errors)
+	}
+}
+
+func TestGuidelinePublicationValidationRejectsPartialWithoutReviewedFallback(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Diabetes"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2026.10.01", Status: "review_required", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, Title: "Diagnosis", Slug: "diagnosis", Level: 2}
+	if err := db.Create(&section).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.GuidelineContentBlock{
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Reviewed"}`), ReviewStatus: models.GuidelineBlockReviewed},
+		{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Pending"}`), ReviewStatus: models.GuidelineBlockDraft},
+	}
+	if err := db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatalf("partial publication without fallback was not blocked: %#v", validation.Errors)
+	}
+
+	asset := models.GuidelineAsset{VersionID: version.ID, Type: models.GuidelineAssetOriginalPDF, MIMEType: "application/pdf", StorageKey: "source.pdf", Checksum: "sum", SizeBytes: 1, ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&asset).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err = (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatal("an unreviewed PDF incorrectly satisfied the fallback gate")
+	}
+	if err := db.Model(&asset).Update("review_status", models.GuidelineBlockReviewed).Error; err != nil {
+		t.Fatal(err)
+	}
+	validation, err = (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasGuidelineReviewIssue(validation.Errors, "partial_without_original_document") {
+		t.Fatalf("reviewed PDF did not satisfy fallback gate: %#v", validation.Errors)
+	}
+}
+
+func TestReviewWorkspaceExposesAuthoritativeBlockReviewPolicy(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "draft"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	workspace, err := (GuidelineService{DB: db}).ReviewWorkspace(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy := workspace.BlockReviewPolicy
+	if !containsGuidelineBlockType(policy.HighRiskTypes, models.GuidelineBlockTable) {
+		t.Fatalf("table missing from high-risk capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.BulkReviewEligibleTypes, models.GuidelineBlockParagraph) {
+		t.Fatalf("paragraph missing from bulk-review capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.ConditionalRiskTypes, models.GuidelineBlockFigure) {
+		t.Fatalf("figure missing from conditional capability: %#v", policy)
+	}
+	if !containsGuidelineBlockType(policy.IneligibleBulkTypes, models.GuidelineBlockUnknown) {
+		t.Fatalf("unknown missing from ineligible capability: %#v", policy)
+	}
+}
+
+func containsGuidelineBlockType(values []models.GuidelineBlockType, expected models.GuidelineBlockType) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func TestReviewBlockAuditsPublisherAndEditedContentResetsDecision(t *testing.T) {
@@ -280,7 +614,7 @@ func TestGuidelinePublicationValidationRejectsStructuralRegression(t *testing.T)
 			t.Fatal(err)
 		}
 		for blockIndex := 0; blockIndex < 2; blockIndex++ {
-			block := models.GuidelineContentBlock{VersionID: current.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, SortOrder: index*2 + blockIndex, ContentJSON: []byte(`{"type":"paragraph","text":"Current clinical content."}`), SourceFingerprint: fmt.Sprintf("current-%d-%d", index, blockIndex), ReviewStatus: models.GuidelineBlockDraft}
+			block := models.GuidelineContentBlock{VersionID: current.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, SortOrder: index*2 + blockIndex, ContentJSON: []byte(`{"type":"paragraph","text":"Current clinical content."}`), SourceFingerprint: fmt.Sprintf("current-%d-%d", index, blockIndex), ReviewStatus: models.GuidelineBlockReviewed}
 			if err := db.Create(&block).Error; err != nil {
 				t.Fatal(err)
 			}
@@ -311,7 +645,7 @@ func TestGuidelinePublicationValidationRejectsStructuralRegression(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "structural_regression") {
+	if validation.Valid || !hasGuidelineReviewIssue(validation.Errors, "structural_regression") || !hasGuidelineReviewIssue(validation.Errors, "reviewed_content_regression") {
 		t.Fatalf("structural collapse passed publication validation: %#v", validation.Errors)
 	}
 }
@@ -477,7 +811,7 @@ func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.GuidelineDocument{}, &models.GuidelineVersion{}, &models.GuidelineSection{},
 		&models.GuidelineContentBlock{}, &models.GuidelineAsset{}, &models.GuidelineChunk{}, &models.AuditLog{},
-		&models.IngestionJob{}, &models.GuidelineMarkdownRevision{},
+		&models.IngestionJob{}, &models.GuidelineMarkdownRevision{}, &models.GuidelineRegenerationReview{},
 	); err != nil {
 		t.Fatal(err)
 	}

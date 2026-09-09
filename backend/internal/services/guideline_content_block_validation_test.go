@@ -56,7 +56,7 @@ func TestClinicalCalloutReviewRiskClassification(t *testing.T) {
 		models.GuidelineBlockAlgorithmReference,
 		models.GuidelineBlockReferralCriteria,
 	} {
-		if !highRiskGuidelineBlock(blockType) {
+		if !models.GuidelineBlockRequiresIndividualReview(blockType) {
 			t.Errorf("expected %s to require clinical review", blockType)
 		}
 	}
@@ -65,7 +65,7 @@ func TestClinicalCalloutReviewRiskClassification(t *testing.T) {
 		models.GuidelineBlockEvidence,
 		models.GuidelineBlockClinicalNote,
 	} {
-		if highRiskGuidelineBlock(blockType) {
+		if models.GuidelineBlockRequiresIndividualReview(blockType) {
 			t.Errorf("expected %s to use standard review", blockType)
 		}
 	}

@@ -141,6 +141,32 @@ void main() {
   });
 
   test(
+    'marks a downloaded guideline outdated when a newer publication is current',
+    () async {
+      await service.download(
+        guidelineId: 'guideline-current',
+        title: 'Clinical guideline',
+        version: '1',
+        assetType: 'offline_package',
+        asset: asset(),
+        scope: 'public',
+      );
+
+      await service.markUpdateAvailable(
+        scope: 'public',
+        guidelineId: 'guideline-current',
+        assetType: 'offline_package',
+        latestVersion: '2',
+      );
+
+      expect(
+        (await service.list('public')).single.status,
+        OfflineDownloadStatus.updateAvailable,
+      );
+    },
+  );
+
+  test(
     'outbreak reconciliation flags updates and removes revoked files',
     () async {
       final current = await service.download(

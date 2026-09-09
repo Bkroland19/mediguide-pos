@@ -14,6 +14,7 @@ reviewer assignment and high-risk review boundaries.
 | Upload or manage authoring assets | `guideline.asset.manage` | Assets are version-scoped, type/size checked and private. |
 | Request, retry or cancel regeneration | `guideline.structure.regenerate` | It is revision-bound, idempotent and concurrency limited. |
 | Review ordinary generated content | `guideline.review` | Decisions record authenticated actor and time. |
+| View/export the read-only completeness report | `guideline.review` | JSON and CSV exports expose review and RAG readiness but cannot mutate a version. |
 | Approve high-risk clinical blocks | `guideline.high_risk.approve` | Required for clinical recommendation and safety blocks. |
 | Restore an immutable revision | `guideline.revision.restore` | Restore creates a new revision; history is never rewritten. |
 | Publish an accepted version | `guideline.publish` | Current, structured and accepted revision IDs must match. |

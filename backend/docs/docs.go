@@ -7042,6 +7042,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/blocks/bulk-review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Approve a verified selection of low-risk guideline blocks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Explicit low-risk review attestation",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.BulkReviewGuidelineBlocksInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineBulkReviewResult"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/blocks/reorder": {
             "put": {
                 "security": [
@@ -7310,6 +7368,128 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/completeness-report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Get a read-only guideline publication completeness report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCompletenessReport"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/completeness-report/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json",
+                    "text/csv"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Export a read-only guideline completeness report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "json",
+                            "csv"
+                        ],
+                        "type": "string",
+                        "default": "json",
+                        "description": "Export format: json or csv",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -8221,6 +8401,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/regenerate-manifest": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Regenerate completeness metadata for a published guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Published guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineVersionManifest"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}": {
             "get": {
                 "security": [
@@ -8640,6 +8878,80 @@ const docTemplate = `{
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-blocks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List and filter guideline blocks for editorial review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Review status: all, pending, reviewed, rejected",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Risk filter: all, low-risk-pending, high-risk, pending-high-risk",
+                        "name": "risk",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Block type",
+                        "name": "block_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Section ID",
+                        "name": "section_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineReviewBlocksPage"
                         }
                     }
                 }
@@ -20934,6 +21246,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "empty_leaf_section_count": {
+                    "type": "integer"
+                },
                 "etag": {
                     "type": "string"
                 },
@@ -20973,7 +21288,19 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "leaf_section_count": {
+                    "type": "integer"
+                },
                 "package_version": {
+                    "type": "integer"
+                },
+                "reviewed_leaf_section_count": {
+                    "type": "integer"
+                },
+                "reviewed_paragraph_count": {
+                    "type": "integer"
+                },
+                "reviewed_section_count": {
                     "type": "integer"
                 },
                 "schema_version": {
@@ -21813,6 +22140,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.Citation"
                     }
                 },
+                "coverage_notice": {
+                    "type": "string"
+                },
+                "search_scope": {
+                    "type": "string"
+                },
                 "session_id": {
                     "type": "string"
                 }
@@ -21829,6 +22162,36 @@ const docTemplate = `{
                 },
                 "reviewer_id": {
                     "type": "string"
+                }
+            }
+        },
+        "services.BulkReviewGuidelineBlocksInput": {
+            "type": "object",
+            "required": [
+                "block_ids",
+                "confirmation",
+                "expected_markdown_revision_id",
+                "expected_regeneration_job_id",
+                "status"
+            ],
+            "properties": {
+                "block_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "confirmation": {
+                    "type": "string"
+                },
+                "expected_markdown_revision_id": {
+                    "type": "string"
+                },
+                "expected_regeneration_job_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
                 }
             }
         },
@@ -23680,6 +24043,84 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineBlockReviewPolicy": {
+            "type": "object",
+            "properties": {
+                "bulk_review_eligible_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "conditional_risk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "high_risk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                },
+                "ineligible_bulk_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineBlockType"
+                    }
+                }
+            }
+        },
+        "services.GuidelineBulkReviewReason": {
+            "type": "object",
+            "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.GuidelineBulkReviewResult": {
+            "type": "object",
+            "properties": {
+                "reasons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineBulkReviewReason"
+                    }
+                },
+                "rejected_count": {
+                    "type": "integer"
+                },
+                "reviewed_count": {
+                    "type": "integer"
+                },
+                "reviewed_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "skipped_count": {
+                    "type": "integer"
+                },
+                "skipped_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "services.GuidelineCategoryInput": {
             "type": "object",
             "properties": {
@@ -23774,6 +24215,279 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineCompletenessBlockCount": {
+            "type": "object",
+            "properties": {
+                "block_type": {
+                    "type": "string"
+                },
+                "draft": {
+                    "type": "integer"
+                },
+                "rejected": {
+                    "type": "integer"
+                },
+                "reviewed": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineCompletenessComparison": {
+            "type": "object",
+            "properties": {
+                "current_version": {
+                    "type": "string"
+                },
+                "current_version_id": {
+                    "type": "string"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineCompletenessMetric"
+                    }
+                },
+                "same_version": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.GuidelineCompletenessEmptySection": {
+            "type": "object",
+            "properties": {
+                "active_block_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "review_exempt": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCompletenessMetric": {
+            "type": "object",
+            "properties": {
+                "candidate": {
+                    "type": "integer"
+                },
+                "current": {
+                    "type": "integer"
+                },
+                "delta": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCompletenessRAG": {
+            "type": "object",
+            "properties": {
+                "approved_chunks": {
+                    "type": "integer"
+                },
+                "draft_chunks": {
+                    "type": "integer"
+                },
+                "embedded_approved_chunks": {
+                    "type": "integer"
+                },
+                "embedded_reviewed_block_chunks": {
+                    "type": "integer"
+                },
+                "embedding_column_available": {
+                    "type": "boolean"
+                },
+                "missing_approved_embeddings": {
+                    "type": "integer"
+                },
+                "missing_reviewed_embeddings": {
+                    "type": "integer"
+                },
+                "ready": {
+                    "type": "boolean"
+                },
+                "rejected_chunks": {
+                    "type": "integer"
+                },
+                "reviewed_block_chunks": {
+                    "type": "integer"
+                },
+                "reviewed_blocks_with_chunks": {
+                    "type": "integer"
+                },
+                "reviewed_blocks_without_chunks": {
+                    "type": "integer"
+                },
+                "total_chunks": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineCompletenessRegeneration": {
+            "type": "object",
+            "properties": {
+                "accepted_at": {
+                    "type": "string"
+                },
+                "accepted_by": {
+                    "type": "string"
+                },
+                "current_markdown_revision_id": {
+                    "type": "string"
+                },
+                "identities_match": {
+                    "type": "boolean"
+                },
+                "latest_job_id": {
+                    "type": "string"
+                },
+                "latest_job_stage": {
+                    "type": "string"
+                },
+                "latest_job_status": {
+                    "type": "string"
+                },
+                "published_markdown_revision_id": {
+                    "type": "string"
+                },
+                "review_id": {
+                    "type": "string"
+                },
+                "review_job_id": {
+                    "type": "string"
+                },
+                "review_revision_id": {
+                    "type": "string"
+                },
+                "review_status": {
+                    "type": "string"
+                },
+                "structured_markdown_revision_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCompletenessReport": {
+            "type": "object",
+            "properties": {
+                "active_blocks": {
+                    "type": "integer"
+                },
+                "block_counts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineCompletenessBlockCount"
+                    }
+                },
+                "current_comparison": {
+                    "$ref": "#/definitions/services.GuidelineCompletenessComparison"
+                },
+                "empty_leaf_sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineCompletenessEmptySection"
+                    }
+                },
+                "generated_at": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "guideline_title": {
+                    "type": "string"
+                },
+                "rag": {
+                    "$ref": "#/definitions/services.GuidelineCompletenessRAG"
+                },
+                "read_only": {
+                    "type": "boolean"
+                },
+                "regeneration": {
+                    "$ref": "#/definitions/services.GuidelineCompletenessRegeneration"
+                },
+                "reviewed_blocks": {
+                    "type": "integer"
+                },
+                "reviewed_percentage": {
+                    "type": "number"
+                },
+                "sections": {
+                    "$ref": "#/definitions/services.GuidelineCompletenessSectionSummary"
+                },
+                "sources": {
+                    "$ref": "#/definitions/services.GuidelineCompletenessSources"
+                },
+                "total_blocks": {
+                    "type": "integer"
+                },
+                "validation": {
+                    "$ref": "#/definitions/services.GuidelinePublicationValidation"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                },
+                "version_status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCompletenessSectionSummary": {
+            "type": "object",
+            "properties": {
+                "empty_leaf_sections": {
+                    "type": "integer"
+                },
+                "leaf_sections": {
+                    "type": "integer"
+                },
+                "reviewed_leaf_sections": {
+                    "type": "integer"
+                },
+                "reviewed_sections": {
+                    "type": "integer"
+                },
+                "total_sections": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineCompletenessSources": {
+            "type": "object",
+            "properties": {
+                "offline_package_available": {
+                    "type": "boolean"
+                },
+                "offline_package_reviewed": {
+                    "type": "boolean"
+                },
+                "original_pdf_available": {
+                    "type": "boolean"
+                },
+                "original_pdf_reviewed": {
+                    "type": "boolean"
+                },
+                "reviewed_fallback_available": {
+                    "type": "boolean"
                 }
             }
         },
@@ -23994,6 +24708,38 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineReviewBlocksPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineContentBlock"
+                    }
+                },
+                "markdown_revision_id": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "progress": {
+                    "$ref": "#/definitions/services.GuidelineReviewProgress"
+                },
+                "regeneration_job_id": {
+                    "type": "string"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.GuidelineReviewCommentInput": {
             "type": "object",
             "properties": {
@@ -24020,8 +24766,37 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
+                "remediation": {
+                    "type": "string"
+                },
                 "section_id": {
                     "type": "string"
+                }
+            }
+        },
+        "services.GuidelineReviewProgress": {
+            "type": "object",
+            "properties": {
+                "empty_clinical_leaf_sections": {
+                    "type": "integer"
+                },
+                "pending_high_risk_blocks": {
+                    "type": "integer"
+                },
+                "pending_low_risk_blocks": {
+                    "type": "integer"
+                },
+                "rejected_blocks": {
+                    "type": "integer"
+                },
+                "reviewed_blocks": {
+                    "type": "integer"
+                },
+                "sections_with_reviewed_content": {
+                    "type": "integer"
+                },
+                "total_blocks": {
+                    "type": "integer"
                 }
             }
         },
@@ -24033,6 +24808,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.GuidelineAsset"
                     }
+                },
+                "block_review_policy": {
+                    "$ref": "#/definitions/services.GuidelineBlockReviewPolicy"
                 },
                 "blocks": {
                     "type": "array",
@@ -26890,11 +27668,23 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.PublicGuidelineBlock"
                     }
                 },
+                "checksum": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "package_version": {
+                    "type": "integer"
+                },
                 "sections": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.PublicGuidelineSection"
                     }
+                },
+                "version_id": {
+                    "type": "string"
                 }
             }
         },
@@ -26936,6 +27726,9 @@ const docTemplate = `{
                 "checksum": {
                     "type": "string"
                 },
+                "empty_leaf_section_count": {
+                    "type": "integer"
+                },
                 "etag": {
                     "type": "string"
                 },
@@ -26972,6 +27765,9 @@ const docTemplate = `{
                 "has_tables": {
                     "type": "boolean"
                 },
+                "leaf_section_count": {
+                    "type": "integer"
+                },
                 "package_version": {
                     "type": "integer"
                 },
@@ -26982,6 +27778,15 @@ const docTemplate = `{
                         "partial",
                         "original_document"
                     ]
+                },
+                "reviewed_leaf_section_count": {
+                    "type": "integer"
+                },
+                "reviewed_paragraph_count": {
+                    "type": "integer"
+                },
+                "reviewed_section_count": {
+                    "type": "integer"
                 },
                 "schema_version": {
                     "type": "integer"
@@ -27038,8 +27843,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/services.PublicGuidelineBlock"
                     }
                 },
+                "checksum": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "package_version": {
+                    "type": "integer"
+                },
                 "section": {
                     "$ref": "#/definitions/services.PublicGuidelineSection"
+                },
+                "version_id": {
+                    "type": "string"
                 }
             }
         },

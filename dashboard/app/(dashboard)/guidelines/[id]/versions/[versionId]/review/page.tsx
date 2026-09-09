@@ -31,6 +31,8 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/lib/toast";
+import { GuidelineBulkReviewPanel } from "@/components/guidelines/guideline-bulk-review-panel";
+import { GuidelineCompletenessReport } from "@/components/guidelines/guideline-completeness-report";
 import {
   guidelineDocumentsQueryKey,
   GuidelineBlockType,
@@ -63,19 +65,6 @@ const blockTypes: GuidelineBlockType[] = [
   "page_break",
   "unknown",
 ];
-
-const highRiskBlockTypes = new Set<GuidelineBlockType>([
-  "table",
-  "recommendation",
-  "warning",
-  "caution",
-  "contraindication",
-  "dosage",
-  "procedure",
-  "algorithm",
-  "algorithm_reference",
-  "referral_criteria",
-]);
 
 type BlockReviewFilter = "high-risk" | "pending-high-risk" | "all";
 
@@ -311,6 +300,10 @@ export default function GuidelineReviewPage() {
     () => workspace?.blocks || [],
     [workspace?.blocks],
   );
+  const highRiskBlockTypes = React.useMemo(
+    () => new Set(workspace?.block_review_policy?.high_risk_types || []),
+    [workspace?.block_review_policy?.high_risk_types],
+  );
   const pendingHighRiskBlocks = React.useMemo(
     () =>
       blocks.filter(
@@ -318,7 +311,7 @@ export default function GuidelineReviewPage() {
           highRiskBlockTypes.has(block.type) &&
           block.review_status !== "reviewed",
       ),
-    [blocks],
+    [blocks, highRiskBlockTypes],
   );
   const selectedSection =
     sections.find((section) => section.id === selectedSectionId) || sections[0];
@@ -738,12 +731,28 @@ export default function GuidelineReviewPage() {
                   if (issue.block_id) setSelectedBlockId(issue.block_id);
                 }}
               >
-                {issue.message}
+                <span className="block font-medium">{issue.message}</span>
+                {issue.remediation ? (
+                  <span className="mt-1 block text-xs text-muted-foreground no-underline">
+                    How to resolve: {issue.remediation}
+                  </span>
+                ) : null}
               </button>
             ))}
           </CardContent>
         </Card>
       )}
+
+      <GuidelineBulkReviewPanel
+        versionId={versionId}
+        sections={sections}
+        eligibleTypes={workspace.block_review_policy?.bulk_review_eligible_types || []}
+        availableTypes={blockTypes}
+        onSelectBlock={selectBlock}
+        onReviewed={refresh}
+      />
+
+      <GuidelineCompletenessReport versionId={versionId} />
 
       <Tabs defaultValue="workspace" className="lg:hidden">
         <TabsList className="grid grid-cols-3">
@@ -783,7 +792,7 @@ export default function GuidelineReviewPage() {
         </TabsContent>
         <TabsContent value="preview">
           <PreviewPanel
-            blocks={blocks.filter(
+            blocks={sectionBlocks.filter(
               (block) => block.review_status !== "rejected",
             )}
             mode={previewMode}
@@ -820,7 +829,7 @@ export default function GuidelineReviewPage() {
           mergeSection={mergeSection}
         />
         <PreviewPanel
-          blocks={blocks.filter((block) => block.review_status !== "rejected")}
+          blocks={sectionBlocks.filter((block) => block.review_status !== "rejected")}
           mode={previewMode}
           setMode={setPreviewMode}
         />

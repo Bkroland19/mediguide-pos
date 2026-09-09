@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -17,6 +18,102 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// CompletenessReport godoc
+// @Summary Get a read-only guideline publication completeness report
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Success 200 {object} services.GuidelineCompletenessReport
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/completeness-report [get]
+func (h GuidelineHandler) CompletenessReport(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	report, err := h.Service.GuidelineCompletenessReport(versionID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, report)
+}
+
+// ExportCompletenessReport godoc
+// @Summary Export a read-only guideline completeness report
+// @Tags guideline-review
+// @Produce application/json,text/csv
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param format query string false "Export format: json or csv" Enums(json,csv) default(json)
+// @Success 200 {file} binary
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/completeness-report/export [get]
+func (h GuidelineHandler) ExportCompletenessReport(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	report, err := h.Service.GuidelineCompletenessReport(versionID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	format := strings.ToLower(strings.TrimSpace(c.DefaultQuery("format", "json")))
+	filename := "guideline-completeness-" + versionID.String()
+	switch format {
+	case "json":
+		data, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			reviewError(c, err)
+			return
+		}
+		c.Header("Content-Disposition", `attachment; filename="`+filename+`.json"`)
+		c.Data(http.StatusOK, "application/json; charset=utf-8", data)
+	case "csv":
+		data, err := services.GuidelineCompletenessReportCSV(report)
+		if err != nil {
+			reviewError(c, err)
+			return
+		}
+		c.Header("Content-Disposition", `attachment; filename="`+filename+`.csv"`)
+		c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
+	default:
+		httpx.Error(c, http.StatusBadRequest, "format must be json or csv")
+	}
+}
+
+// RegenerateManifest godoc
+// @Summary Regenerate completeness metadata for a published guideline version
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Published guideline version ID" format(uuid)
+// @Success 200 {object} models.GuidelineVersionManifest
+// @Failure 409 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/regenerate-manifest [post]
+func (h GuidelineHandler) RegenerateManifest(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	manifest, err := h.Service.RegenerateManifestForAdmin(versionID, reviewActor(c), c.ClientIP())
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, manifest)
+}
 
 // ReviewAsset godoc
 // @Summary Stream an extracted guideline asset for editorial review
@@ -258,6 +355,84 @@ func (h GuidelineHandler) ReviewWorkspace(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, workspace)
+}
+
+// ListReviewBlocks godoc
+// @Summary List and filter guideline blocks for editorial review
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Param status query string false "Review status: all, pending, reviewed, rejected"
+// @Param risk query string false "Risk filter: all, low-risk-pending, high-risk, pending-high-risk"
+// @Param block_type query string false "Block type"
+// @Param section_id query string false "Section ID" format(uuid)
+// @Success 200 {object} services.GuidelineReviewBlocksPage
+// @Router /api/v2/guideline-versions/{id}/review-blocks [get]
+func (h GuidelineHandler) ListReviewBlocks(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	page, err := parsePageQuery(c, 50, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	var sectionID *uuid.UUID
+	if value := strings.TrimSpace(c.Query("section_id")); value != "" {
+		parsed, err := uuid.Parse(value)
+		if err != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid section_id")
+			return
+		}
+		sectionID = &parsed
+	}
+	result, err := h.Service.ListReviewBlocks(versionID, services.GuidelineReviewBlocksFilter{
+		Page: page, Status: c.Query("status"), Risk: c.Query("risk"),
+		BlockType: c.Query("block_type"), SectionID: sectionID,
+	})
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// BulkReviewBlocks godoc
+// @Summary Approve a verified selection of low-risk guideline blocks
+// @Tags guideline-review
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param payload body services.BulkReviewGuidelineBlocksInput true "Explicit low-risk review attestation"
+// @Success 200 {object} services.GuidelineBulkReviewResult
+// @Failure 409 {object} handlers.ErrorResponse
+// @Failure 422 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/blocks/bulk-review [post]
+func (h GuidelineHandler) BulkReviewBlocks(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	var input services.BulkReviewGuidelineBlocksInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	result, err := h.Service.BulkReviewBlocks(versionID, reviewActor(c), c.ClientIP(), input)
+	if errors.Is(err, services.ErrGuidelineBulkReviewRejected) {
+		httpx.ErrorWithMeta(c, http.StatusUnprocessableEntity, err.Error(), result)
+		return
+	}
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
 }
 
 // ValidatePublication godoc
@@ -514,7 +689,7 @@ func reviewError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		httpx.Error(c, http.StatusNotFound, "not found")
-	case errors.Is(err, services.ErrPublishedVersionImmutable), errors.Is(err, services.ErrGuidelineReviewConflict):
+	case errors.Is(err, services.ErrPublishedVersionImmutable), errors.Is(err, services.ErrGuidelineReviewConflict), errors.Is(err, services.ErrGuidelineManifestUnavailable):
 		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrGuidelineValidationFailed):
 		httpx.Error(c, http.StatusUnprocessableEntity, err.Error())

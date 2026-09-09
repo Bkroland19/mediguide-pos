@@ -12,6 +12,7 @@ export class BackendRequestError extends Error {
     message: string,
     public readonly status: number,
     public readonly retryAfterSeconds?: number,
+    public readonly meta?: unknown,
   ) {
     super(message)
     this.name = "BackendRequestError"
@@ -243,13 +244,13 @@ export class BackendClient {
     })
 
     if (!response.ok) {
-      const errorMessage = await extractError(response)
+      const errorPayload = await extractError(response)
       const retryAfterSeconds = parseRetryAfter(response.headers.get("Retry-After"))
       const message =
         response.status === 429 && retryAfterSeconds !== undefined
-          ? `${errorMessage} Try again in ${retryAfterSeconds} seconds.`
-          : errorMessage
-      throw new BackendRequestError(message, response.status, retryAfterSeconds)
+          ? `${errorPayload.message} Try again in ${retryAfterSeconds} seconds.`
+          : errorPayload.message
+      throw new BackendRequestError(message, response.status, retryAfterSeconds, errorPayload.meta)
     }
 
     if (options.responseType === "blob") {
@@ -539,9 +540,12 @@ function isExpired(value: string, now: number) {
 
 async function extractError(response: Response) {
   try {
-    const payload = (await response.json()) as { error?: string; message?: string }
-    return payload.error || payload.message || `Request failed with status ${response.status}`
+    const payload = (await response.json()) as { error?: string; message?: string; meta?: unknown }
+    return {
+      message: payload.error || payload.message || `Request failed with status ${response.status}`,
+      meta: payload.meta,
+    }
   } catch {
-    return `Request failed with status ${response.status}`
+    return { message: `Request failed with status ${response.status}`, meta: undefined }
   }
 }

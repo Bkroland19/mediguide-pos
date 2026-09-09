@@ -341,6 +341,39 @@ route, frequency, age group, or weight basis.
 
 ## Publication errors that block publishing
 
+### `no_reviewed_prose`
+
+The structured document contains meaningful paragraph or list content, but no
+prose is approved for public display. Review the authoritative paragraphs and
+lists, bulk-review only eligible low-risk content, and rerun validation.
+
+### `partial_without_original_document`
+
+Only part of the active projection is reviewed and neither a reviewed original
+PDF nor reviewed offline package is available. Complete block review or attach
+and review a source fallback before publishing.
+
+### `reviewed_content_imbalance`
+
+A conservative minimum sample is overwhelmingly represented by one non-prose
+block type, such as tables. Verify that paragraphs and lists were not omitted
+from review and inspect the publication preview before retrying.
+
+### `empty_clinical_leaf_sections`
+
+At least eight content-bearing clinical leaf sections were assessed and 40% or
+more (with at least four affected leaves) contain no reviewed blocks. Container
+headings and common front matter such as references, indexes, prefaces, and
+glossaries are excluded. Review the affected leaves or remove content that is
+not intended for publication.
+
+### `reviewed_content_regression`
+
+Compared with the current publication, the candidate retains less than a
+conservative threshold of reviewed blocks, paragraphs, sections, chapters,
+tables, or high-risk blocks. Compare versions and restore/review missing content
+before replacing the current publication.
+
 ### `missing_original_file`
 
 For a PDF-derived revision, the original PDF key is missing, the object cannot
@@ -573,3 +606,31 @@ When reporting an unresolved issue, provide:
 
 Do not include access tokens, passwords, Firebase credentials, MinIO secrets, or
 unredacted patient information.
+
+## Completeness report diagnosis
+
+Use `GET /api/v2/guideline-versions/{id}/completeness-report` before changing
+review state. The response is explicitly `read_only: true`. Important fields:
+
+- `reviewed_percentage` uses active (non-rejected) blocks as its denominator.
+- `sections.total_sections` is the complete structure;
+  `reviewed_sections` is the subset with direct reviewed blocks.
+- `empty_leaf_sections` lists leaves with no reviewed blocks and identifies
+  known structural exceptions such as references or indexes.
+- `sources.reviewed_fallback_available` is true only for a legacy authoritative
+  PDF or a reviewed original-PDF/offline-package asset.
+- `regeneration.identities_match` confirms that the current Markdown,
+  structured Markdown, latest regeneration job, and regeneration review refer
+  to the same immutable projection.
+- `rag.ready` requires every reviewed block to have chunks and every one of
+  those candidate chunks to have an embedding. `approved_chunks` separately
+  reports what is publicly searchable now. A false value is a publication/retrieval readiness
+  signal, not permission to expose draft chunks.
+- `current_comparison` shows coverage deltas against the document's current
+  published version.
+
+Export with `/completeness-report/export?format=json` or `format=csv`. If a
+report fails to load, confirm the user has `guideline.review`, the requested
+version exists, and migrations include the regeneration-review tables. Do not
+repair counts with direct SQL; correct review state through Editorial Review
+and regenerate derived manifests/packages through supported operations.

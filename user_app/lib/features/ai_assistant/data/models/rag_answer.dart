@@ -12,19 +12,24 @@ abstract class RagAnswer with _$RagAnswer {
     @Default('') String answer,
     @Default([]) List<RagCitation> citations,
     @JsonKey(name: 'session_id') @Default('') String sessionId,
+    @JsonKey(name: 'search_scope') @Default('') String searchScope,
+    @JsonKey(name: 'coverage_notice') @Default('') String coverageNotice,
   }) = _RagAnswer;
 
   factory RagAnswer.fromJson(Map<String, dynamic> json) =>
       _$RagAnswerFromJson(json);
 
   String get answerWithSources {
-    if (citations.isEmpty) return answer;
+    final coverage = coverageNotice.trim().isEmpty
+        ? ''
+        : '\n\n_${coverageNotice.trim()}_';
+    if (citations.isEmpty) return '$answer$coverage';
     final sources = citations
         .asMap()
         .entries
         .map((entry) => '[${entry.key + 1}] ${entry.value.displayLabel}')
         .join('\n');
-    return '$answer\n\n**Sources**\n$sources';
+    return '$answer\n\n**Sources**\n$sources$coverage';
   }
 }
 

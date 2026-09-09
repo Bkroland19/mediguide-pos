@@ -6841,6 +6841,9 @@ final class ModelsGuidelineVersionManifest {
 
   String? get createdAt => value['created_at']?.toString();
 
+  int? get emptyLeafSectionCount =>
+      (value['empty_leaf_section_count'] as num?)?.toInt();
+
   String? get etag => value['etag']?.toString();
 
   String? get extractionQuality => value['extraction_quality']?.toString();
@@ -6867,7 +6870,18 @@ final class ModelsGuidelineVersionManifest {
 
   String? get id => value['id']?.toString();
 
+  int? get leafSectionCount => (value['leaf_section_count'] as num?)?.toInt();
+
   int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
+  int? get reviewedLeafSectionCount =>
+      (value['reviewed_leaf_section_count'] as num?)?.toInt();
+
+  int? get reviewedParagraphCount =>
+      (value['reviewed_paragraph_count'] as num?)?.toInt();
+
+  int? get reviewedSectionCount =>
+      (value['reviewed_section_count'] as num?)?.toInt();
 
   int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
 
@@ -7648,6 +7662,10 @@ final class ServicesAskResponse {
         .toList(growable: false);
   }
 
+  String? get coverageNotice => value['coverage_notice']?.toString();
+
+  String? get searchScope => value['search_scope']?.toString();
+
   String? get sessionId => value['session_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
@@ -7667,6 +7685,36 @@ final class ServicesAssignGuidelineReviewerInput {
   String? get dueAt => value['due_at']?.toString();
 
   String? get reviewerId => value['reviewer_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesBulkReviewGuidelineBlocksInput {
+  ServicesBulkReviewGuidelineBlocksInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesBulkReviewGuidelineBlocksInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesBulkReviewGuidelineBlocksInput(json);
+
+  static const schemaName = 'services.BulkReviewGuidelineBlocksInput';
+  final Map<String, dynamic> value;
+
+  List<String> get blockIds {
+    final raw = value['block_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get confirmation => value['confirmation']?.toString();
+
+  String? get expectedMarkdownRevisionId =>
+      value['expected_markdown_revision_id']?.toString();
+
+  String? get expectedRegenerationJobId =>
+      value['expected_regeneration_job_id']?.toString();
+
+  String? get status => value['status']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -9584,6 +9632,121 @@ final class ServicesGuidelineBlockOrderInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineBlockReviewPolicy {
+  ServicesGuidelineBlockReviewPolicy(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBlockReviewPolicy.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBlockReviewPolicy(json);
+
+  static const schemaName = 'services.GuidelineBlockReviewPolicy';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineBlockType> get bulkReviewEligibleTypes {
+    final raw = value['bulk_review_eligible_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get conditionalRiskTypes {
+    final raw = value['conditional_risk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get highRiskTypes {
+    final raw = value['high_risk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineBlockType> get ineligibleBulkTypes {
+    final raw = value['ineligible_bulk_types'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineBlockType.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineBulkReviewReason {
+  ServicesGuidelineBulkReviewReason(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBulkReviewReason.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBulkReviewReason(json);
+
+  static const schemaName = 'services.GuidelineBulkReviewReason';
+  final Map<String, dynamic> value;
+
+  String? get blockId => value['block_id']?.toString();
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineBulkReviewResult {
+  ServicesGuidelineBulkReviewResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineBulkReviewResult.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineBulkReviewResult(json);
+
+  static const schemaName = 'services.GuidelineBulkReviewResult';
+  final Map<String, dynamic> value;
+
+  List<ServicesGuidelineBulkReviewReason> get reasons {
+    final raw = value['reasons'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesGuidelineBulkReviewReason.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  int? get rejectedCount => (value['rejected_count'] as num?)?.toInt();
+
+  int? get reviewedCount => (value['reviewed_count'] as num?)?.toInt();
+
+  List<String> get reviewedIds {
+    final raw = value['reviewed_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  int? get skippedCount => (value['skipped_count'] as num?)?.toInt();
+
+  List<String> get skippedIds {
+    final raw = value['skipped_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineCategoryInput {
   ServicesGuidelineCategoryInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -9696,6 +9859,348 @@ final class ServicesGuidelineCollectionItemInput {
   String? get guidelineId => value['guideline_id']?.toString();
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessBlockCount {
+  ServicesGuidelineCompletenessBlockCount(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessBlockCount.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessBlockCount(json);
+
+  static const schemaName = 'services.GuidelineCompletenessBlockCount';
+  final Map<String, dynamic> value;
+
+  String? get blockType => value['block_type']?.toString();
+
+  int? get draft => (value['draft'] as num?)?.toInt();
+
+  int? get rejected => (value['rejected'] as num?)?.toInt();
+
+  int? get reviewed => (value['reviewed'] as num?)?.toInt();
+
+  int? get total => (value['total'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessComparison {
+  ServicesGuidelineCompletenessComparison(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessComparison.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessComparison(json);
+
+  static const schemaName = 'services.GuidelineCompletenessComparison';
+  final Map<String, dynamic> value;
+
+  String? get currentVersion => value['current_version']?.toString();
+
+  String? get currentVersionId => value['current_version_id']?.toString();
+
+  List<ServicesGuidelineCompletenessMetric> get metrics {
+    final raw = value['metrics'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              ServicesGuidelineCompletenessMetric.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  bool? get sameVersion => value['same_version'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessEmptySection {
+  ServicesGuidelineCompletenessEmptySection(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessEmptySection.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessEmptySection(json);
+
+  static const schemaName = 'services.GuidelineCompletenessEmptySection';
+  final Map<String, dynamic> value;
+
+  int? get activeBlockCount => (value['active_block_count'] as num?)?.toInt();
+
+  String? get id => value['id']?.toString();
+
+  int? get level => (value['level'] as num?)?.toInt();
+
+  bool? get reviewExempt => value['review_exempt'] as bool?;
+
+  String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessMetric {
+  ServicesGuidelineCompletenessMetric(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessMetric.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessMetric(json);
+
+  static const schemaName = 'services.GuidelineCompletenessMetric';
+  final Map<String, dynamic> value;
+
+  int? get candidate => (value['candidate'] as num?)?.toInt();
+
+  int? get current => (value['current'] as num?)?.toInt();
+
+  int? get delta => (value['delta'] as num?)?.toInt();
+
+  String? get name => value['name']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessRAG {
+  ServicesGuidelineCompletenessRAG(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessRAG.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessRAG(json);
+
+  static const schemaName = 'services.GuidelineCompletenessRAG';
+  final Map<String, dynamic> value;
+
+  int? get approvedChunks => (value['approved_chunks'] as num?)?.toInt();
+
+  int? get draftChunks => (value['draft_chunks'] as num?)?.toInt();
+
+  int? get embeddedApprovedChunks =>
+      (value['embedded_approved_chunks'] as num?)?.toInt();
+
+  int? get embeddedReviewedBlockChunks =>
+      (value['embedded_reviewed_block_chunks'] as num?)?.toInt();
+
+  bool? get embeddingColumnAvailable =>
+      value['embedding_column_available'] as bool?;
+
+  int? get missingApprovedEmbeddings =>
+      (value['missing_approved_embeddings'] as num?)?.toInt();
+
+  int? get missingReviewedEmbeddings =>
+      (value['missing_reviewed_embeddings'] as num?)?.toInt();
+
+  bool? get ready => value['ready'] as bool?;
+
+  int? get rejectedChunks => (value['rejected_chunks'] as num?)?.toInt();
+
+  int? get reviewedBlockChunks =>
+      (value['reviewed_block_chunks'] as num?)?.toInt();
+
+  int? get reviewedBlocksWithChunks =>
+      (value['reviewed_blocks_with_chunks'] as num?)?.toInt();
+
+  int? get reviewedBlocksWithoutChunks =>
+      (value['reviewed_blocks_without_chunks'] as num?)?.toInt();
+
+  int? get totalChunks => (value['total_chunks'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessRegeneration {
+  ServicesGuidelineCompletenessRegeneration(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessRegeneration.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessRegeneration(json);
+
+  static const schemaName = 'services.GuidelineCompletenessRegeneration';
+  final Map<String, dynamic> value;
+
+  String? get acceptedAt => value['accepted_at']?.toString();
+
+  String? get acceptedBy => value['accepted_by']?.toString();
+
+  String? get currentMarkdownRevisionId =>
+      value['current_markdown_revision_id']?.toString();
+
+  bool? get identitiesMatch => value['identities_match'] as bool?;
+
+  String? get latestJobId => value['latest_job_id']?.toString();
+
+  String? get latestJobStage => value['latest_job_stage']?.toString();
+
+  String? get latestJobStatus => value['latest_job_status']?.toString();
+
+  String? get publishedMarkdownRevisionId =>
+      value['published_markdown_revision_id']?.toString();
+
+  String? get reviewId => value['review_id']?.toString();
+
+  String? get reviewJobId => value['review_job_id']?.toString();
+
+  String? get reviewRevisionId => value['review_revision_id']?.toString();
+
+  String? get reviewStatus => value['review_status']?.toString();
+
+  String? get structuredMarkdownRevisionId =>
+      value['structured_markdown_revision_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessReport {
+  ServicesGuidelineCompletenessReport(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessReport.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessReport(json);
+
+  static const schemaName = 'services.GuidelineCompletenessReport';
+  final Map<String, dynamic> value;
+
+  int? get activeBlocks => (value['active_blocks'] as num?)?.toInt();
+
+  List<ServicesGuidelineCompletenessBlockCount> get blockCounts {
+    final raw = value['block_counts'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              ServicesGuidelineCompletenessBlockCount.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  ServicesGuidelineCompletenessComparison? get currentComparison {
+    final raw = value['current_comparison'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineCompletenessComparison.fromJson(_jsonMap(raw));
+  }
+
+  List<ServicesGuidelineCompletenessEmptySection> get emptyLeafSections {
+    final raw = value['empty_leaf_sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesGuidelineCompletenessEmptySection.fromJson(
+            _jsonMap(item),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  String? get generatedAt => value['generated_at']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  String? get guidelineTitle => value['guideline_title']?.toString();
+
+  ServicesGuidelineCompletenessRAG? get rag {
+    final raw = value['rag'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineCompletenessRAG.fromJson(_jsonMap(raw));
+  }
+
+  bool? get readOnly => value['read_only'] as bool?;
+
+  ServicesGuidelineCompletenessRegeneration? get regeneration {
+    final raw = value['regeneration'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineCompletenessRegeneration.fromJson(_jsonMap(raw));
+  }
+
+  int? get reviewedBlocks => (value['reviewed_blocks'] as num?)?.toInt();
+
+  num? get reviewedPercentage => value['reviewed_percentage'] as num?;
+
+  ServicesGuidelineCompletenessSectionSummary? get sections {
+    final raw = value['sections'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineCompletenessSectionSummary.fromJson(_jsonMap(raw));
+  }
+
+  ServicesGuidelineCompletenessSources? get sources {
+    final raw = value['sources'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineCompletenessSources.fromJson(_jsonMap(raw));
+  }
+
+  int? get totalBlocks => (value['total_blocks'] as num?)?.toInt();
+
+  ServicesGuidelinePublicationValidation? get validation {
+    final raw = value['validation'];
+    if (raw is! Map) return null;
+    return ServicesGuidelinePublicationValidation.fromJson(_jsonMap(raw));
+  }
+
+  String? get version => value['version']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  String? get versionStatus => value['version_status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessSectionSummary {
+  ServicesGuidelineCompletenessSectionSummary(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessSectionSummary.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessSectionSummary(json);
+
+  static const schemaName = 'services.GuidelineCompletenessSectionSummary';
+  final Map<String, dynamic> value;
+
+  int? get emptyLeafSections => (value['empty_leaf_sections'] as num?)?.toInt();
+
+  int? get leafSections => (value['leaf_sections'] as num?)?.toInt();
+
+  int? get reviewedLeafSections =>
+      (value['reviewed_leaf_sections'] as num?)?.toInt();
+
+  int? get reviewedSections => (value['reviewed_sections'] as num?)?.toInt();
+
+  int? get totalSections => (value['total_sections'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineCompletenessSources {
+  ServicesGuidelineCompletenessSources(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineCompletenessSources.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineCompletenessSources(json);
+
+  static const schemaName = 'services.GuidelineCompletenessSources';
+  final Map<String, dynamic> value;
+
+  bool? get offlinePackageAvailable =>
+      value['offline_package_available'] as bool?;
+
+  bool? get offlinePackageReviewed =>
+      value['offline_package_reviewed'] as bool?;
+
+  bool? get originalPdfAvailable => value['original_pdf_available'] as bool?;
+
+  bool? get originalPdfReviewed => value['original_pdf_reviewed'] as bool?;
+
+  bool? get reviewedFallbackAvailable =>
+      value['reviewed_fallback_available'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -9965,6 +10470,47 @@ final class ServicesGuidelineReviewAssignmentView {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineReviewBlocksPage {
+  ServicesGuidelineReviewBlocksPage(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewBlocksPage.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineReviewBlocksPage(json);
+
+  static const schemaName = 'services.GuidelineReviewBlocksPage';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineContentBlock> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineContentBlock.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get markdownRevisionId => value['markdown_revision_id']?.toString();
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  ServicesGuidelineReviewProgress? get progress {
+    final raw = value['progress'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineReviewProgress.fromJson(_jsonMap(raw));
+  }
+
+  String? get regenerationJobId => value['regeneration_job_id']?.toString();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineReviewCommentInput {
   ServicesGuidelineReviewCommentInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10001,7 +10547,40 @@ final class ServicesGuidelineReviewIssue {
 
   String? get message => value['message']?.toString();
 
+  String? get remediation => value['remediation']?.toString();
+
   String? get sectionId => value['section_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineReviewProgress {
+  ServicesGuidelineReviewProgress(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewProgress.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineReviewProgress(json);
+
+  static const schemaName = 'services.GuidelineReviewProgress';
+  final Map<String, dynamic> value;
+
+  int? get emptyClinicalLeafSections =>
+      (value['empty_clinical_leaf_sections'] as num?)?.toInt();
+
+  int? get pendingHighRiskBlocks =>
+      (value['pending_high_risk_blocks'] as num?)?.toInt();
+
+  int? get pendingLowRiskBlocks =>
+      (value['pending_low_risk_blocks'] as num?)?.toInt();
+
+  int? get rejectedBlocks => (value['rejected_blocks'] as num?)?.toInt();
+
+  int? get reviewedBlocks => (value['reviewed_blocks'] as num?)?.toInt();
+
+  int? get sectionsWithReviewedContent =>
+      (value['sections_with_reviewed_content'] as num?)?.toInt();
+
+  int? get totalBlocks => (value['total_blocks'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -10024,6 +10603,12 @@ final class ServicesGuidelineReviewWorkspace {
         .whereType<Map>()
         .map((item) => ModelsGuidelineAsset.fromJson(_jsonMap(item)))
         .toList(growable: false);
+  }
+
+  ServicesGuidelineBlockReviewPolicy? get blockReviewPolicy {
+    final raw = value['block_review_policy'];
+    if (raw is! Map) return null;
+    return ServicesGuidelineBlockReviewPolicy.fromJson(_jsonMap(raw));
   }
 
   List<ModelsGuidelineContentBlock> get blocks {
@@ -13145,6 +13730,12 @@ final class ServicesPublicGuidelineContent {
         .toList(growable: false);
   }
 
+  String? get checksum => value['checksum']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
   List<ServicesPublicGuidelineSection> get sections {
     final raw = value['sections'];
     if (raw is! List) return const [];
@@ -13153,6 +13744,8 @@ final class ServicesPublicGuidelineContent {
         .map((item) => ServicesPublicGuidelineSection.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
+
+  String? get versionId => value['version_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -13208,6 +13801,9 @@ final class ServicesPublicGuidelineManifest {
 
   String? get checksum => value['checksum']?.toString();
 
+  int? get emptyLeafSectionCount =>
+      (value['empty_leaf_section_count'] as num?)?.toInt();
+
   String? get etag => value['etag']?.toString();
 
   String? get extractionQuality => value['extraction_quality']?.toString();
@@ -13232,9 +13828,20 @@ final class ServicesPublicGuidelineManifest {
 
   bool? get hasTables => value['has_tables'] as bool?;
 
+  int? get leafSectionCount => (value['leaf_section_count'] as num?)?.toInt();
+
   int? get packageVersion => (value['package_version'] as num?)?.toInt();
 
   String? get recommendedMode => value['recommended_mode']?.toString();
+
+  int? get reviewedLeafSectionCount =>
+      (value['reviewed_leaf_section_count'] as num?)?.toInt();
+
+  int? get reviewedParagraphCount =>
+      (value['reviewed_paragraph_count'] as num?)?.toInt();
+
+  int? get reviewedSectionCount =>
+      (value['reviewed_section_count'] as num?)?.toInt();
 
   int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
 
@@ -13298,11 +13905,19 @@ final class ServicesPublicGuidelineSectionDetail {
         .toList(growable: false);
   }
 
+  String? get checksum => value['checksum']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
   ServicesPublicGuidelineSection? get section {
     final raw = value['section'];
     if (raw is! Map) return null;
     return ServicesPublicGuidelineSection.fromJson(_jsonMap(raw));
   }
+
+  String? get versionId => value['version_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

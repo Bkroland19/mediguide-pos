@@ -52,25 +52,39 @@ func TestRAGCitationEnrichmentUsesAuthoritativeChunkNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AutoMigrate(&models.GuidelineChunk{}); err != nil {
+	if err := db.AutoMigrate(&models.GuidelineDocument{}, &models.GuidelineVersion{}, &models.GuidelineChunk{}); err != nil {
 		t.Fatal(err)
 	}
 	sectionID := uuid.New()
 	blockID := uuid.New()
+	document := models.GuidelineDocument{Title: "Current guideline"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "published"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&document).Update("current_version_id", version.ID).Error; err != nil {
+		t.Fatal(err)
+	}
 	chunk := models.GuidelineChunk{
-		DocumentID: uuid.New(),
-		VersionID:  uuid.New(),
-		SectionID:  &sectionID,
-		BlockID:    &blockID,
-		Title:      "Reviewed source",
+		DocumentID:   document.ID,
+		VersionID:    version.ID,
+		SectionID:    &sectionID,
+		BlockID:      &blockID,
+		Title:        "Reviewed source",
+		ReviewStatus: "approved",
 	}
 	if err := db.Create(&chunk).Error; err != nil {
 		t.Fatal(err)
 	}
-	citations := []Citation{{ChunkID: chunk.ID.String()}}
-	RAGService{DB: db}.enrichCitations(citations)
+	citations := RAGService{DB: db}.enrichCitations([]Citation{
+		{ChunkID: chunk.ID.String()},
+		{ChunkID: uuid.NewString(), Title: "Stale worker citation"},
+	})
 
-	if citations[0].GuidelineID != chunk.DocumentID.String() || citations[0].SectionID != sectionID.String() || citations[0].BlockID != blockID.String() {
-		t.Fatalf("unexpected citation navigation: %+v", citations[0])
+	if len(citations) != 1 || citations[0].GuidelineID != chunk.DocumentID.String() || citations[0].SectionID != sectionID.String() || citations[0].BlockID != blockID.String() {
+		t.Fatalf("unexpected citation navigation: %+v", citations)
 	}
 }
