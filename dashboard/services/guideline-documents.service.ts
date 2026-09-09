@@ -515,17 +515,62 @@ export class GuidelineDocumentsService {
   static async getReviewWorkspace(
     versionId: string,
   ): Promise<GuidelineReviewWorkspace> {
-    return getBackendClient().request<GuidelineReviewWorkspace>(
+    const workspace = await getBackendClient().request<GuidelineReviewWorkspace>(
       `/api/v2/guideline-versions/${versionId}/review`,
       { method: "GET" },
     );
+    // Be defensive around historical API rows whose JSON arrays may have been
+    // persisted as null. One nullable advisory field must not take down the
+    // complete editorial workspace.
+    return {
+      ...workspace,
+      sections: Array.isArray(workspace.sections) ? workspace.sections : [],
+      blocks: Array.isArray(workspace.blocks) ? workspace.blocks : [],
+      assets: Array.isArray(workspace.assets) ? workspace.assets : [],
+      extraction_warnings: Array.isArray(workspace.extraction_warnings)
+        ? workspace.extraction_warnings
+        : [],
+      validation: {
+        valid: Boolean(workspace.validation?.valid),
+        errors: Array.isArray(workspace.validation?.errors)
+          ? workspace.validation.errors
+          : [],
+        warnings: Array.isArray(workspace.validation?.warnings)
+          ? workspace.validation.warnings
+          : [],
+      },
+      block_review_policy: workspace.block_review_policy
+        ? {
+            high_risk_types: Array.isArray(
+              workspace.block_review_policy.high_risk_types,
+            )
+              ? workspace.block_review_policy.high_risk_types
+              : [],
+            bulk_review_eligible_types: Array.isArray(
+              workspace.block_review_policy.bulk_review_eligible_types,
+            )
+              ? workspace.block_review_policy.bulk_review_eligible_types
+              : [],
+            conditional_risk_types: Array.isArray(
+              workspace.block_review_policy.conditional_risk_types,
+            )
+              ? workspace.block_review_policy.conditional_risk_types
+              : [],
+            ineligible_bulk_types: Array.isArray(
+              workspace.block_review_policy.ineligible_bulk_types,
+            )
+              ? workspace.block_review_policy.ineligible_bulk_types
+              : [],
+          }
+        : undefined,
+    };
   }
 
   static async getReviewBlocks(
     versionId: string,
     filters: GuidelineReviewBlocksFilter,
   ): Promise<GuidelineReviewBlocksPage> {
-    return getBackendClient().request<GuidelineReviewBlocksPage>(
+    const page = await getBackendClient().request<GuidelineReviewBlocksPage>(
       `/api/v2/guideline-versions/${versionId}/review-blocks`,
       {
         method: "GET",
@@ -539,6 +584,7 @@ export class GuidelineDocumentsService {
         },
       },
     );
+    return { ...page, items: Array.isArray(page.items) ? page.items : [] };
   }
 
   static async bulkReviewBlocks(
@@ -569,10 +615,36 @@ export class GuidelineDocumentsService {
   static async getCompletenessReport(
     versionId: string,
   ): Promise<GuidelineCompletenessReport> {
-    return getBackendClient().request<GuidelineCompletenessReport>(
+    const report = await getBackendClient().request<GuidelineCompletenessReport>(
       `/api/v2/guideline-versions/${versionId}/completeness-report`,
       { method: "GET" },
     );
+    return {
+      ...report,
+      block_counts: Array.isArray(report.block_counts)
+        ? report.block_counts
+        : [],
+      empty_leaf_sections: Array.isArray(report.empty_leaf_sections)
+        ? report.empty_leaf_sections
+        : [],
+      validation: {
+        valid: Boolean(report.validation?.valid),
+        errors: Array.isArray(report.validation?.errors)
+          ? report.validation.errors
+          : [],
+        warnings: Array.isArray(report.validation?.warnings)
+          ? report.validation.warnings
+          : [],
+      },
+      current_comparison: report.current_comparison
+        ? {
+            ...report.current_comparison,
+            metrics: Array.isArray(report.current_comparison.metrics)
+              ? report.current_comparison.metrics
+              : [],
+          }
+        : undefined,
+    };
   }
 
   static async downloadCompletenessReport(
