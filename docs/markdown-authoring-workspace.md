@@ -205,6 +205,40 @@ only a stable opaque reference:
 ![Alternative text](guideline-asset://00000000-0000-0000-0000-000000000000)
 ```
 
+When a caption is supplied, the editor stores it as the optional Markdown image
+title so it remains part of the immutable revision and becomes the structured
+figure caption:
+
+```md
+![Alternative text](guideline-asset://00000000-0000-0000-0000-000000000000 "Figure caption")
+```
+
+Alternative text is required before upload or insertion. The editor separates
+the figure from adjacent blocks with blank lines and includes available source,
+attribution and licence information immediately after it. During regeneration,
+current governed asset metadata is authoritative for the structured figure;
+changing that metadata changes the figure identity and requires review again.
+
+### Approving a figure
+
+Figures are never eligible for bulk approval. After saving the Markdown and
+successfully regenerating its structured projection:
+
+1. Open **Editorial Review**.
+2. Keep **Pending individual review only** selected, or choose **All blocks**
+   and select a figure.
+3. Compare the rendered image with the authoritative source and verify its
+   caption, alternative text, source, attribution, licence and clinical
+   labels.
+4. Select **Approve figure**. This records the reviewer and timestamp on both
+   the structured figure block and its linked asset in one transaction.
+5. If anything is wrong, select **Reject figure**, correct the Markdown or
+   asset metadata, regenerate, and review the replacement again.
+
+An approved asset alone is not a substitute for reviewing the structured
+figure block that readers receive. A changed image or changed governed
+metadata returns the affected draft content to review.
+
 Replacing an image uploads a new asset and changes the draft reference; it does
 not overwrite the previous object. Deleted asset rows are soft-deleted and the
 stored object is retained for immutable historical revisions. Published

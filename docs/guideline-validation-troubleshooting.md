@@ -123,6 +123,12 @@ image:
 ![Algorithm for management of severe malaria](guideline-asset://ASSET_UUID)
 ```
 
+An optional reviewed caption can be included as the Markdown image title:
+
+```markdown
+![Algorithm for management of severe malaria](guideline-asset://ASSET_UUID "Severe malaria management pathway")
+```
+
 Do not use a filename as alternative text. If an image is purely decorative,
 confirm with the accessibility reviewer before treating it as decorative.
 
@@ -435,7 +441,13 @@ assignment alone does not approve a block.
 ### `unreviewed_clinical_asset`
 
 A clinically sensitive figure has not been reviewed. Confirm the image, caption,
-alternative text, labels, and source before approval.
+alternative text, labels, source, attribution and licence before approval. Open
+**Editorial Review**, choose **Pending individual review only**, select the
+figure and use **Approve figure**. The decision applies to both the figure block
+and its linked asset; figures cannot be bulk-approved. An unused asset that is
+not referenced by an active figure block is not part of the public projection
+and must not block publication. It remains labelled **Unused** in the asset
+library so an editor can remove it from the draft when appropriate.
 
 ## Publication warnings
 

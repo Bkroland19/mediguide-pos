@@ -792,6 +792,14 @@ func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
 	if err := db.Create(&asset).Error; err != nil {
 		t.Fatal(err)
 	}
+	figurePayload, err := json.Marshal(models.GuidelineFigureBlockPayload{Type: models.GuidelineBlockFigure, AssetID: asset.ID, AlternativeText: "Clinical figure"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	figureBlock := models.GuidelineContentBlock{VersionID: version.ID, Type: models.GuidelineBlockFigure, ContentJSON: figurePayload, SourceFingerprint: "figure-block", ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&figureBlock).Error; err != nil {
+		t.Fatal(err)
+	}
 	job := models.IngestionJob{VersionID: version.ID, Status: "completed", AttemptCount: 1}
 	if err := db.Create(&job).Error; err != nil {
 		t.Fatal(err)
@@ -818,6 +826,88 @@ func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
 	}
 	if status.JobStatus != "completed" || status.AssetCount != 1 || status.ExtractionSchema != 3 || len(status.Warnings) != 1 {
 		t.Fatalf("unexpected extraction status: %#v", status)
+	}
+}
+
+func TestUnusedClinicalFigureDoesNotBlockPublication(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	unused := models.GuidelineAsset{
+		VersionID: version.ID, Type: models.GuidelineAssetFigure,
+		MIMEType: "image/png", Checksum: "unused", StorageKey: "private/unused.png",
+		SourceFingerprint: "unused-figure", ClinicallySensitive: true,
+		ReviewStatus: models.GuidelineBlockDraft,
+	}
+	if err := db.Create(&unused).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := (GuidelineService{DB: db}).ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasGuidelineReviewIssue(validation.Errors, "unreviewed_clinical_asset") {
+		t.Fatalf("unused clinical figure must not block publication: %#v", validation.Errors)
+	}
+}
+
+func TestReviewFigureBlockSynchronizesLinkedAssetDecision(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	asset := models.GuidelineAsset{
+		VersionID: version.ID, Type: models.GuidelineAssetFigure,
+		MIMEType: "image/png", Checksum: "figure-checksum", StorageKey: "private/figure.png",
+		SourceFingerprint: "figure-source", AlternativeText: "Clinical treatment diagram",
+		ReviewStatus: models.GuidelineBlockDraft,
+	}
+	if err := db.Create(&asset).Error; err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(models.GuidelineFigureBlockPayload{
+		Type: models.GuidelineBlockFigure, AssetID: asset.ID,
+		Caption: "Treatment pathway", AlternativeText: asset.AlternativeText,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{
+		VersionID: version.ID, Type: models.GuidelineBlockFigure,
+		ContentJSON: payload, SourceFingerprint: "figure-block", ReviewStatus: models.GuidelineBlockDraft,
+	}
+	if err := db.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	reviewer := uuid.New()
+	reviewed, err := (GuidelineService{DB: db}).ReviewBlock(
+		version.ID, block.ID, reviewer, "127.0.0.1",
+		ReviewGuidelineBlockInput{Status: models.GuidelineBlockReviewed},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reviewed.ReviewStatus != models.GuidelineBlockReviewed || reviewed.ReviewedBy == nil || *reviewed.ReviewedBy != reviewer {
+		t.Fatalf("figure block review provenance missing: %#v", reviewed)
+	}
+	if err := db.First(&asset, "id = ?", asset.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if asset.ReviewStatus != models.GuidelineBlockReviewed || asset.ReviewedBy == nil || *asset.ReviewedBy != reviewer || asset.ReviewedAt == nil {
+		t.Fatalf("linked figure asset review was not synchronized: %#v", asset)
 	}
 }
 
