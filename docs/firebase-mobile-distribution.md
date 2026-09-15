@@ -427,29 +427,29 @@ openssl base64 -A \
 `FIREBASE_ANDROID_APP_ID` and `FIREBASE_IOS_APP_ID` above are Firebase App IDs,
 not the Android package name or iOS bundle ID.
 
-Configure the protected `testing` GitHub Environment. Always specify the
+Configure the protected `staging` GitHub Environment. Always specify the
 repository because this checkout can have multiple remotes:
 
 ```bash
 gh api --method PUT \
-  repos/mohuganda/mediguide-pos/environments/testing
+  repos/mohuganda/mediguide-pos/environments/staging
 
 gh variable set FIREBASE_ANDROID_APP_ID \
-  --repo mohuganda/mediguide-pos --env testing \
+  --repo mohuganda/mediguide-pos --env staging \
   --body '1:1234567890:android:example'
 gh variable set FIREBASE_IOS_APP_ID \
-  --repo mohuganda/mediguide-pos --env testing \
+  --repo mohuganda/mediguide-pos --env staging \
   --body '1:1234567890:ios:example'
 gh variable set FIREBASE_TESTER_GROUPS \
-  --repo mohuganda/mediguide-pos --env testing \
+  --repo mohuganda/mediguide-pos --env staging \
   --body 'mediguide-testers'
 
 gh secret set FIREBASE_MOBILE_CONFIG_JSON \
-  --repo mohuganda/mediguide-pos --env testing \
+  --repo mohuganda/mediguide-pos --env staging \
   < /secure/path/firebase-dart-defines.json
 openssl base64 -A -in /secure/path/firebase-app-distribution-service-account.json | \
   gh secret set FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64 \
-    --repo mohuganda/mediguide-pos --env testing
+    --repo mohuganda/mediguide-pos --env staging
 ```
 
 Create the protected production Environment and provide its production app

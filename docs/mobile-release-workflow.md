@@ -157,14 +157,14 @@ Use protected GitHub Environments to separate credentials and approvals:
 |---|---|
 | `staging` | Alpha and beta builds using staging identifiers and API |
 | `beta-approval` | Required reviewer gate before a beta can be built or distributed |
-| `testing` | Stable-tag verification and signed production-flavor tester builds |
 | `production` | Google Play and App Store Connect candidates |
 
 Configure `beta-approval` with designated product or release reviewers; it does
-not need signing secrets. The `testing` Environment must contain credentials
-that match the production flavor because stable-tag distribution explicitly
-builds production IDs. The `production` Environment should require designated
-reviewers and restrict deployment to trusted branches or stable tags.
+not need signing secrets. The `staging` Environment contains staging Firebase,
+Android and Apple credentials for alpha/beta delivery. The `production`
+Environment contains production-flavor store credentials, should require
+designated reviewers, and should restrict deployment to trusted branches or
+stable tags.
 
 ## Required configuration
 
@@ -344,12 +344,17 @@ Signed iOS delivery is handled separately by Fastlane.
 
 ### Signed tester distribution
 
-The tag calls the reusable distribution workflow with production flavor and
-the protected `testing` Environment. It sends:
+The alpha and beta workflows call the reusable distribution workflow with the
+staging flavor and protected `staging` Environment. They send:
 
 - signed Android APK to Firebase App Distribution;
 - signed Ad Hoc iOS IPA to Firebase App Distribution;
-- App Store-signed IPA to internal TestFlight.
+- App Store-signed staging IPA to internal TestFlight.
+
+A stable tag publishes verification artifacts but does not automatically submit
+an iOS build to a store. Production App Store submission remains a separately
+approved `mobile-production.yml` run using the protected `production`
+Environment.
 
 ### GitHub Release
 
