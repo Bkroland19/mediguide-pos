@@ -20,15 +20,16 @@ part '../widgets/publication_catalogue_page_catalogue_empty_state.dart';
 part '../widgets/publication_catalogue_page_catalogue_skeleton.dart';
 
 final _publicationCatalogueProvider = FutureProvider.autoDispose
-    .family<List<GuidelinePublication>, ({String search, String programArea})>((
-      ref,
-      query,
-    ) async {
+    .family<
+      List<GuidelinePublication>,
+      ({String search, String programArea, String categoryId})
+    >((ref, query) async {
       final page = await ref
           .watch(guidelinePublicationRepositoryProvider)
           .publications(
             search: query.search.trim(),
             programArea: query.programArea.trim(),
+            categoryId: query.categoryId.trim(),
             page: 1,
             perPage: 100,
           );
@@ -41,10 +42,14 @@ class PublicationCataloguePage extends ConsumerStatefulWidget {
     super.key,
     this.embedded = false,
     this.programArea = '',
+    this.categoryId = '',
+    this.categoryName = '',
   });
 
   final bool embedded;
   final String programArea;
+  final String categoryId;
+  final String categoryName;
 
   @override
   ConsumerState<PublicationCataloguePage> createState() =>
@@ -57,8 +62,11 @@ class _PublicationCataloguePageState
 
   String _search = '';
 
-  ({String search, String programArea}) get _query =>
-      (search: _search, programArea: widget.programArea.trim());
+  ({String search, String programArea, String categoryId}) get _query => (
+    search: _search,
+    programArea: widget.programArea.trim(),
+    categoryId: widget.categoryId.trim(),
+  );
 
   @override
   void dispose() {
@@ -100,6 +108,8 @@ class _PublicationCataloguePageState
   @override
   Widget build(BuildContext context) {
     final programArea = widget.programArea.trim();
+    final categoryName = widget.categoryName.trim();
+    final filterName = categoryName.isNotEmpty ? categoryName : programArea;
     final publications = ref.watch(_publicationCatalogueProvider(_query));
 
     final body = RefreshIndicator(
@@ -121,17 +131,17 @@ class _PublicationCataloguePageState
                 children: [
                   if (widget.embedded) ...[
                     Text(
-                      programArea.isEmpty
+                      filterName.isEmpty
                           ? 'All Guidelines'
-                          : '$programArea Guidelines',
+                          : '$filterName Guidelines',
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      programArea.isEmpty
+                      filterName.isEmpty
                           ? 'Browse published clinical guidance'
-                          : 'Published guidance in $programArea',
+                          : 'Published guidance in $filterName',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -175,7 +185,7 @@ class _PublicationCataloguePageState
                   hasScrollBody: false,
                   child: _CatalogueEmptyState(
                     search: _search,
-                    programArea: programArea,
+                    programArea: filterName,
                     onClear: _clearSearch,
                     onRefresh: _refresh,
                   ),
@@ -214,21 +224,19 @@ class _PublicationCataloguePageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              programArea.isEmpty
-                  ? 'All Guidelines'
-                  : '$programArea Guidelines',
+              filterName.isEmpty ? 'All Guidelines' : '$filterName Guidelines',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             Text(
               _search.isEmpty
-                  ? programArea.isEmpty
+                  ? filterName.isEmpty
                         ? 'Published clinical guidance'
-                        : 'Published guidance in $programArea'
-                  : programArea.isEmpty
+                        : 'Published guidance in $filterName'
+                  : filterName.isEmpty
                   ? 'Results for “$_search”'
-                  : 'Results for “$_search” in $programArea',
+                  : 'Results for “$_search” in $filterName',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(

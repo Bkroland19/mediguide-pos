@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
@@ -110,6 +111,7 @@ Future<List<List<SearchResult>>> searchCategoriesIndependently(
 @riverpod
 GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
   return RepositoryGlobalSearchDataSource(
+    api: ref.watch(backendApiServiceProvider),
     drugs: ref.watch(drugRepositoryProvider),
     guidelines: ref.watch(guidelineContentRepositoryProvider),
     publications: ref.watch(guidelinePublicationRepositoryProvider),
@@ -118,6 +120,9 @@ GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
     helpContent: ref.watch(helpContentRepositoryProvider),
     calculators: ref.watch(calculatorRepositoryProvider),
     outbreaks: ref.watch(outbreakRepositoryProvider),
+    unifiedDocumentSearchEnabled: ref.watch(
+      unifiedDocumentSearchEnabledProvider,
+    ),
     recordMetric: ref.watch(firebaseServiceProvider).recordOperationalEvent,
   );
 }
@@ -244,6 +249,7 @@ class GlobalSearchController extends _$GlobalSearchController {
 
 final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   RepositoryGlobalSearchDataSource({
+    required BackendApiService api,
     required DrugRepository drugs,
     required GuidelineContentRepository guidelines,
     required GuidelinePublicationRepository publications,
@@ -252,8 +258,10 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     required HelpContentRepository helpContent,
     required CalculatorRepository calculators,
     required OutbreakRepository outbreaks,
+    required bool unifiedDocumentSearchEnabled,
     Future<void> Function(String, Map<String, Object>)? recordMetric,
-  }) : _drugs = drugs,
+  }) : _api = api,
+       _drugs = drugs,
        _guidelines = guidelines,
        _publications = publications,
        _consultants = consultants,
@@ -261,9 +269,11 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
        _helpContent = helpContent,
        _calculators = calculators,
        _outbreaks = outbreaks,
+       _unifiedDocumentSearchEnabled = unifiedDocumentSearchEnabled,
        _recordMetric = recordMetric;
 
   final DrugRepository _drugs;
+  final BackendApiService _api;
   final GuidelineContentRepository _guidelines;
   final GuidelinePublicationRepository _publications;
   final ConsultantRepository _consultants;
@@ -271,6 +281,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   final HelpContentRepository _helpContent;
   final CalculatorRepository _calculators;
   final OutbreakRepository _outbreaks;
+  final bool _unifiedDocumentSearchEnabled;
   final Future<void> Function(String, Map<String, Object>)? _recordMetric;
 
   @override
@@ -280,16 +291,21 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       (category) => _searchCategory(category, query),
     );
 
-    final results = batches.expand((items) => items).toList()
-      ..sort((a, b) {
-        final relevance = b.relevanceScore.compareTo(a.relevanceScore);
+    final seen = <String>{};
+    final results =
+        batches
+            .expand((items) => items)
+            .where((item) => seen.add('${item.category.value}:${item.id}'))
+            .toList()
+          ..sort((a, b) {
+            final relevance = b.relevanceScore.compareTo(a.relevanceScore);
 
-        if (relevance != 0) {
-          return relevance;
-        }
+            if (relevance != 0) {
+              return relevance;
+            }
 
-        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-      });
+            return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+          });
 
     try {
       await _recordMetric?.call('global_search_completed', <String, Object>{
@@ -313,6 +329,13 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     String query,
   ) async {
     switch (category) {
+      case SearchCategory.diseases:
+        return _unifiedDocumentSearchEnabled
+            ? _searchDiscovery(query)
+            : _searchDiseaseDirectory(query);
+      case SearchCategory.hubs:
+      case SearchCategory.pillars:
+        return const [];
       case SearchCategory.drugs:
         final response = await _drugs.list(
           page: 1,
@@ -559,6 +582,139 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     }
   }
 
+  Future<List<SearchResult>> _searchDiscovery(String query) async {
+    final response = await _api.requestJson(
+      '/api/public/search',
+      method: 'GET',
+      includeAuth: false,
+      query: {'q': query, 'limit': '30'},
+    );
+    final raw = response['data'] as List? ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .map((entry) {
+          final type = '${entry['result_type']}';
+          final category = switch (type) {
+            'disease' => SearchCategory.diseases,
+            'hub' => SearchCategory.hubs,
+            'pillar' => SearchCategory.pillars,
+            'guideline' => SearchCategory.guidelines,
+            'outbreak' => SearchCategory.outbreaks,
+            'outbreak_document' || 'form' => SearchCategory.outbreakDocuments,
+            'situation_report' => SearchCategory.situationReports,
+            'drug_reference' => SearchCategory.drugs,
+            _ => SearchCategory.tools,
+          };
+          final backendRoute = '${entry['route'] ?? ''}';
+          final destination = _discoveryMobileRoute(
+            type,
+            '${entry['id'] ?? ''}',
+            '${entry['guideline_id'] ?? ''}',
+            backendRoute,
+          );
+          return _withRelevance(
+            SearchResult(
+              id: '${entry['id'] ?? ''}',
+              title: '${entry['title'] ?? ''}',
+              description: '${entry['snippet'] ?? ''}',
+              subtitle: type.replaceAll('_', ' '),
+              category: category,
+              route: destination.route,
+              externalUrl: destination.externalUrl,
+              item: entry,
+            ),
+            query,
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Future<List<SearchResult>> _searchDiseaseDirectory(String query) async {
+    final response = await _api.requestJson(
+      '/api/public/diseases',
+      method: 'GET',
+      includeAuth: false,
+      query: {'search': query, 'page': '1', 'per_page': '20'},
+    );
+    final data = response['data'] is Map
+        ? Map<String, dynamic>.from(response['data'] as Map)
+        : <String, dynamic>{};
+    final raw = data['items'] as List? ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .map(
+          (entry) => _withRelevance(
+            SearchResult(
+              id: '${entry['id'] ?? ''}',
+              title: '${entry['name'] ?? ''}',
+              description: '${entry['description'] ?? ''}',
+              subtitle: 'disease',
+              category: SearchCategory.diseases,
+              route: AppRoutes.disease('${entry['slug'] ?? ''}'),
+              item: entry,
+            ),
+            query,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  ({String? route, String? externalUrl}) _discoveryMobileRoute(
+    String type,
+    String id,
+    String guidelineId,
+    String backendRoute,
+  ) {
+    if (backendRoute.startsWith('https://')) {
+      return (route: null, externalUrl: backendRoute);
+    }
+    if (type == 'disease' || type == 'hub' || type == 'pillar') {
+      return (route: backendRoute, externalUrl: null);
+    }
+    if (type == 'guideline') {
+      return (
+        route: AppRoutes.publicGuideline(
+          guidelineId.isNotEmpty ? guidelineId : id,
+        ),
+        externalUrl: null,
+      );
+    }
+    if (type == 'outbreak') {
+      return (route: AppRoutes.outbreak(id), externalUrl: null);
+    }
+    if (type == 'situation_report') {
+      return (route: AppRoutes.situationReport(id), externalUrl: null);
+    }
+    final segments = Uri.tryParse(backendRoute)?.pathSegments ?? const [];
+    if ((type == 'outbreak_document' || type == 'form') &&
+        segments.length >= 4 &&
+        segments[0] == 'outbreaks' &&
+        segments[2] == 'documents') {
+      return (
+        route: AppRoutes.outbreakDocument(segments[1], segments[3]),
+        externalUrl: null,
+      );
+    }
+    if (type == 'algorithm' && segments.length >= 2) {
+      return (
+        route: AppRoutes.publicGuidelineAlgorithmView(segments[1], id),
+        externalUrl: null,
+      );
+    }
+    if (type == 'clinical_tool') {
+      return (route: AppRoutes.calculator(id), externalUrl: null);
+    }
+    if (type == 'drug_reference') {
+      return (route: AppRoutes.drugIndex, externalUrl: null);
+    }
+    return (
+      route: backendRoute.startsWith('/') ? backendRoute : null,
+      externalUrl: null,
+    );
+  }
+
   // ======================================================
   // RESULT MAPPING
   // ======================================================
@@ -687,6 +843,9 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       case SearchCategory.outbreakDocuments:
       case SearchCategory.situationReports:
       case SearchCategory.outbreakResources:
+      case SearchCategory.diseases:
+      case SearchCategory.hubs:
+      case SearchCategory.pillars:
         throw UnsupportedError('Unsupported search category: $category');
     }
   }

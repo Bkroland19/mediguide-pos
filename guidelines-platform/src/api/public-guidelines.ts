@@ -201,13 +201,21 @@ export type PublicMarkdown = {
 export type PublicAICitation = {
   chunk_id: string;
   guideline_id?: string;
+  guideline_version_id?: string;
   section_id?: string;
   block_id?: string;
+  content_type?: string;
+  route?: string;
   title: string;
   source_name: string;
   source_version: string;
   page_start?: number;
   page_end?: number;
+  categories?: DiscoveryFacet[];
+  diseases?: DiscoveryFacet[];
+  hubs?: DiscoveryFacet[];
+  pillars?: DiscoveryFacet[];
+  metadata?: Record<string, unknown>;
 };
 
 export type PublicAIAnswer = {
@@ -217,6 +225,45 @@ export type PublicAIAnswer = {
   search_scope?: string;
   coverage_notice?: string;
 };
+
+export type DiscoveryFacet = { id: string; name: string; slug?: string };
+export type PublicResource = {
+  id: string; content_type: string; title: string; description?: string; route?: string;
+  source_organization?: string; issuing_authority?: string; version?: string;
+  publication_date?: string; effective_at?: string; review_at?: string; expires_at?: string;
+  review_state?: string; provenance?: string;
+};
+export type PublicPillarItem = {
+  id: string; content_type: string; label_override?: string; description_override?: string;
+  icon_override?: string; sort_order: number; featured: boolean; resource?: PublicResource;
+};
+export type PublicPillar = {
+  id: string; parent_id?: string; name: string; slug: string; description?: string;
+  icon?: string; color?: string; sort_order: number; items: PublicPillarItem[]; children: PublicPillar[];
+};
+export type PublicHub = {
+  id: string; name: string; slug: string; description?: string; icon?: string; color?: string;
+  audience?: string; published_at?: string; diseases: DiscoveryFacet[]; pillars?: PublicPillar[];
+  outbreak?: { id: string; title: string; status: string; disease_type?: string; geographic_area?: string;
+    summary?: string; source_organization?: string; data_as_of?: string; last_verified_at?: string;
+    metrics?: Array<Record<string, unknown>> };
+};
+export type PublicDiseaseSummary = DiscoveryFacet & {
+  parent_id?: string; short_name?: string; description?: string; icon?: string; color?: string; sort_order: number;
+};
+export type PublicDisease = PublicDiseaseSummary & {
+  aliases: string[]; codes: Array<{ code_system: string; code: string; display_name?: string }>;
+  children: PublicDiseaseSummary[]; hubs: PublicHub[]; resources: PublicResource[];
+};
+export type PublicDiseasePage = { items: PublicDiseaseSummary[]; page: number; per_page: number; total_items: number; total_pages: number };
+export type PublicHubPage = { items: PublicHub[]; page: number; per_page: number; total_items: number; total_pages: number };
+export type PublicSearchResult = PublicResource & {
+  result_type: string; guideline_id?: string; section_id?: string; block_id?: string;
+  snippet: string; source_name: string; source_version: string; status?: string;
+  categories?: DiscoveryFacet[]; diseases?: DiscoveryFacet[]; hubs?: DiscoveryFacet[]; pillars?: DiscoveryFacet[];
+  metadata?: Record<string, unknown>;
+};
+export type PublicSearchFilters = { categoryId?: string; diseaseSlug?: string; hubSlug?: string; pillarSlug?: string; contentType?: string; limit?: number };
 
 export type PublicApiErrorKind =
   | "not-found"
@@ -251,7 +298,7 @@ export class PublicApiError extends Error {
 }
 
 const requestTimeoutMs = 12_000;
-const markdownCache = new Map<string, PublicMarkdown>();
+const markdownCache = new Map<string, ConditionalCacheEntry<PublicMarkdown>>();
 const listCache = new Map<string, CacheEntry<PublicGuidelinePage>>();
 const detailCache = new Map<string, CacheEntry<PublicGuideline>>();
 const structuredCache = new Map<string, ConditionalCacheEntry<unknown>>();
@@ -261,13 +308,19 @@ const maxCachedDocuments = 8;
 const maxCachedLists = 16;
 const maxCachedDetails = 40;
 const listTtlMs = 60_000;
-const detailTtlMs = 5 * 60_000;
+// Current-publication pointers can change when content is withdrawn or superseded,
+// so keep their freshness window deliberately short. Projection payloads include
+// the publication identity in their cache key and are immutable for that identity.
+const publicationPointerTtlMs = 30_000;
+const immutableProjectionTtlMs = 10 * 60_000;
+const detailTtlMs = publicationPointerTtlMs;
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 type ConditionalCacheEntry<T> = {
   value: T;
   etag?: string;
   lastModified?: string;
+  validatedAt: number;
 };
 
 function publicUrl(path: string, query?: URLSearchParams) {
@@ -338,15 +391,24 @@ async function requestConditionalJson<T>(
   validate: (value: unknown) => value is T,
   signal?: AbortSignal,
   cacheKey = url,
+  freshnessMs = 0,
 ): Promise<T> {
   const cached = structuredCache.get(cacheKey) as ConditionalCacheEntry<T> | undefined;
+  if (cached && Date.now() - cached.validatedAt < freshnessMs) {
+    rememberConditional(cacheKey, cached);
+    return cached.value;
+  }
   const headers: Record<string, string> = { Accept: "application/json" };
   if (cached?.etag) headers["If-None-Match"] = cached.etag;
   if (!cached?.etag && cached?.lastModified) {
     headers["If-Modified-Since"] = cached.lastModified;
   }
   const response = await request(url, { headers }, signal);
-  if (response.status === 304 && cached) return cached.value;
+  if (response.status === 304 && cached) {
+    const refreshed = { ...cached, validatedAt: Date.now() };
+    rememberConditional(cacheKey, refreshed);
+    return refreshed.value;
+  }
   if (response.status === 404) throw new PublicApiError("not-found", 404);
   if (response.status === 429) {
     throw new PublicApiError("rate-limited", 429, parseRetryAfter(response.headers.get("Retry-After")));
@@ -365,6 +427,7 @@ async function requestConditionalJson<T>(
     value: envelope.data,
     etag: response.headers.get("ETag") ?? undefined,
     lastModified: response.headers.get("Last-Modified") ?? undefined,
+    validatedAt: Date.now(),
   });
   return envelope.data;
 }
@@ -452,10 +515,20 @@ export function getPublicGuideline(id: string, signal?: AbortSignal) {
   return signal ? load() : deduplicated(`detail:${url}`, load);
 }
 
-export function getPublicGuidelineManifest(id: string, signal?: AbortSignal) {
+export function getPublicGuidelineManifest(
+  id: string,
+  signal?: AbortSignal,
+  forceRevalidate = false,
+) {
   const url = publicUrl(`/guidelines/${encodeURIComponent(id)}/manifest`);
   const load = async () => {
-    const manifest = await requestConditionalJson(url, isManifest, signal);
+    const manifest = await requestConditionalJson(
+      url,
+      isManifest,
+      signal,
+      url,
+      forceRevalidate ? 0 : publicationPointerTtlMs,
+    );
     const identity = publicationIdentity(manifest);
     const previous = manifestIdentityByGuideline.get(id);
     if (previous && previous !== identity) {
@@ -479,6 +552,7 @@ export async function getPublicGuidelineContent(
     isContent,
     signal,
     `${url}#${identity}`,
+    immutableProjectionTtlMs,
   );
   assertPublicationIdentity(value, manifest);
   return value;
@@ -494,7 +568,13 @@ export function listPublicGuidelineSections(id: string, signal?: AbortSignal) {
 export async function getPublicGuidelineSection(id: string, sectionId: string, manifest: PublicGuidelineManifest, signal?: AbortSignal) {
   const url = publicUrl(`/guidelines/${encodeURIComponent(id)}/sections/${encodeURIComponent(sectionId)}`);
   const identity = publicationIdentity(manifest);
-  const load = () => requestConditionalJson(url, isSectionDetail, signal, `${url}#${identity}`);
+  const load = () => requestConditionalJson(
+    url,
+    isSectionDetail,
+    signal,
+    `${url}#${identity}`,
+    immutableProjectionTtlMs,
+  );
   const value = signal ? await load() : await deduplicated(`section:${url}:${identity}`, load);
   assertPublicationIdentity(value, manifest);
   return value;
@@ -545,9 +625,19 @@ export function getPublicGuidelineOfflinePackage(id: string, signal?: AbortSigna
 export async function getPublicGuidelineMarkdown(
   id: string,
   signal?: AbortSignal,
+  forceRevalidate = false,
 ): Promise<PublicMarkdown> {
   const cacheKey = id;
   const cached = markdownCache.get(cacheKey);
+  if (
+    cached &&
+    !forceRevalidate &&
+    Date.now() - cached.validatedAt < publicationPointerTtlMs
+  ) {
+    markdownCache.delete(cacheKey);
+    markdownCache.set(cacheKey, cached);
+    return { ...cached.value, fromCache: true };
+  }
   const headers: HeadersInit = { Accept: "text/markdown" };
   if (cached?.etag) headers["If-None-Match"] = cached.etag;
 
@@ -557,9 +647,10 @@ export async function getPublicGuidelineMarkdown(
     signal,
   );
   if (response.status === 304 && cached) {
+    const refreshed = { ...cached, validatedAt: Date.now() };
     markdownCache.delete(cacheKey);
-    markdownCache.set(cacheKey, cached);
-    return { ...cached, fromCache: true };
+    markdownCache.set(cacheKey, refreshed);
+    return { ...cached.value, fromCache: true };
   }
   if (response.status === 404) throw new PublicApiError("not-found", 404);
   if (response.status === 429) {
@@ -573,7 +664,7 @@ export async function getPublicGuidelineMarkdown(
     lastModified: response.headers.get("Last-Modified") ?? undefined,
     fromCache: false,
   };
-  markdownCache.set(cacheKey, result);
+  markdownCache.set(cacheKey, { value: result, etag: result.etag, lastModified: result.lastModified, validatedAt: Date.now() });
   while (markdownCache.size > maxCachedDocuments) {
     const oldest = markdownCache.keys().next().value;
     if (oldest === undefined) break;
@@ -594,6 +685,51 @@ export async function askPublicGuideline(
   );
   if (!isAIAnswer(answer)) throw new PublicApiError("invalid-response");
   return answer;
+}
+
+async function requestDiscovery<T>(key: string, url: string, signal?: AbortSignal): Promise<T & { offline?: boolean }> {
+  try {
+    const value = await requestJson<T>(url, signal);
+    try { localStorage.setItem(`mediguide:${key}`, JSON.stringify(value)); } catch { /* storage is optional */ }
+    return value as T & { offline?: boolean };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    try {
+      const stored = localStorage.getItem(`mediguide:${key}`);
+      if (stored) return { ...(JSON.parse(stored) as T), offline: true };
+    } catch { /* retain the original network error */ }
+    throw error;
+  }
+}
+
+export function listPublicDiseases(search = "", signal?: AbortSignal) {
+  const query = new URLSearchParams({ page: "1", per_page: "100" });
+  if (search.trim()) query.set("search", search.trim());
+  return requestDiscovery<PublicDiseasePage>(`diseases:${search.trim().toLowerCase()}`, publicUrl("/diseases", query), signal);
+}
+
+export function getPublicDisease(slug: string, signal?: AbortSignal) {
+  return requestDiscovery<PublicDisease>(`disease:${slug}`, publicUrl(`/diseases/${encodeURIComponent(slug)}`), signal);
+}
+
+export function listPublicHubs(diseaseSlug = "", signal?: AbortSignal) {
+  const query = new URLSearchParams({ page: "1", per_page: "100" });
+  if (diseaseSlug) query.set("disease_slug", diseaseSlug);
+  return requestDiscovery<PublicHubPage>(`hubs:${diseaseSlug}`, publicUrl("/hubs", query), signal);
+}
+
+export function getPublicHub(slug: string, signal?: AbortSignal) {
+  return requestDiscovery<PublicHub>(`hub:${slug}`, publicUrl(`/hubs/${encodeURIComponent(slug)}`), signal);
+}
+
+export async function searchPublicContent(queryText: string, filters: PublicSearchFilters = {}, signal?: AbortSignal) {
+  const query = new URLSearchParams({ q: queryText.trim(), limit: String(filters.limit ?? 30) });
+  if (filters.categoryId) query.set("category_id", filters.categoryId);
+  if (filters.diseaseSlug) query.set("disease_slug", filters.diseaseSlug);
+  if (filters.hubSlug) query.set("hub_slug", filters.hubSlug);
+  if (filters.pillarSlug) query.set("pillar_slug", filters.pillarSlug);
+  if (filters.contentType) query.set("content_type", filters.contentType);
+  return requestJson<PublicSearchResult[]>(publicUrl("/search", query), signal);
 }
 
 export function clearPublicMarkdownCache() {

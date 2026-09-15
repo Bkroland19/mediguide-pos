@@ -77,6 +77,104 @@
                 }
             }
         },
+        "/api/public/diseases": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-diseases"
+                ],
+                "summary": "Browse diseases with eligible public content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Canonical name, alias, or slug",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent disease UUID",
+                        "name": "parent_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return root diseases only",
+                        "name": "root_only",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicDiseasesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/diseases/hierarchy": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-diseases"
+                ],
+                "summary": "Browse the eligible public disease hierarchy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicDiseaseHierarchyEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/diseases/{slug}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-diseases"
+                ],
+                "summary": "Get a disease and its eligible hubs and resources",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicDiseaseEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/guidelines": {
             "get": {
                 "produces": [
@@ -97,6 +195,18 @@
                         "type": "string",
                         "description": "Program area",
                         "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guideline category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
                         "in": "query"
                     },
                     {
@@ -684,6 +794,111 @@
                 }
             }
         },
+        "/api/public/hubs": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "List published content hubs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name or description search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease slug",
+                        "name": "disease_slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicContentHubsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/hubs/{slug}": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "Get a published content hub with its nested pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/hubs/{slug}/pillars/{pillarSlug}": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "Get an active pillar from a published content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar slug",
+                        "name": "pillarSlug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/outbreak-documents": {
             "get": {
                 "tags": [
@@ -1128,6 +1343,15 @@
                 }
             }
         },
+        "/api/public/outbreaks/{id}/hub": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "Get the explicitly configured published hub for an outbreak",
+                "responses": {}
+            }
+        },
         "/api/public/outbreaks/{id}/resources": {
             "get": {
                 "tags": [
@@ -1200,6 +1424,54 @@
                         "type": "string",
                         "description": "Program area filter",
                         "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guideline category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Canonical disease slug or alias",
+                        "name": "disease_slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "hub_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content hub slug",
+                        "name": "hub_slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillar_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar slug",
+                        "name": "pillar_slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource type",
+                        "name": "content_type",
                         "in": "query"
                     },
                     {
@@ -3759,6 +4031,1016 @@
                 }
             }
         },
+        "/api/v2/content-disease-assignments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List disease-content assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Supported resource type",
+                        "name": "content_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource UUID",
+                        "name": "content_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedContentDiseaseAssignmentsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Assign a disease to a content resource",
+                "parameters": [
+                    {
+                        "description": "Disease assignment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentDiseaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentDiseaseAssignmentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-disease-assignments/replace": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Atomically replace disease assignments for one content resource",
+                "responses": {}
+            }
+        },
+        "/api/v2/content-disease-assignments/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Remove a disease-content assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Assignment UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hub-resources": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Search resources that can be assigned to a content pillar",
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hub-templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List reusable content hub templates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubTemplatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hub-templates/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Get a reusable content hub template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubTemplateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List content hubs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name or description search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Hub status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedContentHubsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Create a draft content hub",
+                "parameters": [
+                    {
+                        "description": "Content hub",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateContentHubInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Get a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Delete a draft content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content hub",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UpdateContentHubInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/apply-template": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Copy a template into an empty draft hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Template application",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ApplyContentHubTemplateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/archive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Archive a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Archive transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentHubTransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "View content hub audit history",
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hubs/{id}/diseases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List diseases assigned to a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubDiseasesEnvelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Replace a content hub's disease assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Disease assignments and lock version",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ReplaceContentHubDiseasesInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List a hub's pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Create a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content pillar",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Reorder content pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar order",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ContentPillarOrderInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Remove a content pillar and its nested associations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content pillar",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List a pillar's resource assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Assign a resource to a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Reorder pillar resource assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item order",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ContentPillarItemOrderInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Remove a resource assignment without deleting its source",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pillar item UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a pillar resource assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pillar item UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Preview a hub using public eligibility rules",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Publish a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Publication transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentHubTransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/workspace": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Get a hub, all pillars and all resource assignments",
+                "responses": {}
+            }
+        },
         "/api/v2/conversations": {
             "get": {
                 "security": [
@@ -4039,6 +5321,409 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.MessageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List diseases and clinical conditions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Canonical name, alias, or slug",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "active, inactive, or archived",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent disease UUID",
+                        "name": "parent_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return only root diseases",
+                        "name": "root_only",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDiseasesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Create a disease or clinical condition",
+                "parameters": [
+                    {
+                        "description": "Disease taxonomy entry",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DiseaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/hierarchy": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Get the disease taxonomy hierarchy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "active, inactive, or archived",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseHierarchyEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/migration-report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List legacy disease-name migration resolutions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "matched, ambiguous, or unmatched",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Legacy source table",
+                        "name": "source_table",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDiseaseMigrationReportEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/migration-report/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Refresh legacy disease-name migration resolutions",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Get a disease or clinical condition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Archive a disease or clinical condition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Update a disease or clinical condition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Disease taxonomy changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DiseaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/{id}/aliases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List aliases for a disease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseAliasesEnvelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Replace all aliases for a disease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Disease aliases",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.DiseaseAliasInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseAliasesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/diseases/{id}/codes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List external codes for a disease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseCodesEnvelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Replace all external codes for a disease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Disease codes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.DiseaseCodeInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DiseaseCodesEnvelope"
                         }
                     }
                 }
@@ -9716,6 +11401,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Assigned category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
                         "minimum": 1,
                         "type": "integer",
                         "description": "Page number",
@@ -12171,6 +13862,20 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v2/outbreaks/{id}/content-hub": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Create an outbreak hub from the default template and map published resources",
+                "responses": {}
             }
         },
         "/api/v2/outbreaks/{id}/correct": {
@@ -16835,6 +18540,117 @@
                 }
             }
         },
+        "handlers.ContentDiseaseAssignmentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentDiseaseAssignment"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubDiseasesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Disease"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubTemplateEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.ContentHubTemplateDetail"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubTemplatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ContentHubTemplateDetail"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentPillar"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarItemEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentPillarItem"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarItemsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentPillarItem"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentPillar"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.ConversationEnvelope": {
             "type": "object",
             "properties": {
@@ -16864,6 +18680,59 @@
                 "deleted": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.DiseaseAliasesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseAlias"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.DiseaseCodesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseCode"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.DiseaseEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Disease"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.DiseaseHierarchyEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.DiseaseTreeNode"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -17983,11 +19852,55 @@
                 }
             }
         },
+        "handlers.PaginatedContentDiseaseAssignmentsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_ContentDiseaseAssignment"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedContentHubsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_ContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedConversationsEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
                     "$ref": "#/definitions/services.PageResult-services_ConversationView"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedDiseaseMigrationReportEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_DiseaseTaxonomyMigrationReport"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedDiseasesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_Disease"
                 },
                 "success": {
                     "type": "boolean"
@@ -18743,6 +20656,28 @@
                 }
             }
         },
+        "handlers.PaginatedPublicContentHubsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_PublicContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedPublicDiseasesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_PublicDiseaseSummary"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedPublicGuidelineAlgorithms": {
             "type": "object",
             "properties": {
@@ -19125,6 +21060,53 @@
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PublicContentHubEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicContentPillarEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicContentPillar"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicDiseaseEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicDisease"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicDiseaseHierarchyEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicDiseaseTreeNode"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -19832,6 +21814,384 @@
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentDiseaseAssignment": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "disease": {
+                    "$ref": "#/definitions/models.Disease"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "primary": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentHub": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Disease"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "outbreaks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Outbreak"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentHubTemplatePillar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentPillar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "hub_id": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentPillarItem": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "pillar_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Disease": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseAlias"
+                    }
+                },
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseCode"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "parent_name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DiseaseAlias": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DiseaseCode": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "code_system": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DiseaseTaxonomyMigrationReport": {
+            "type": "object",
+            "properties": {
+                "candidate_disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "normalized_value": {
+                    "type": "string"
+                },
+                "resolution_status": {
+                    "type": "string"
+                },
+                "source_field": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "source_table": {
+                    "type": "string"
+                },
+                "source_value": {
                     "type": "string"
                 }
             }
@@ -20711,6 +23071,12 @@
         "models.GuidelineDocument": {
             "type": "object",
             "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineCategory"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -21711,6 +24077,104 @@
                 }
             }
         },
+        "models.Outbreak": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data_as_of": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "supersedes_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
+                },
+                "withdrawal_reason": {
+                    "type": "string"
+                },
+                "withdrawn_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Permission": {
             "type": "object",
             "properties": {
@@ -22105,13 +24569,53 @@
                 }
             }
         },
+        "services.ApplyContentHubTemplateInput": {
+            "type": "object",
+            "required": [
+                "lock_version",
+                "template_id"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.AskRequest": {
             "type": "object",
             "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
                 "country": {
                     "type": "string"
                 },
+                "disease_id": {
+                    "type": "string"
+                },
+                "disease_slug": {
+                    "type": "string"
+                },
+                "hub_id": {
+                    "type": "string"
+                },
+                "hub_slug": {
+                    "type": "string"
+                },
                 "language": {
+                    "type": "string"
+                },
+                "pillar_id": {
+                    "type": "string"
+                },
+                "pillar_slug": {
                     "type": "string"
                 },
                 "program_area": {
@@ -22535,17 +25039,53 @@
                 "block_id": {
                     "type": "string"
                 },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
                 "chunk_id": {
                     "type": "string"
                 },
+                "content_type": {
+                    "type": "string"
+                },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
                 "guideline_id": {
                     "type": "string"
+                },
+                "guideline_version_id": {
+                    "type": "string"
+                },
+                "hubs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
+                "metadata": {
+                    "type": "object"
                 },
                 "page_end": {
                     "type": "integer"
                 },
                 "page_start": {
                     "type": "integer"
+                },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
+                "route": {
+                    "type": "string"
                 },
                 "section_id": {
                     "type": "string"
@@ -22817,6 +25357,206 @@
                 }
             }
         },
+        "services.ContentDiseaseInput": {
+            "type": "object",
+            "required": [
+                "content_id",
+                "content_type",
+                "disease_id"
+            ],
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "primary": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.ContentHubTemplateDetail": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentHubTemplatePillar"
+                    }
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentHubTransitionInput": {
+            "type": "object",
+            "required": [
+                "lock_version"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "services.ContentPillarInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "clear_parent": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentPillarItemInput": {
+            "type": "object",
+            "required": [
+                "content_type"
+            ],
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentPillarItemOrderInput": {
+            "type": "object",
+            "required": [
+                "id",
+                "lock_version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "services.ContentPillarOrderInput": {
+            "type": "object",
+            "required": [
+                "id",
+                "lock_version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
         "services.ConversationCreate": {
             "type": "object",
             "properties": {
@@ -22924,6 +25664,47 @@
                 }
             }
         },
+        "services.CreateContentHubInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "outbreak_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.CreateGuidelineBlockInput": {
             "type": "object",
             "required": [
@@ -22968,6 +25749,12 @@
         "services.CreateGuidelineInput": {
             "type": "object",
             "properties": {
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -23085,6 +25872,140 @@
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DiseaseAliasInput": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DiseaseCodeInput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "code_system": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DiseaseInput": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.DiseaseAliasInput"
+                    }
+                },
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.DiseaseCodeInput"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DiseaseTreeNode": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseAlias"
+                    }
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.DiseaseTreeNode"
+                    }
+                },
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseCode"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "parent_name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
@@ -26808,6 +29729,98 @@
                 }
             }
         },
+        "services.PageResult-models_ContentDiseaseAssignment": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentDiseaseAssignment"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_ContentHub": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentHub"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_Disease": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Disease"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_DiseaseTaxonomyMigrationReport": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DiseaseTaxonomyMigrationReport"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_Documentation": {
             "type": "object",
             "properties": {
@@ -27314,6 +30327,52 @@
                 }
             }
         },
+        "services.PageResult-services_PublicContentHub": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentHub"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_PublicDiseaseSummary": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicDiseaseSummary"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-services_PublicOutbreak": {
             "type": "object",
             "properties": {
@@ -27531,9 +30590,340 @@
                 }
             }
         },
+        "services.PublicContentHub": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicHubDisease"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "outbreak": {
+                    "$ref": "#/definitions/services.PublicHubOutbreak"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillar"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicContentPillar": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillar"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillarItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicContentPillarItem": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "resource": {
+                    "$ref": "#/definitions/services.PublicContentResource"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicContentResource": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "issuing_authority": {
+                    "type": "string"
+                },
+                "provenance": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_at": {
+                    "type": "string"
+                },
+                "review_state": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicDisease": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicDiseaseSummary"
+                    }
+                },
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicDiseaseCode"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "hubs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentHub"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentResource"
+                    }
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicDiseaseCode": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "code_system": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicDiseaseSummary": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicDiseaseTreeNode": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicDiseaseTreeNode"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PublicGuideline": {
             "type": "object",
             "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineCategory"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -27653,6 +31043,35 @@
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.PublicGuidelineCategory": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
                 }
             }
         },
@@ -27877,6 +31296,64 @@
                 },
                 "sort_order": {
                     "type": "integer"
+                }
+            }
+        },
+        "services.PublicHubDisease": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicHubOutbreak": {
+            "type": "object",
+            "properties": {
+                "data_as_of": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
                 }
             }
         },
@@ -28365,6 +31842,25 @@
                 }
             }
         },
+        "services.ReplaceContentHubDiseasesInput": {
+            "type": "object",
+            "required": [
+                "disease_ids",
+                "lock_version"
+            ],
+            "properties": {
+                "disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
         "services.ResolveGuidelineEditorCommentInput": {
             "type": "object",
             "properties": {
@@ -28465,17 +31961,58 @@
                 }
             }
         },
+        "services.SearchFacet": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
         "services.SearchResult": {
             "type": "object",
             "properties": {
                 "block_id": {
                     "type": "string"
                 },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
                 "content_type": {
                     "type": "string"
                 },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
                 "guideline_id": {
                     "type": "string"
+                },
+                "guideline_version_id": {
+                    "type": "string"
+                },
+                "hubs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -28486,13 +32023,25 @@
                 "last_verified_at": {
                     "type": "string"
                 },
+                "metadata": {
+                    "type": "object"
+                },
                 "page_end": {
                     "type": "integer"
                 },
                 "page_start": {
                     "type": "integer"
                 },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SearchFacet"
+                    }
+                },
                 "result_type": {
+                    "type": "string"
+                },
+                "route": {
                     "type": "string"
                 },
                 "section_id": {
@@ -28900,6 +32449,51 @@
                 }
             }
         },
+        "services.UpdateContentHubInput": {
+            "type": "object",
+            "required": [
+                "lock_version"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "name": {
+                    "type": "string"
+                },
+                "outbreak_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.UpdateGuidelineBlockInput": {
             "type": "object",
             "properties": {
@@ -28920,6 +32514,12 @@
         "services.UpdateGuidelineInput": {
             "type": "object",
             "properties": {
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },

@@ -291,6 +291,18 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 		{Code: "firebase.push.test", Name: "Send Firebase test pushes"},
 		{Code: "firebase.config.manage", Name: "Manage Firebase Remote Config"},
 		{Code: "admin.all", Name: "All administration permissions"},
+		{Code: "disease.taxonomy.read", Name: "Read the disease taxonomy"},
+		{Code: "disease.taxonomy.manage", Name: "Manage diseases, aliases and codes"},
+		{Code: "disease.assignment.read", Name: "Read disease-content assignments"},
+		{Code: "disease.assignment.manage", Name: "Manage disease-content assignments"},
+		{Code: "content_hub.read", Name: "Read content hub administration data"},
+		{Code: "content_hub.manage", Name: "Manage content hub metadata and disease relationships"},
+		{Code: "content_hub.publish", Name: "Publish content hubs"},
+		{Code: "content_hub.archive", Name: "Archive content hubs"},
+		{Code: "content_pillar.read", Name: "Read content pillars and assignments"},
+		{Code: "content_pillar.manage", Name: "Manage content pillars and assignments"},
+		{Code: "content_hub.template.read", Name: "Read content hub templates"},
+		{Code: "content_hub.template.manage", Name: "Apply and manage content hub templates"},
 	}
 	for i := range permissions {
 		if err := database.Where(models.Permission{Code: permissions[i].Code}).Assign(permissions[i]).FirstOrCreate(&permissions[i]).Error; err != nil {
@@ -577,6 +589,9 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"notification.campaign.read", "notification.campaign.manage",
 			"notification.campaign.approve", "notification.analytics.read",
 			"firebase.status.read", "firebase.push.test", "firebase.config.manage",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_hub.publish", "content_hub.archive",
+			"content_pillar.read", "content_pillar.manage", "content_hub.template.read", "content_hub.template.manage",
 		}
 	case "content_manager":
 		return []string{
@@ -595,6 +610,9 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"notification.template.read", "notification.template.manage",
 			"notification.campaign.read", "notification.campaign.manage",
 			"firebase.status.read",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_pillar.read", "content_pillar.manage",
+			"content_hub.template.read", "content_hub.template.manage",
 		}
 	case "reviewer":
 		return []string{
@@ -602,6 +620,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
 			"notification.read", "notification.template.read", "notification.campaign.read",
 			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
+			"disease.taxonomy.read", "disease.assignment.read", "content_hub.read", "content_pillar.read", "content_hub.template.read",
 		}
 	case "healthcare_provider":
 		return []string{
@@ -1479,6 +1498,35 @@ func lookupExistingSeedRowID(database *gorm.DB, table string, row map[string]any
 		return lookupRowIDByColumn(database, table, "code", row["code"])
 	case "faq_tags":
 		return lookupRowIDByColumn(database, table, "slug", row["slug"])
+	case "diseases", "guideline_categories", "content_hubs":
+		return lookupRowIDByColumn(database, table, "slug", row["slug"])
+	case "disease_aliases":
+		return lookupRowIDByColumns(database, table, map[string]any{
+			"disease_id":       row["disease_id"],
+			"normalized_alias": row["normalized_alias"],
+		})
+	case "disease_codes":
+		return lookupRowIDByColumns(database, table, map[string]any{
+			"code_system": row["code_system"],
+			"code":        row["code"],
+		})
+	case "content_disease_assignments":
+		return lookupRowIDByColumns(database, table, map[string]any{
+			"disease_id":   row["disease_id"],
+			"content_type": row["content_type"],
+			"content_id":   row["content_id"],
+		})
+	case "content_pillars":
+		return lookupRowIDByColumns(database, table, map[string]any{
+			"hub_id": row["hub_id"],
+			"slug":   row["slug"],
+		})
+	case "content_pillar_items":
+		return lookupRowIDByColumns(database, table, map[string]any{
+			"pillar_id":    row["pillar_id"],
+			"content_type": row["content_type"],
+			"content_id":   row["content_id"],
+		})
 	case "notification_template_versions":
 		type versionRow struct {
 			ID uuid.UUID `gorm:"column:id"`
@@ -1516,6 +1564,25 @@ func lookupExistingSeedRowID(database *gorm.DB, table string, row map[string]any
 	default:
 		return uuid.Nil, false, nil
 	}
+}
+
+func lookupRowIDByColumns(database *gorm.DB, table string, columns map[string]any) (uuid.UUID, bool, error) {
+	type row struct {
+		ID uuid.UUID `gorm:"column:id"`
+	}
+	var found row
+	query := database.Table(table).Select("id").Where("deleted_at IS NULL")
+	for column, value := range columns {
+		query = query.Where(fmt.Sprintf("%s = ?", column), value)
+	}
+	err := query.Take(&found).Error
+	if err == nil {
+		return found.ID, true, nil
+	}
+	if err == gorm.ErrRecordNotFound {
+		return uuid.Nil, false, nil
+	}
+	return uuid.Nil, false, err
 }
 
 func lookupRowIDByColumn(database *gorm.DB, table, column string, value any) (uuid.UUID, bool, error) {

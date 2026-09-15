@@ -36,12 +36,19 @@ final class RagApi extends BackendApiService {
           {
             'chunk_id': 'chunk-1',
             'guideline_id': 'guideline-1',
+            'guideline_version_id': 'version-1',
             'section_id': 'section-2',
+            'content_type': 'guideline',
+            'route': '/guidelines/guideline-1',
             'title': 'Uganda Clinical Guidelines',
             'source_name': 'Ministry of Health',
             'source_version': '2023',
             'page_start': 120,
             'page_end': 122,
+            'diseases': [
+              {'id': 'malaria-id', 'name': 'Malaria', 'slug': 'malaria'},
+            ],
+            'metadata': {'review_state': 'approved'},
           },
         ],
       },
@@ -103,6 +110,11 @@ void main() {
     expect(answer.answer, contains('malaria'));
     expect(answer.citations.single.chunkId, 'chunk-1');
     expect(answer.citations.single.guidelineId, 'guideline-1');
+    expect(answer.citations.single.guidelineVersionId, 'version-1');
+    expect(answer.citations.single.contentType, 'guideline');
+    expect(answer.citations.single.route, '/guidelines/guideline-1');
+    expect(answer.citations.single.diseases.single['slug'], 'malaria');
+    expect(answer.citations.single.metadata['review_state'], 'approved');
     expect(answer.citations.single.sectionId, 'section-2');
     expect(answer.answerWithSources, contains('pages 120–122'));
     expect(answer.searchScope, 'current_published_reviewed_content');
@@ -123,6 +135,33 @@ void main() {
 
     expect(api.requests.single['path'], '/api/public/assistant/ask');
     expect(api.requests.single['includeAuth'], isFalse);
+  });
+
+  test('sends disease, hub, pillar and content scopes to RAG', () async {
+    final api = RagApi();
+    final repository = RagRepository(api, preferences);
+
+    await repository.ask(
+      question: 'How should cases be managed?',
+      diseaseSlug: 'cholera',
+      hubSlug: 'cholera-response',
+      pillarSlug: 'clinical-care',
+      contentType: 'outbreak_document',
+    );
+
+    expect(api.requests.single['body'], containsPair('disease_slug', 'cholera'));
+    expect(
+      api.requests.single['body'],
+      containsPair('hub_slug', 'cholera-response'),
+    );
+    expect(
+      api.requests.single['body'],
+      containsPair('pillar_slug', 'clinical-care'),
+    );
+    expect(
+      api.requests.single['body'],
+      containsPair('content_type', 'outbreak_document'),
+    );
   });
 
   test('reuses the server-issued session for conversational context', () async {

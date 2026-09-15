@@ -29,6 +29,7 @@ import 'package:user_app/features/guidelines/data/repositories/progress_usage_re
 import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
+import 'package:user_app/features/discovery/data/repositories/discovery_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
 import 'package:user_app/features/authentication/data/repositories/user_repository.dart';
@@ -87,6 +88,55 @@ final outbreakFeatureEnabledProvider = Provider<bool>((ref) {
       ref.watch(firebaseServiceProvider).outbreakBannerEnabled;
 });
 
+final backendManagedOutbreakHubsEnabledProvider = Provider<bool>((ref) {
+  try {
+    return ref.watch(firebaseServiceProvider).backendManagedOutbreakHubsEnabled;
+  } on StateError {
+    // Isolated previews and widget tests intentionally do not initialize
+    // Firebase. The rollout-safe behavior in that environment is the legacy
+    // outbreak presentation.
+    return false;
+  }
+});
+
+bool _firebaseFlag(Ref ref, bool Function(MediGuideFirebaseService) read) {
+  try {
+    return read(ref.watch(firebaseServiceProvider));
+  } on StateError {
+    // Isolated previews and widget tests do not always initialize Firebase.
+    // Preserve the local/test experience; configured environments still use
+    // the rollout-safe Remote Config defaults.
+    return true;
+  }
+}
+
+final diseaseTaxonomyEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.diseaseTaxonomyEnabled),
+);
+final diseaseContentAssignmentEnabledProvider = Provider<bool>(
+  (ref) =>
+      _firebaseFlag(ref, (service) => service.diseaseContentAssignmentEnabled),
+);
+final diseaseHubsEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.diseaseHubsEnabled),
+);
+final genericHubsEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.genericHubsEnabled),
+);
+final guidelineCategoryAssignmentEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(
+    ref,
+    (service) => service.guidelineCategoryAssignmentEnabled,
+  ),
+);
+final unifiedDocumentSearchEnabledProvider = Provider<bool>(
+  (ref) =>
+      _firebaseFlag(ref, (service) => service.unifiedDocumentSearchEnabled),
+);
+final pillarRagMetadataEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.pillarRagMetadataEnabled),
+);
+
 final notificationPermissionProvider =
     StreamProvider<AppNotificationPermissionState>((ref) async* {
       final service = ref.watch(firebaseServiceProvider);
@@ -100,6 +150,13 @@ final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
   (ref) => RagRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(sharedPreferencesProvider),
+  ),
+);
+
+final discoveryRepositoryProvider = Provider<DiscoveryRepository>(
+  (ref) => DiscoveryRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
   ),
 );
 

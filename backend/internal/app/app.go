@@ -148,6 +148,9 @@ func New(cfg config.Config) (*App, error) {
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
+	diseaseSvc := services.DiseaseService{DB: database}
+	contentDiseaseSvc := services.ContentDiseaseService{DB: database}
+	contentHubSvc := services.ContentHubService{DB: database, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
 	contentReferenceSvc := services.ContentReferenceService{DB: database, Cache: cacheStore}
 	consultantSvc := services.ConsultantService{DB: database}
@@ -176,6 +179,9 @@ func New(cfg config.Config) (*App, error) {
 	supportH := handlers.SupportHandler{Service: supportSvc}
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
+	diseaseH := handlers.DiseaseHandler{Service: diseaseSvc}
+	contentDiseaseH := handlers.ContentDiseaseHandler{Service: contentDiseaseSvc}
+	contentHubH := handlers.ContentHubHandler{Service: contentHubSvc}
 	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
 	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
 	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
@@ -218,6 +224,12 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/guidelines/:id/offline-package/download", rateLimiter.Limit(middleware.Policy("public-guideline-offline-download", 10, time.Minute, 2), middleware.IPIdentity), publicGuidelineH.OfflinePackageDownload)
 		public.GET("/guidelines/:id/assets/:assetId/download", rateLimiter.Limit(middleware.Policy("public-guideline-asset-download", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.AssetDownload)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
+		public.GET("/hubs", contentHubH.PublicList)
+		public.GET("/hubs/:slug", contentHubH.PublicGet)
+		public.GET("/hubs/:slug/pillars/:pillarSlug", contentHubH.PublicPillar)
+		public.GET("/diseases", diseaseH.PublicList)
+		public.GET("/diseases/hierarchy", diseaseH.PublicHierarchy)
+		public.GET("/diseases/:slug", diseaseH.PublicGet)
 		public.POST("/assistant/ask",
 			middleware.PrivateNoStore(),
 			rateLimiter.Limit(middleware.Policy("public-general-ai-chat-minute", 6, time.Minute, 1), middleware.IPIdentity),
@@ -235,6 +247,7 @@ func New(cfg config.Config) (*App, error) {
 		outbreakReadLimit := rateLimiter.Limit(middleware.Policy("public-outbreaks", 90, time.Minute, 15), middleware.IPIdentity)
 		public.GET("/outbreaks", outbreakReadLimit, outbreakH.List)
 		public.GET("/outbreaks/:id", outbreakReadLimit, outbreakH.Get)
+		public.GET("/outbreaks/:id/hub", outbreakReadLimit, contentHubH.PublicOutbreakHub)
 		public.GET("/outbreaks/:id/updates", outbreakReadLimit, outbreakH.Updates)
 		public.GET("/outbreaks/:id/resources", outbreakReadLimit, outbreakH.Resources)
 		public.GET("/outbreak-resources", outbreakReadLimit, outbreakH.ListResources)
@@ -484,6 +497,49 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-categories", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateCategory)
 		protected.PATCH("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateCategory)
 		protected.DELETE("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteCategory)
+		protected.GET("/diseases", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.List)
+		protected.GET("/diseases/hierarchy", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.Hierarchy)
+		protected.GET("/diseases/migration-report", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.MigrationReport)
+		protected.POST("/diseases/migration-report/refresh", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.RefreshMigrationReport)
+		protected.GET("/diseases/:id", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.Get)
+		protected.GET("/diseases/:id/aliases", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.ListAliases)
+		protected.PUT("/diseases/:id/aliases", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.ReplaceAliases)
+		protected.GET("/diseases/:id/codes", middleware.RequireAnyPermission("disease.taxonomy.read", "disease.taxonomy.manage"), diseaseH.ListCodes)
+		protected.PUT("/diseases/:id/codes", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.ReplaceCodes)
+		protected.POST("/diseases", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.Create)
+		protected.PATCH("/diseases/:id", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.Update)
+		protected.DELETE("/diseases/:id", middleware.RequirePermission("disease.taxonomy.manage"), diseaseH.Archive)
+		protected.GET("/content-disease-assignments", middleware.RequireAnyPermission("disease.assignment.read", "disease.assignment.manage"), contentDiseaseH.List)
+		protected.POST("/content-disease-assignments", middleware.RequirePermission("disease.assignment.manage"), contentDiseaseH.Create)
+		protected.PUT("/content-disease-assignments/replace", middleware.RequirePermission("disease.assignment.manage"), contentDiseaseH.Replace)
+		protected.DELETE("/content-disease-assignments/:id", middleware.RequirePermission("disease.assignment.manage"), contentDiseaseH.Delete)
+		protected.GET("/content-hubs", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.List)
+		protected.GET("/content-hubs/:id", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.Get)
+		protected.GET("/content-hubs/:id/preview", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.Preview)
+		protected.GET("/content-hubs/:id/diseases", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.ListDiseases)
+		protected.PUT("/content-hubs/:id/diseases", middleware.RequirePermission("content_hub.manage"), contentHubH.ReplaceDiseases)
+		protected.GET("/content-hubs/:id/workspace", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.Workspace)
+		protected.GET("/content-hubs/:id/audit", middleware.RequireAnyPermission("content_hub.read", "content_hub.manage"), contentHubH.Audit)
+		protected.GET("/content-hub-resources", middleware.RequireAnyPermission("content_pillar.read", "content_pillar.manage"), contentHubH.SearchResources)
+		protected.POST("/outbreaks/:id/content-hub", middleware.RequirePermission("content_hub.manage"), contentHubH.ConfigureOutbreak)
+		protected.POST("/content-hubs", middleware.RequirePermission("content_hub.manage"), contentHubH.Create)
+		protected.PATCH("/content-hubs/:id", middleware.RequirePermission("content_hub.manage"), contentHubH.Update)
+		protected.DELETE("/content-hubs/:id", middleware.RequirePermission("content_hub.manage"), contentHubH.Delete)
+		protected.POST("/content-hubs/:id/publish", middleware.RequirePermission("content_hub.publish"), contentHubH.Publish)
+		protected.POST("/content-hubs/:id/archive", middleware.RequirePermission("content_hub.archive"), contentHubH.Archive)
+		protected.GET("/content-hubs/:id/pillars", middleware.RequireAnyPermission("content_pillar.read", "content_pillar.manage"), contentHubH.ListPillars)
+		protected.POST("/content-hubs/:id/pillars", middleware.RequirePermission("content_pillar.manage"), contentHubH.CreatePillar)
+		protected.PATCH("/content-hubs/:id/pillars/:pillarId", middleware.RequirePermission("content_pillar.manage"), contentHubH.UpdatePillar)
+		protected.DELETE("/content-hubs/:id/pillars/:pillarId", middleware.RequirePermission("content_pillar.manage"), contentHubH.DeletePillar)
+		protected.PUT("/content-hubs/:id/pillars/reorder", middleware.RequirePermission("content_pillar.manage"), contentHubH.ReorderPillars)
+		protected.GET("/content-hubs/:id/pillars/:pillarId/items", middleware.RequireAnyPermission("content_pillar.read", "content_pillar.manage"), contentHubH.ListPillarItems)
+		protected.POST("/content-hubs/:id/pillars/:pillarId/items", middleware.RequirePermission("content_pillar.manage"), contentHubH.CreatePillarItem)
+		protected.PATCH("/content-hubs/:id/pillars/:pillarId/items/:itemId", middleware.RequirePermission("content_pillar.manage"), contentHubH.UpdatePillarItem)
+		protected.DELETE("/content-hubs/:id/pillars/:pillarId/items/:itemId", middleware.RequirePermission("content_pillar.manage"), contentHubH.DeletePillarItem)
+		protected.PUT("/content-hubs/:id/pillars/:pillarId/items/reorder", middleware.RequirePermission("content_pillar.manage"), contentHubH.ReorderPillarItems)
+		protected.GET("/content-hub-templates", middleware.RequireAnyPermission("content_hub.template.read", "content_hub.template.manage"), contentHubH.ListTemplates)
+		protected.GET("/content-hub-templates/:id", middleware.RequireAnyPermission("content_hub.template.read", "content_hub.template.manage"), contentHubH.GetTemplate)
+		protected.POST("/content-hubs/:id/apply-template", middleware.RequirePermission("content_hub.template.manage"), contentHubH.ApplyTemplate)
 		protected.GET("/guideline-tags", middleware.RequirePermission("guideline.read"), guidelineContentH.ListTags)
 		protected.GET("/guideline-tags/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetTag)
 		protected.POST("/guideline-tags", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateTag)

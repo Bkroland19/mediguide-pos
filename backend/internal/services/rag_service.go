@@ -32,6 +32,14 @@ type AskRequest struct {
 	Country     string `json:"country"`
 	ProgramArea string `json:"program_area"`
 	SessionID   string `json:"session_id"`
+	CategoryID  string `json:"category_id,omitempty"`
+	DiseaseID   string `json:"disease_id,omitempty"`
+	DiseaseSlug string `json:"disease_slug,omitempty"`
+	HubID       string `json:"hub_id,omitempty"`
+	HubSlug     string `json:"hub_slug,omitempty"`
+	PillarID    string `json:"pillar_id,omitempty"`
+	PillarSlug  string `json:"pillar_slug,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
 }
 
 type workerAskRequest struct {
@@ -41,6 +49,7 @@ type workerAskRequest struct {
 	ProgramArea    string              `json:"program_area"`
 	HistorySummary string              `json:"history_summary,omitempty"`
 	RecentMessages []workerChatMessage `json:"recent_messages,omitempty"`
+	Filter         PublicSearchFilter  `json:"-"`
 }
 
 type workerChatMessage struct {
@@ -49,15 +58,23 @@ type workerChatMessage struct {
 }
 
 type Citation struct {
-	ChunkID       string `json:"chunk_id"`
-	GuidelineID   string `json:"guideline_id,omitempty"`
-	SectionID     string `json:"section_id,omitempty"`
-	BlockID       string `json:"block_id,omitempty"`
-	Title         string `json:"title"`
-	SourceName    string `json:"source_name"`
-	SourceVersion string `json:"source_version"`
-	PageStart     *int   `json:"page_start"`
-	PageEnd       *int   `json:"page_end"`
+	ChunkID            string         `json:"chunk_id"`
+	GuidelineID        string         `json:"guideline_id,omitempty"`
+	GuidelineVersionID string         `json:"guideline_version_id,omitempty"`
+	SectionID          string         `json:"section_id,omitempty"`
+	BlockID            string         `json:"block_id,omitempty"`
+	Title              string         `json:"title"`
+	SourceName         string         `json:"source_name"`
+	SourceVersion      string         `json:"source_version"`
+	PageStart          *int           `json:"page_start"`
+	PageEnd            *int           `json:"page_end"`
+	ContentType        string         `json:"content_type,omitempty"`
+	Route              string         `json:"route,omitempty"`
+	Categories         []SearchFacet  `json:"categories,omitempty"`
+	Diseases           []SearchFacet  `json:"diseases,omitempty"`
+	Hubs               []SearchFacet  `json:"hubs,omitempty"`
+	Pillars            []SearchFacet  `json:"pillars,omitempty"`
+	Metadata           map[string]any `json:"metadata,omitempty" swaggertype:"object"`
 }
 type AskResponse struct {
 	Answer         string     `json:"answer"`
@@ -103,7 +120,7 @@ func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.
 	citations := make([]Citation, 0, len(results))
 	parts := make([]string, 0, len(results))
 	for _, result := range results {
-		citations = append(citations, Citation{ChunkID: result.ID, GuidelineID: result.GuidelineID, SectionID: result.SectionID, BlockID: result.BlockID, Title: result.Title, SourceName: result.SourceName, SourceVersion: result.SourceVersion, PageStart: result.PageStart, PageEnd: result.PageEnd})
+		citations = append(citations, Citation{ChunkID: result.ID, GuidelineID: result.GuidelineID, GuidelineVersionID: result.GuidelineVersionID, SectionID: result.SectionID, BlockID: result.BlockID, Title: result.Title, SourceName: result.SourceName, SourceVersion: result.SourceVersion, PageStart: result.PageStart, PageEnd: result.PageEnd, ContentType: "guideline"})
 		parts = append(parts, "- "+result.Snippet)
 	}
 	answer := "I could not find an answer in this published guideline. Review the guideline or consult a senior clinician."
@@ -111,7 +128,7 @@ func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.
 		answer = "I found the following relevant content in this published guideline. Verify the cited sections before clinical use:\n\n" + strings.Join(parts, "\n")
 	}
 	coverage := "Only approved content in the current published guideline was searched. Unreviewed sections were excluded."
-	return &AskResponse{Answer: answer, Citations: citations, SearchScope: "current_published_reviewed_content", CoverageNotice: coverage}, nil
+	return &AskResponse{Answer: answer, Citations: s.enrichCitations(citations), SearchScope: "current_published_reviewed_content", CoverageNotice: coverage}, nil
 }
 
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
@@ -152,10 +169,10 @@ func (s RAGService) ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	res.SessionID = session.ID.String()
 	res.Citations = s.enrichCitations(res.Citations)
 	if len(res.Citations) == 0 {
-		res.Answer = "I could not find an answer in the current approved guideline content. Review the published guideline or consult a senior clinician."
+		res.Answer = "I could not find an answer in the current approved content. Review the published source or consult a senior clinician."
 	}
 	res.SearchScope = "current_published_reviewed_content"
-	res.CoverageNotice = "Only approved content in current published guideline versions was searched. Unreviewed and superseded content was excluded."
+	res.CoverageNotice = "Only approved, currently published content was searched. Draft, superseded, expired and withdrawn content was excluded."
 	cjson, _ := json.Marshal(res.Citations)
 	if err := s.DB.Create(&models.ChatMessage{
 		SessionID:     session.ID,
@@ -190,21 +207,22 @@ func (s RAGService) enrichCitations(citations []Citation) []Citation {
 	}
 	ids := make([]uuid.UUID, 0, len(citations))
 	for _, citation := range citations {
-		if id, err := uuid.Parse(citation.ChunkID); err == nil {
-			ids = append(ids, id)
+		if citation.ContentType == "" || citation.ContentType == "guideline" {
+			if id, err := uuid.Parse(citation.ChunkID); err == nil {
+				ids = append(ids, id)
+			}
 		}
 	}
-	if len(ids) == 0 {
-		return []Citation{}
-	}
 	var chunks []models.GuidelineChunk
-	if err := s.DB.Model(&models.GuidelineChunk{}).
-		Select("guideline_chunks.id", "guideline_chunks.document_id", "guideline_chunks.section_id", "guideline_chunks.block_id").
-		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.current_version_id = guideline_chunks.version_id AND gd.deleted_at IS NULL").
-		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND LOWER(gv.status) = 'published'").
-		Where("guideline_chunks.id IN ? AND guideline_chunks.review_status = ?", ids, "approved").Find(&chunks).Error; err != nil {
-		log.Warn().Err(err).Msg("failed to enrich RAG citation navigation")
-		return []Citation{}
+	if len(ids) > 0 {
+		if err := s.DB.Model(&models.GuidelineChunk{}).
+			Select("guideline_chunks.id", "guideline_chunks.document_id", "guideline_chunks.version_id", "guideline_chunks.section_id", "guideline_chunks.block_id").
+			Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.current_version_id = guideline_chunks.version_id AND gd.deleted_at IS NULL").
+			Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND LOWER(gv.status) = 'published'").
+			Where("guideline_chunks.id IN ? AND guideline_chunks.review_status = ?", ids, "approved").Find(&chunks).Error; err != nil {
+			log.Warn().Err(err).Msg("failed to enrich RAG citation navigation")
+			return []Citation{}
+		}
 	}
 	byID := make(map[string]models.GuidelineChunk, len(chunks))
 	for _, chunk := range chunks {
@@ -212,6 +230,36 @@ func (s RAGService) enrichCitations(citations []Citation) []Citation {
 	}
 	verified := make([]Citation, 0, len(citations))
 	for index := range citations {
+		if citations[index].ContentType != "" && citations[index].ContentType != "guideline" {
+			id, err := uuid.Parse(citations[index].ChunkID)
+			if err != nil {
+				continue
+			}
+			assignment := models.ContentDiseaseAssignment{ContentType: citations[index].ContentType, ContentID: id}
+			eligible, err := (ContentDiseaseService{DB: s.DB}).PubliclyEligible(assignment, time.Now().UTC())
+			if err != nil || !eligible {
+				continue
+			}
+			resource, err := resolvePublicContentResource(context.Background(), s.DB, citations[index].ContentType, id)
+			if err != nil {
+				continue
+			}
+			citations[index].Title = firstNonEmpty(citations[index].Title, resource.Title)
+			citations[index].SourceName = firstNonEmpty(citations[index].SourceName, resource.IssuingAuthority, resource.SourceOrganization)
+			citations[index].SourceVersion = firstNonEmpty(citations[index].SourceVersion, resource.Version)
+			citations[index].Route = resource.Route
+			searchResult := SearchResult{ID: id.String(), ResultType: citations[index].ContentType, ContentType: citations[index].ContentType, Title: citations[index].Title, SourceName: citations[index].SourceName, SourceVersion: citations[index].SourceVersion, Route: resource.Route, Metadata: publicResourceMetadata(*resource)}
+			metadataSearch := s.Search
+			if metadataSearch.DB == nil {
+				metadataSearch.DB = s.DB
+			}
+			if err := metadataSearch.attachSearchMetadata(context.Background(), &searchResult); err == nil {
+				citations[index].Diseases, citations[index].Hubs, citations[index].Pillars = searchResult.Diseases, searchResult.Hubs, searchResult.Pillars
+				citations[index].Metadata = searchResult.Metadata
+			}
+			verified = append(verified, citations[index])
+			continue
+		}
 		chunk, ok := byID[citations[index].ChunkID]
 		if !ok {
 			continue
@@ -223,12 +271,50 @@ func (s RAGService) enrichCitations(citations []Citation) []Citation {
 		if chunk.BlockID != nil {
 			citations[index].BlockID = chunk.BlockID.String()
 		}
+		citations[index].ContentType = "guideline"
+		citations[index].GuidelineVersionID = chunk.VersionID.String()
+		searchResult := SearchResult{ID: chunk.ID.String(), ResultType: "guideline", GuidelineID: chunk.DocumentID.String(), GuidelineVersionID: chunk.VersionID.String(), SourceName: citations[index].SourceName, SourceVersion: citations[index].SourceVersion}
+		metadataSearch := s.Search
+		if metadataSearch.DB == nil {
+			metadataSearch.DB = s.DB
+		}
+		if err := metadataSearch.attachSearchMetadata(context.Background(), &searchResult); err != nil {
+			log.Warn().Err(err).Str("chunk_id", chunk.ID.String()).Msg("failed to attach RAG citation taxonomy")
+			verified = append(verified, citations[index])
+			continue
+		}
+		citations[index].Route = searchResult.Route
+		citations[index].Categories = searchResult.Categories
+		citations[index].Diseases = searchResult.Diseases
+		citations[index].Hubs = searchResult.Hubs
+		citations[index].Pillars = searchResult.Pillars
+		citations[index].Metadata = searchResult.Metadata
 		verified = append(verified, citations[index])
 	}
 	return verified
 }
 
 func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskResponse, error) {
+	local, localErr := s.askLocal(req)
+	if localErr != nil {
+		return nil, localErr
+	}
+	// The worker protocol currently has no taxonomy-filter fields. Sending a
+	// scoped request there would risk returning otherwise-public but out-of-scope
+	// evidence, so scoped questions always use the authoritative local query.
+	if hasPublicSearchScope(req.Filter) {
+		return local, nil
+	}
+	// The current worker index contains guideline chunks only. Prefer the
+	// publication-safe mixed-source response whenever discovery found an
+	// eligible outbreak, managed document, report, algorithm, tool or drug.
+	// This prevents a worker guideline match from hiding more relevant governed
+	// evidence until the worker protocol supports the same typed corpus.
+	for _, citation := range local.Citations {
+		if citation.ContentType != "" && citation.ContentType != "guideline" {
+			return local, nil
+		}
+	}
 	provider := strings.ToLower(strings.TrimSpace(s.Cfg.AIRAGProvider))
 	if provider == "worker" || provider == "ai-worker" {
 		if res, err := s.askWorker(req); err == nil {
@@ -240,7 +326,7 @@ func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskRespons
 			log.Warn().Err(err).Msg("ai-worker RAG failed, falling back to local search")
 		}
 	}
-	return s.askLocal(req)
+	return local, nil
 }
 
 func (s RAGService) askWorker(req workerAskRequest) (*AskResponse, error) {
@@ -317,19 +403,19 @@ func toGRPCChatMessages(messages []workerChatMessage) []*aiworkerpb.ChatMessage 
 }
 
 func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {
-	results, err := s.Search.SearchApprovedGuidelineContext(context.Background(), s.buildLocalSearchQuestion(req), 5)
+	results, err := s.Search.SearchApprovedContentContextFiltered(context.Background(), s.buildLocalSearchQuestion(req), req.Filter, 5)
 	if err != nil {
 		return nil, err
 	}
 	citations := []Citation{}
 	parts := []string{}
 	for _, r := range results {
-		citations = append(citations, Citation{ChunkID: r.ID, GuidelineID: r.GuidelineID, SectionID: r.SectionID, BlockID: r.BlockID, Title: r.Title, SourceName: r.SourceName, SourceVersion: r.SourceVersion, PageStart: r.PageStart, PageEnd: r.PageEnd})
+		citations = append(citations, Citation{ChunkID: r.ID, GuidelineID: r.GuidelineID, GuidelineVersionID: r.GuidelineVersionID, SectionID: r.SectionID, BlockID: r.BlockID, Title: r.Title, SourceName: r.SourceName, SourceVersion: r.SourceVersion, PageStart: r.PageStart, PageEnd: r.PageEnd, ContentType: r.ResultType, Route: r.Route, Categories: r.Categories, Diseases: r.Diseases, Hubs: r.Hubs, Pillars: r.Pillars, Metadata: r.Metadata})
 		parts = append(parts, "- "+r.Snippet)
 	}
-	answer := "I found the following approved guideline content that may answer the question. Please review the cited source sections before clinical use:\n\n" + strings.Join(parts, "\n")
+	answer := "I found the following approved content that may answer the question. Please review the cited sources before clinical use:\n\n" + strings.Join(parts, "\n")
 	if len(results) == 0 {
-		answer = "I could not find an answer in the approved guideline content. Please consult the current national guideline or refer to a senior clinician."
+		answer = "I could not find an answer in the approved published content. Please consult the current national guidance or refer to a senior clinician."
 	}
 	return &AskResponse{Answer: answer, Citations: citations}, nil
 }
@@ -378,7 +464,18 @@ func (s RAGService) buildWorkerAskRequest(sessionID uuid.UUID, req AskRequest) (
 		ProgramArea:    req.ProgramArea,
 		HistorySummary: historySummary,
 		RecentMessages: recentMessages,
+		Filter: PublicSearchFilter{
+			ProgramArea: req.ProgramArea, CategoryID: req.CategoryID,
+			DiseaseID: req.DiseaseID, DiseaseSlug: req.DiseaseSlug,
+			HubID: req.HubID, HubSlug: req.HubSlug,
+			PillarID: req.PillarID, PillarSlug: req.PillarSlug,
+			ContentType: req.ContentType,
+		},
 	}, nil
+}
+
+func hasPublicSearchScope(filter PublicSearchFilter) bool {
+	return strings.TrimSpace(filter.CategoryID+filter.DiseaseID+filter.DiseaseSlug+filter.HubID+filter.HubSlug+filter.PillarID+filter.PillarSlug+filter.ContentType) != ""
 }
 
 func (s RAGService) loadConversationContext(sessionID uuid.UUID) (string, []workerChatMessage, error) {

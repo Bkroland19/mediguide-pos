@@ -52,6 +52,7 @@ import 'package:user_app/features/notifications/presentation/screens/notificatio
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
 import 'package:user_app/features/downloads/presentation/screens/offline_content_page.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
+import 'package:user_app/features/discovery/presentation/screens/discovery_pages.dart';
 import 'package:user_app/features/support/presentation/screens/faq_page.dart';
 import 'package:user_app/features/support/presentation/screens/help_center_page.dart';
 
@@ -144,6 +145,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.publicGuidelines,
         builder: (_, state) => PublicationCataloguePage(
           programArea: state.uri.queryParameters['program_area'] ?? '',
+          categoryId: state.uri.queryParameters['category_id'] ?? '',
+          categoryName: state.uri.queryParameters['category_name'] ?? '',
         ),
       ),
       GoRoute(
@@ -214,6 +217,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.situationReportDetails,
         builder: (_, state) => SituationReportDetailPage(
           reportId: state.pathParameters['reportId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.diseases,
+        builder: (_, _) => const DiseaseDirectoryPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.diseaseDetails,
+        builder: (_, state) =>
+            DiseaseDetailPage(slug: state.pathParameters['slug'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.contentHubs,
+        builder: (_, _) => const ContentHubDirectoryPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.contentHub,
+        builder: (_, state) =>
+            ContentHubPage(slug: state.pathParameters['slug'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.contentPillar,
+        builder: (_, state) => ContentPillarPage(
+          hubSlug: state.pathParameters['slug'] ?? '',
+          pillarSlug: state.pathParameters['pillarSlug'] ?? '',
         ),
       ),
       GoRoute(

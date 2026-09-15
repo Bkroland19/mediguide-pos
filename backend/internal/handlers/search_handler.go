@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"strconv"
 
 	"mediguide/internal/httpx"
@@ -17,14 +18,26 @@ type SearchHandler struct{ Service services.SearchService }
 // @Produce json
 // @Param q query string true "Search query" minlength(2)
 // @Param program_area query string false "Program area filter"
+// @Param category_id query string false "Guideline category UUID"
+// @Param disease_id query string false "Disease UUID"
+// @Param disease_slug query string false "Canonical disease slug or alias"
+// @Param hub_id query string false "Content hub UUID"
+// @Param hub_slug query string false "Content hub slug"
+// @Param pillar_id query string false "Content pillar UUID"
+// @Param pillar_slug query string false "Content pillar slug"
+// @Param content_type query string false "Resource type"
 // @Param limit query int false "Maximum results" minimum(1) maximum(50)
 // @Success 200 {object} handlers.SearchResultsEnvelope
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/public/search [get]
 func (h SearchHandler) PublicSearch(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	rows, err := h.Service.PublicSearchContext(c.Request.Context(), c.Query("q"), c.Query("program_area"), limit)
+	rows, err := h.Service.PublicSearchContextFiltered(c.Request.Context(), c.Query("q"), publicSearchFilter(c), limit)
 	if err != nil {
+		if errors.Is(err, services.ErrPublicGuidelineQuery) {
+			httpx.Error(c, 400, "invalid search filter")
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}
@@ -46,10 +59,24 @@ func (h SearchHandler) PublicSearch(c *gin.Context) {
 // @Router /api/v2/search [get]
 func (h SearchHandler) Search(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	rows, err := h.Service.SearchContext(c.Request.Context(), c.Query("q"), c.Query("program_area"), limit)
+	rows, err := h.Service.SearchContextFiltered(c.Request.Context(), c.Query("q"), publicSearchFilter(c), limit)
 	if err != nil {
+		if errors.Is(err, services.ErrPublicGuidelineQuery) {
+			httpx.Error(c, 400, "invalid search filter")
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}
 	httpx.OK(c, rows)
+}
+
+func publicSearchFilter(c *gin.Context) services.PublicSearchFilter {
+	return services.PublicSearchFilter{
+		ProgramArea: c.Query("program_area"), CategoryID: c.Query("category_id"),
+		DiseaseID: c.Query("disease_id"), DiseaseSlug: c.Query("disease_slug"),
+		HubID: c.Query("hub_id"), HubSlug: c.Query("hub_slug"),
+		PillarID: c.Query("pillar_id"), PillarSlug: c.Query("pillar_slug"),
+		ContentType: c.Query("content_type"),
+	}
 }

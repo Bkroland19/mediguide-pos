@@ -318,6 +318,26 @@ type PaginatedGuidelineCategoriesEnvelope struct {
 	Success bool                                          `json:"success"`
 	Data    services.PageResult[models.GuidelineCategory] `json:"data"`
 }
+type DiseaseEnvelope struct {
+	Success bool           `json:"success"`
+	Data    models.Disease `json:"data"`
+}
+type PaginatedDiseasesEnvelope struct {
+	Success bool                                `json:"success"`
+	Data    services.PageResult[models.Disease] `json:"data"`
+}
+type PublicDiseaseEnvelope struct {
+	Success bool                   `json:"success"`
+	Data    services.PublicDisease `json:"data"`
+}
+type PaginatedPublicDiseasesEnvelope struct {
+	Success bool                                               `json:"success"`
+	Data    services.PageResult[services.PublicDiseaseSummary] `json:"data"`
+}
+type PaginatedDiseaseMigrationReportEnvelope struct {
+	Success bool                                                       `json:"success"`
+	Data    services.PageResult[models.DiseaseTaxonomyMigrationReport] `json:"data"`
+}
 type PaginatedGuidelineTagsEnvelope struct {
 	Success bool                                     `json:"success"`
 	Data    services.PageResult[models.GuidelineTag] `json:"data"`
@@ -1057,4 +1077,94 @@ type RegenerationCommentsEnvelope struct {
 type RegenerationCommentEnvelope struct {
 	Success bool                          `json:"success"`
 	Data    models.GuidelineReviewComment `json:"data"`
+}
+
+type ContentDiseaseAssignmentEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    models.ContentDiseaseAssignment `json:"data"`
+}
+
+type PaginatedContentDiseaseAssignmentsEnvelope struct {
+	Success bool                                                 `json:"success"`
+	Data    services.PageResult[models.ContentDiseaseAssignment] `json:"data"`
+}
+
+type ContentHubEnvelope struct {
+	Success bool              `json:"success"`
+	Data    models.ContentHub `json:"data"`
+}
+
+type DiseaseHierarchyEnvelope struct {
+	Success bool                       `json:"success"`
+	Data    []services.DiseaseTreeNode `json:"data"`
+}
+
+type PublicDiseaseHierarchyEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    []services.PublicDiseaseTreeNode `json:"data"`
+}
+
+type DiseaseAliasesEnvelope struct {
+	Success bool                  `json:"success"`
+	Data    []models.DiseaseAlias `json:"data"`
+}
+
+type DiseaseCodesEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    []models.DiseaseCode `json:"data"`
+}
+
+type ContentHubDiseasesEnvelope struct {
+	Success bool             `json:"success"`
+	Data    []models.Disease `json:"data"`
+}
+
+type PaginatedContentHubsEnvelope struct {
+	Success bool                                   `json:"success"`
+	Data    services.PageResult[models.ContentHub] `json:"data"`
+}
+
+type PaginatedPublicContentHubsEnvelope struct {
+	Success bool                                           `json:"success"`
+	Data    services.PageResult[services.PublicContentHub] `json:"data"`
+}
+
+type PublicContentHubEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    services.PublicContentHub `json:"data"`
+}
+
+type ContentPillarsEnvelope struct {
+	Success bool                   `json:"success"`
+	Data    []models.ContentPillar `json:"data"`
+}
+
+type ContentPillarEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    models.ContentPillar `json:"data"`
+}
+
+type ContentPillarItemsEnvelope struct {
+	Success bool                       `json:"success"`
+	Data    []models.ContentPillarItem `json:"data"`
+}
+
+type ContentPillarItemEnvelope struct {
+	Success bool                     `json:"success"`
+	Data    models.ContentPillarItem `json:"data"`
+}
+
+type ContentHubTemplatesEnvelope struct {
+	Success bool                                `json:"success"`
+	Data    []services.ContentHubTemplateDetail `json:"data"`
+}
+
+type ContentHubTemplateEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.ContentHubTemplateDetail `json:"data"`
+}
+
+type PublicContentPillarEnvelope struct {
+	Success bool                         `json:"success"`
+	Data    services.PublicContentPillar `json:"data"`
 }

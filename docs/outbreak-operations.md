@@ -1,5 +1,9 @@
 # Outbreak operations runbook
 
+For the end-to-end dashboard sequence that creates an outbreak hub, uploads and
+reviews its documents, assigns pillar items and verifies mobile visibility, use
+the [content hub and document publishing workflow](content-hub-and-document-publishing-workflow.md).
+
 ## Discovery and freshness
 
 Public search returns only published, non-withdrawn guidelines, outbreaks, and situation reports. Results use the explicit `result_type` values `guideline`, `outbreak`, and `situation_report`. Search covers approved editorial fields: title, summary, disease, geography, source organization, source reference, and situation-report highlights.
@@ -125,7 +129,7 @@ docker compose \
   run --rm --no-deps -e SEED_SCOPE=outbreaks api /app/seed
 ```
 
-The documents cover the guest response-hub workflow: case definition, screening and treatment pathway, case-management SOP, IPC, discharge and referral, laboratory handling, medicines safety, contact tracing, forms, frontline checklist, training, risk communication and FAQs. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
+The Ebola documents cover the complete guest response-hub workflow: case definition, screening and treatment pathway, case-management SOP, IPC, discharge and referral, laboratory handling, medicines safety, contact tracing, forms, frontline checklist, training, risk communication and FAQs. Cholera and Measles each include six additional managed-document fixtures: a case definition, case-management SOP, IPC SOP, health-worker checklist, response form and situation-report attachment. The Cholera and Measles content is deliberately synthetic and contains no approved treatment, dosing or surveillance instructions. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
 
 Rerunning the seed is safe: document UUIDs, document numbers, versions and storage keys are stable; object contents are replaced from the repository fixture; and SHA-256 checksum and size metadata are recalculated. Each demo outbreak also receives a protocol/SOP, checklist, situation report, related guideline and approved official website quick resource. The seed reads uploaded objects back from storage, verifies non-empty bytes and SHA-256 checksums, and invokes the same projection derivation used by runtime uploads. It persists the runtime search text, rendered body, headings, sections, page map, derived checksum and search-schema version, then verifies public metadata, content, download and body-search paths. A parity test re-derives every fixture and prevents seed/runtime projection drift. The fixtures are clearly marked as demonstration content and are not clinician-approved operational guidance.
 

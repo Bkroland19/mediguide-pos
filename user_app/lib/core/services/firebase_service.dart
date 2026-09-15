@@ -94,6 +94,29 @@ final class MediGuideFirebaseService {
   bool get outbreakBannerEnabled =>
       !_enabled ||
       FirebaseRemoteConfig.instance.getBool('outbreak_banner_enabled');
+  bool get backendManagedOutbreakHubsEnabled =>
+      _enabled &&
+      FirebaseRemoteConfig.instance.getBool('api_driven_outbreak_pillars');
+  bool get diseaseTaxonomyEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_taxonomy_enabled');
+  bool get diseaseContentAssignmentEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_content_assignment');
+  bool get diseaseHubsEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_hubs_enabled');
+  bool get genericHubsEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('generic_hubs_enabled');
+  bool get guidelineCategoryAssignmentEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('guideline_category_assignment');
+  bool get unifiedDocumentSearchEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('unified_document_search');
+  bool get pillarRagMetadataEnabled =>
+      !_enabled || FirebaseRemoteConfig.instance.getBool('pillar_rag_metadata');
   bool get maintenanceMode =>
       _enabled && FirebaseRemoteConfig.instance.getBool('maintenance_mode');
   String get maintenanceMessage => _enabled
@@ -234,6 +257,19 @@ final class MediGuideFirebaseService {
       'enable_push_notifications': true,
       'minimum_supported_version': '',
       'outbreak_banner_enabled': true,
+      // Enable after configured hubs are verified in production. Until then
+      // every outbreak retains the existing compatibility presentation.
+      'api_driven_outbreak_pillars': false,
+      // Public disease and hub discovery is a stable reader capability. It
+      // remains remotely reversible, but a missing/failing Remote Config
+      // value must not hide already-published clinical content.
+      'disease_taxonomy_enabled': true,
+      'disease_content_assignment': false,
+      'disease_hubs_enabled': true,
+      'generic_hubs_enabled': true,
+      'guideline_category_assignment': false,
+      'unified_document_search': false,
+      'pillar_rag_metadata': false,
     });
     await config.setConfigSettings(
       RemoteConfigSettings(
