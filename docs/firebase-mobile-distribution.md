@@ -502,8 +502,10 @@ alias before invoking Fastlane.
 
 ## Apple signing and TestFlight
 
-In Apple Developer, create one Apple Distribution certificate and two
-provisioning profiles for `com.omarsoft.mediguide`:
+Alpha and beta runs build the staging app. In Apple Developer and App Store
+Connect, first register `com.omarsoft.mediguide.staging` and create its app
+record. Create one Apple Distribution certificate and two staging provisioning
+profiles:
 
 - Ad Hoc profile containing every Firebase tester device.
 - App Store profile for TestFlight.
@@ -515,7 +517,7 @@ equivalent App Store Connect value) for TestFlight. Each plist must use manual
 signing, the correct Apple team ID, bundle identifier, and profile name.
 
 Create an App Store Connect team API key with access sufficient to upload
-TestFlight builds. Store these `testing` Environment secrets:
+TestFlight builds. Store these `staging` Environment secrets:
 
 | Secret | Value |
 |---|---|
@@ -530,14 +532,41 @@ TestFlight builds. Store these `testing` Environment secrets:
 | `APP_STORE_CONNECT_ISSUER_ID` | App Store Connect issuer UUID |
 | `APP_STORE_CONNECT_PRIVATE_KEY_BASE64` | Base64 `AuthKey_*.p8` |
 
-Use `openssl base64 -A -in FILE | gh secret set NAME --repo ... --env testing`
+Use `openssl base64 -A -in FILE | gh secret set NAME --repo ... --env staging`
 for binary files. Use `printf '%s' VALUE | gh secret set ...` for text values.
 Never commit certificates, profiles, keys, Firebase service accounts, generated
 Firebase config, or export-options files.
 
-The App Store Connect app record must already exist and use bundle identifier
-`com.omarsoft.mediguide`. Every tag must carry a higher Flutter build number;
-`make release-prepare` handles this.
+Use the repository helper to validate and upload all ten signing values without
+placing secret material in shell arguments or the worktree:
+
+```bash
+export APPLE_TEAM_ID='YOUR_TEAM_ID'
+export IOS_DISTRIBUTION_CERTIFICATE_FILE='/secure/distribution.p12'
+export IOS_DISTRIBUTION_CERTIFICATE_PASSWORD='YOUR_P12_PASSWORD'
+export IOS_FIREBASE_PROVISIONING_PROFILE_FILE='/secure/staging-ad-hoc.mobileprovision'
+export IOS_FIREBASE_EXPORT_OPTIONS_PLIST_FILE='/secure/ExportOptions-Staging-AdHoc.plist'
+export IOS_TESTFLIGHT_PROVISIONING_PROFILE_FILE='/secure/staging-app-store.mobileprovision'
+export IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST_FILE='/secure/ExportOptions-Staging-AppStore.plist'
+export APP_STORE_CONNECT_KEY_ID='YOUR_KEY_ID'
+export APP_STORE_CONNECT_ISSUER_ID='YOUR_ISSUER_UUID'
+export APP_STORE_CONNECT_PRIVATE_KEY_FILE='/secure/AuthKey_YOUR_KEY_ID.p8'
+
+scripts/configure-ios-distribution-secrets.sh \
+  --repo mohuganda/mediguide-pos \
+  --environment staging
+```
+
+The helper rejects expired profiles, development profiles, incorrect APNs
+entitlements, wrong team/bundle mappings and mismatched export options before
+changing GitHub secrets. Unset the password and identifiers after it succeeds.
+
+The staging App Store Connect record must use bundle identifier
+`com.omarsoft.mediguide.staging`. Stable production distribution uses separate
+credentials in the `production` GitHub Environment and the
+`com.omarsoft.mediguide` app record. Every upload must carry a higher Flutter
+build number; the prerelease workflow allocates one automatically and
+`make release-prepare` handles stable releases.
 
 ## Run and monitor distribution
 

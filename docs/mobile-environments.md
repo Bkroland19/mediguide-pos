@@ -80,6 +80,11 @@ Create separate Apple provisioning profiles for each iOS bundle ID. Production
 Fastlane archives explicitly select the `production` scheme. Development and
 staging builds must never reuse the production provisioning profile.
 
+Release/Profile configurations resolve the app's `aps-environment` entitlement
+to `production`; Debug configurations resolve it to `development`. The protected
+workflow additionally checks that Ad Hoc and App Store profiles contain the
+production APNs entitlement before importing any signing identity.
+
 ## Debug tools
 
 Development and staging show a red draggable environment badge above the app.

@@ -313,6 +313,30 @@ jobs:
           test -s ios/distribution.p12
           chmod 600 ios/distribution.p12 ios/AuthKey.p8 2>/dev/null || true
 
+      - name: Validate iOS signing assets
+        env:
+          DESTINATION: ${{ inputs.destination || 'all' }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          args=(
+            --bundle-id "${IOS_BUNDLE_IDENTIFIER}"
+            --team-id "${APPLE_TEAM_ID}"
+          )
+          if [ "${DESTINATION:-all}" = "all" ] || [ "${DESTINATION:-all}" = "firebase-ios" ]; then
+            args+=(
+              --firebase-profile ios/firebase.mobileprovision
+              --firebase-export-options ios/ExportOptions-Firebase.plist
+            )
+          fi
+          if [ "${DESTINATION:-all}" = "all" ] || [ "${DESTINATION:-all}" = "testflight" ]; then
+            args+=(
+              --testflight-profile ios/testflight.mobileprovision
+              --testflight-export-options ios/ExportOptions-TestFlight.plist
+            )
+          fi
+          ../scripts/validate-ios-distribution-assets.sh "${args[@]}"
+
       - name: Install Apple certificate and profiles
         env:
           IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
