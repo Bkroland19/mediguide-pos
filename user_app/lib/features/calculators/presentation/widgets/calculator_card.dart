@@ -4,7 +4,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/theme/app_text_styles.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/extensions.dart';
 
 /// Clean list tile for calculator/tool items — MDCalc-style.
 /// No cards, just icon badge + text + chevron with divider.

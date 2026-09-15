@@ -11,7 +11,6 @@ import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
 
-import 'package:user_app/features/calculators/presentation/controllers/tools_controller.dart';
 import 'package:user_app/features/calculators/presentation/widgets/calculator_card.dart';
 
 import 'package:user_app/shared/models/models.dart';

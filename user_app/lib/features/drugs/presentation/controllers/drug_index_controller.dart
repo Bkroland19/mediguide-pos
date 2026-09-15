@@ -162,7 +162,7 @@ class DrugIndexController extends _$DrugIndexController {
     if (values.contains(value)) {
       values.remove(value);
     } else {
-      values.add(value);
+      values.add(Color.toARGB32);
     }
 
     state = state.copyWith(
@@ -184,7 +184,7 @@ class DrugIndexController extends _$DrugIndexController {
     if (values.contains(value)) {
       values.remove(value);
     } else {
-      values.add(value);
+      values.add(Color.toARGB32);
     }
 
     state = state.copyWith(
@@ -206,7 +206,7 @@ class DrugIndexController extends _$DrugIndexController {
     if (values.contains(value)) {
       values.remove(value);
     } else {
-      values.add(value);
+      values.add(Color.toARGB32);
     }
 
     state = state.copyWith(
@@ -228,7 +228,7 @@ class DrugIndexController extends _$DrugIndexController {
     if (values.contains(value)) {
       values.remove(value);
     } else {
-      values.add(value);
+      values.add(Color.toARGB32);
     }
 
     state = state.copyWith(

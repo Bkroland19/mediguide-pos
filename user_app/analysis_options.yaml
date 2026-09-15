@@ -14,6 +14,12 @@ analyzer:
     # Freezed intentionally places json_annotation metadata on factory
     # parameters before generating concrete fields/getters.
     invalid_annotation_target: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - macos/**
 
 linter:
   # The lint rules applied to this project can be customized in the
