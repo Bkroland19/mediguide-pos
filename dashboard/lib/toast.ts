@@ -1,4 +1,5 @@
 import { toast } from "sonner"
+import { isSessionExpiryToastWindow } from "@/lib/backend-client"
 
 export const showToast = {
   success: (message: string, description?: string) => {
@@ -7,11 +8,14 @@ export const showToast = {
     })
   },
   error: (message: string, description?: string) => {
+    // Suppresses duplicate error toasts during a session-expiry event
+    if (isSessionExpiryToastWindow()) return
     toast.error(message, {
       description,
     })
   },
   warning: (message: string, description?: string) => {
+    if (isSessionExpiryToastWindow()) return
     toast.warning(message, {
       description,
     })
