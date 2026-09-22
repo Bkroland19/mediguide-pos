@@ -145,17 +145,17 @@ const data: { navMain: NavItem[] } = {
         { title: "Tags", url: "/drugs/tags" },
       ],
     },
-    {
-      title: "Emergency Protocols",
-      url: "#",
-      icon: AlertTriangle,
-      permission: { resource: "content", action: "read:any" },
-      items: [
-        { title: "All Protocols", url: "/emergency-protocols" },
-        { title: "Resuscitation", url: "/emergency-protocols/resuscitation" },
-        { title: "Trauma", url: "/emergency-protocols/trauma" },
-      ],
-    },
+    // {
+    //   title: "Emergency Protocols",
+    //   url: "#",
+    //   icon: AlertTriangle,
+    //   permission: { resource: "content", action: "read:any" },
+    //   items: [
+    //     { title: "All Protocols", url: "/emergency-protocols" },
+    //     { title: "Resuscitation", url: "/emergency-protocols/resuscitation" },
+    //     { title: "Trauma", url: "/emergency-protocols/trauma" },
+    //   ],
+    // },
     {
       title: "Outbreak Management",
       url: "#",
