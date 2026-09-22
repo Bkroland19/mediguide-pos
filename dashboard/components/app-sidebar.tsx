@@ -100,7 +100,7 @@ const data: { navMain: NavItem[] } = {
       title: "Dashboard",
       url: "/",
       icon: BarChart3,
-      // always visible to all dashboard roles
+
     },
     {
       title: "Clinical Guidelines",
@@ -110,7 +110,7 @@ const data: { navMain: NavItem[] } = {
       items: [
         { title: "All Guidelines", url: "/guidelines" },
         { title: "Create Guideline", url: "/guidelines/create", permission: { resource: "content", action: "create:any" } },
-        { title: "Index", url: "/guidelines/index" },
+        // { title: "Index", url: "/guidelines/index" },
         { title: "Categories", url: "/guidelines/categories" },
         { title: "Diseases", url: "/diseases", backendPermissions: ["disease.taxonomy.read", "disease.taxonomy.manage"] },
         { title: "Content Hubs", url: "/content-hubs", backendPermissions: ["content_hub.read", "content_hub.manage"] },
@@ -118,22 +118,6 @@ const data: { navMain: NavItem[] } = {
         { title: "Abbreviations", url: "/guidelines/abbreviations" },
       ],
     },
-    // {
-    //   title: "Pages",
-    //   url: "#",
-    //   icon: FileText,
-    //   permission: { resource: "content", action: "read:any" },
-    //   items: [
-    //     { title: "All Pages", url: "/pages" },
-    //     { title: "Create Page", url: "/pages/create", permission: { resource: "content", action: "create:any" } },
-    //   ],
-    // },
-    // {
-    //   title: "Lab Test Menu",
-    //   url: "/lab-test-menu",
-    //   icon: TestTube,
-    //   permission: { resource: "content", action: "read:any" },
-    // },
     {
       title: "Drug Index",
       url: "#",
@@ -145,17 +129,6 @@ const data: { navMain: NavItem[] } = {
         { title: "Tags", url: "/drugs/tags" },
       ],
     },
-    // {
-    //   title: "Emergency Protocols",
-    //   url: "#",
-    //   icon: AlertTriangle,
-    //   permission: { resource: "content", action: "read:any" },
-    //   items: [
-    //     { title: "All Protocols", url: "/emergency-protocols" },
-    //     { title: "Resuscitation", url: "/emergency-protocols/resuscitation" },
-    //     { title: "Trauma", url: "/emergency-protocols/trauma" },
-    //   ],
-    // },
     {
       title: "Outbreak Management",
       url: "#",
