@@ -43,6 +43,7 @@ backend/.cache/
 # Retired PocketBase exports are preserved in release tags, not the worktree.
 backend/migrations/init_db/
 .DS_Store
+:memory:.ses
 guidelines-docs
 .idea/
 .vscode/
