@@ -46,14 +46,14 @@ import type { PermissionAction } from "@/types/permissions"
 function findActiveMenuItem(pathname: string, navItems: typeof data.navMain) {
   for (let i = 0; i < navItems.length; i++) {
     const item = navItems[i]
-    
+
     // Check if any sub-item matches the current pathname (exact match)
     if (item.items) {
       const hasActiveChild = item.items.some(subItem => pathname === subItem.url)
       if (hasActiveChild) {
         return i
       }
-      
+
       // Check if current pathname starts with any sub-item URL (for nested routes)
       const hasNestedActiveChild = item.items.some(subItem => {
         if (subItem.url === "/") return false // Skip root to avoid matching everything
@@ -63,12 +63,12 @@ function findActiveMenuItem(pathname: string, navItems: typeof data.navMain) {
         return i
       }
     }
-    
+
     // Check if the main item URL matches (for overview pages)
     if (pathname === item.url && item.url !== "#") {
       return i
     }
-    
+
     // Check if current pathname starts with the main item URL (for nested routes)
     if (item.url !== "#" && item.url !== "/" && pathname.startsWith(item.url + "/")) {
       return i
@@ -128,12 +128,12 @@ const data: { navMain: NavItem[] } = {
     //     { title: "Create Page", url: "/pages/create", permission: { resource: "content", action: "create:any" } },
     //   ],
     // },
-    {
-      title: "Lab Test Menu",
-      url: "/lab-test-menu",
-      icon: TestTube,
-      permission: { resource: "content", action: "read:any" },
-    },
+    // {
+    //   title: "Lab Test Menu",
+    //   url: "/lab-test-menu",
+    //   icon: TestTube,
+    //   permission: { resource: "content", action: "read:any" },
+    // },
     {
       title: "Drug Index",
       url: "#",
@@ -268,29 +268,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Find which menu item should be active/open based on current pathname
   const activeMenuIndex = findActiveMenuItem(pathname, visibleNav)
-  
+
   // State to track which menu items are open
   const [openItems, setOpenItems] = React.useState<Set<number>>(() => {
     const initialOpen = new Set<number>()
-    
+
     // Always open the dashboard (index 0) by default
     initialOpen.add(0)
-    
+
     // Open the menu item that contains the active route
     if (activeMenuIndex !== -1) {
       initialOpen.add(activeMenuIndex)
     }
-    
+
     return initialOpen
   })
-  
+
   // Update open items when pathname changes
   React.useEffect(() => {
     if (activeMenuIndex !== -1) {
       setOpenItems(prev => new Set(prev).add(activeMenuIndex))
     }
   }, [activeMenuIndex])
-  
+
   // Handle toggle of menu items
   const toggleMenuItem = React.useCallback((index: number) => {
     setOpenItems(prev => {
