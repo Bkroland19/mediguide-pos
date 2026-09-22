@@ -333,7 +333,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {visibleNav.map((item, index) => {
+            {visibleNav?.map((item, index) => {
               // If item has no subitems and a direct URL, render as direct link
               if (!item.items?.length && item.url !== "#") {
                 return (
