@@ -118,16 +118,16 @@ const data: { navMain: NavItem[] } = {
         { title: "Abbreviations", url: "/guidelines/abbreviations" },
       ],
     },
-    {
-      title: "Pages",
-      url: "#",
-      icon: FileText,
-      permission: { resource: "content", action: "read:any" },
-      items: [
-        { title: "All Pages", url: "/pages" },
-        { title: "Create Page", url: "/pages/create", permission: { resource: "content", action: "create:any" } },
-      ],
-    },
+    // {
+    //   title: "Pages",
+    //   url: "#",
+    //   icon: FileText,
+    //   permission: { resource: "content", action: "read:any" },
+    //   items: [
+    //     { title: "All Pages", url: "/pages" },
+    //     { title: "Create Page", url: "/pages/create", permission: { resource: "content", action: "create:any" } },
+    //   ],
+    // },
     {
       title: "Lab Test Menu",
       url: "/lab-test-menu",
