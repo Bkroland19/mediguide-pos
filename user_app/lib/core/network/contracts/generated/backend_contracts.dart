@@ -1335,6 +1335,27 @@ final class HandlersDiseaseHierarchyEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersDocumentKindEnvelope {
+  HandlersDocumentKindEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersDocumentKindEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDocumentKindEnvelope(json);
+
+  static const schemaName = 'handlers.DocumentKindEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsDocumentKind? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsDocumentKind.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersDocumentationEnvelope {
   HandlersDocumentationEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -3241,6 +3262,28 @@ final class HandlersPaginatedDiseasesEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ServicesPageResultModelsDisease.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedDocumentKindsEnvelope {
+  HandlersPaginatedDocumentKindsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedDocumentKindsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedDocumentKindsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedDocumentKindsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsDocumentKind? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsDocumentKind.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -6431,6 +6474,43 @@ final class ModelsDiseaseTaxonomyMigrationReport {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsDocumentKind {
+  ModelsDocumentKind(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsDocumentKind.fromJson(Map<String, dynamic> json) =>
+      ModelsDocumentKind(json);
+
+  static const schemaName = 'models.DocumentKind';
+  final Map<String, dynamic> value;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  int? get guidelineDocumentCount =>
+      (value['guideline_document_count'] as num?)?.toInt();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  int? get outbreakDocumentCount =>
+      (value['outbreak_document_count'] as num?)?.toInt();
+
+  bool? get publishAsUploaded => value['publish_as_uploaded'] as bool?;
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsDocumentation {
   ModelsDocumentation(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7229,6 +7309,14 @@ final class ModelsGuidelineDocument {
   String? get currentVersionId => value['current_version_id']?.toString();
 
   String? get description => value['description']?.toString();
+
+  ModelsDocumentKind? get documentKind {
+    final raw = value['document_kind'];
+    if (raw is! Map) return null;
+    return ModelsDocumentKind.fromJson(_jsonMap(raw));
+  }
+
+  String? get documentKindId => value['document_kind_id']?.toString();
 
   String? get healthcareLevel => value['healthcare_level']?.toString();
 
@@ -9820,6 +9908,8 @@ final class ServicesCreateGuidelineInput {
 
   String? get description => value['description']?.toString();
 
+  String? get documentKindId => value['document_kind_id']?.toString();
+
   String? get healthcareLevel => value['healthcare_level']?.toString();
 
   String? get intendedPopulation => value['intended_population']?.toString();
@@ -10094,6 +10184,31 @@ final class ServicesDiseaseTreeNode {
   String? get updatedAt => value['updated_at']?.toString();
 
   String? get updatedBy => value['updated_by']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesDocumentKindInput {
+  ServicesDocumentKindInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDocumentKindInput.fromJson(Map<String, dynamic> json) =>
+      ServicesDocumentKindInput(json);
+
+  static const schemaName = 'services.DocumentKindInput';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  bool? get publishAsUploaded => value['publish_as_uploaded'] as bool?;
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -14188,6 +14303,37 @@ final class ServicesPageResultModelsDiseaseTaxonomyMigrationReport {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultModelsDocumentKind {
+  ServicesPageResultModelsDocumentKind(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsDocumentKind.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsDocumentKind(json);
+
+  static const schemaName = 'services.PageResult-models_DocumentKind';
+  final Map<String, dynamic> value;
+
+  List<ModelsDocumentKind> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDocumentKind.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultModelsDocumentation {
   ServicesPageResultModelsDocumentation(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -15574,6 +15720,25 @@ final class ServicesPublicDiseaseTreeNode {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPublicDocumentKind {
+  ServicesPublicDocumentKind(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicDocumentKind.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicDocumentKind(json);
+
+  static const schemaName = 'services.PublicDocumentKind';
+  final Map<String, dynamic> value;
+
+  String? get name => value['name']?.toString();
+
+  bool? get publishAsUploaded => value['publish_as_uploaded'] as bool?;
+
+  String? get slug => value['slug']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPublicGuideline {
   ServicesPublicGuideline(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -15596,6 +15761,8 @@ final class ServicesPublicGuideline {
   String? get country => value['country']?.toString();
 
   String? get description => value['description']?.toString();
+
+  Object? get documentKind => value['document_kind'];
 
   String? get healthcareLevel => value['healthcare_level']?.toString();
 
@@ -17283,6 +17450,8 @@ final class ServicesUpdateGuidelineInput {
   String? get country => value['country']?.toString();
 
   String? get description => value['description']?.toString();
+
+  String? get documentKindId => value['document_kind_id']?.toString();
 
   String? get healthcareLevel => value['healthcare_level']?.toString();
 

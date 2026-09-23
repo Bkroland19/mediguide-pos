@@ -57,10 +57,50 @@ export interface GuidelineDocumentRecord {
   language?: string;
   description?: string;
   current_version_id?: string | null;
+  document_kind_id?: string | null;
+  document_kind?: GuidelineDocumentKindRecord | null;
   versions: GuidelineVersionRecord[];
   categories: GuidelineDocumentCategoryRecord[];
   created_at: string;
   updated_at: string;
+}
+
+export interface GuidelineDocumentKindRecord {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  /** Kinds such as forms publish the uploaded file itself, with no editor. */
+  publish_as_uploaded?: boolean;
+}
+
+/** File types accepted for guidelines that are extracted into editable content. */
+export const GUIDELINE_SOURCE_ACCEPT =
+  "application/pdf,text/markdown,.pdf,.md,.markdown";
+
+/** File types accepted for documents published exactly as uploaded (for example forms). */
+export const AS_UPLOADED_SOURCE_ACCEPT =
+  "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx";
+
+/** Whether the document is published as its uploaded file rather than extracted content. */
+export function isPublishedAsUploaded(
+  document?: Pick<GuidelineDocumentRecord, "document_kind"> | null,
+): boolean {
+  return Boolean(document?.document_kind?.publish_as_uploaded);
+}
+
+/** The name a user uploaded, without the storage key's folders and timestamp prefix. */
+export function originalFileName(key?: string | null): string {
+  const name = (key || "").split("/").pop() || "";
+  return name.replace(/^\d+_/, "");
+}
+
+export interface GuidelineExtractionStatus {
+  version_id: string;
+  version_status: string;
+  job_status?: string;
+  error?: string;
+  section_count: number;
 }
 
 export interface GuidelineDocumentCategoryRecord {
@@ -87,6 +127,7 @@ export interface GuidelineDocumentInput {
   language?: string;
   description?: string;
   category_ids?: string[];
+  document_kind_id?: string;
   disease_ids?: string[];
   primary_disease_id?: string;
 }
@@ -771,6 +812,15 @@ export class GuidelineDocumentsService {
     await getBackendClient().request<void>(
       `/api/v2/guideline-versions/${versionId}/blocks/${blockId}`,
       { method: "DELETE" },
+    );
+  }
+
+  static async getExtractionStatus(
+    versionId: string,
+  ): Promise<GuidelineExtractionStatus> {
+    return getBackendClient().request<GuidelineExtractionStatus>(
+      `/api/v2/guideline-versions/${versionId}/extraction-status`,
+      { method: "GET" },
     );
   }
 

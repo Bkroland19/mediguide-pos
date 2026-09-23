@@ -110,6 +110,7 @@ const data: { navMain: NavItem[] } = {
         { title: "All Guidelines", url: "/guidelines" },
         { title: "Create Guideline", url: "/guidelines/create", permission: { resource: "content", action: "create:any" } },
         { title: "Categories", url: "/guidelines/categories" },
+        { title: "Document Kinds", url: "/guidelines/document-kinds" },
         { title: "Diseases", url: "/diseases", backendPermissions: ["disease.taxonomy.read", "disease.taxonomy.manage"] },
         { title: "Content Hubs", url: "/content-hubs", backendPermissions: ["content_hub.read", "content_hub.manage"] },
         { title: "Tags", url: "/guidelines/tags" },

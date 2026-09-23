@@ -347,6 +347,11 @@ export interface HandlersDiseaseHierarchyEnvelope {
   success?: boolean;
 }
 
+export interface HandlersDocumentKindEnvelope {
+  data?: ModelsDocumentKind;
+  success?: boolean;
+}
+
 export interface HandlersDocumentationEnvelope {
   data?: ModelsDocumentation;
   success?: boolean;
@@ -866,6 +871,11 @@ export interface HandlersPaginatedDiseaseMigrationReportEnvelope {
 
 export interface HandlersPaginatedDiseasesEnvelope {
   data?: ServicesPageResultModelsDisease;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedDocumentKindsEnvelope {
+  data?: ServicesPageResultModelsDocumentKind;
   success?: boolean;
 }
 
@@ -1826,6 +1836,24 @@ export interface ModelsDiseaseTaxonomyMigrationReport {
   source_value?: string;
 }
 
+export interface ModelsDocumentKind {
+  created_at?: string;
+  description?: string;
+  guideline_document_count?: number;
+  id?: string;
+  name?: string;
+  outbreak_document_count?: number;
+  /**
+   * PublishAsUploaded kinds (for example Form) keep the uploaded file as the
+   * published document: no extraction into editable Markdown or blocks.
+   */
+  publish_as_uploaded?: boolean;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+}
+
 export interface ModelsDocumentation {
   category?: string;
   content?: string;
@@ -2147,6 +2175,8 @@ export interface ModelsGuidelineDocument {
   created_at?: string;
   current_version_id?: string;
   description?: string;
+  document_kind?: ModelsDocumentKind;
+  document_kind_id?: string;
   healthcare_level?: string;
   id?: string;
   intended_population?: string;
@@ -3088,6 +3118,8 @@ export interface ServicesCreateGuidelineInput {
   category_ids?: string[];
   country?: string;
   description?: string;
+  /** DocumentKindID defaults to the first active kind by sort order. */
+  document_kind_id?: string;
   healthcare_level?: string;
   intended_population?: string;
   language?: string;
@@ -3176,6 +3208,19 @@ export interface ServicesDiseaseTreeNode {
   status?: string;
   updated_at?: string;
   updated_by?: string;
+}
+
+export interface ServicesDocumentKindInput {
+  description?: string;
+  name?: string;
+  /**
+   * PublishAsUploaded keeps uploaded files as the published document instead
+   * of extracting them into editable content.
+   */
+  publish_as_uploaded?: boolean;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
 }
 
 export interface ServicesDocumentationInput {
@@ -4543,6 +4588,14 @@ export interface ServicesPageResultModelsDiseaseTaxonomyMigrationReport {
   total_pages?: number;
 }
 
+export interface ServicesPageResultModelsDocumentKind {
+  items?: ModelsDocumentKind[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsDocumentation {
   items?: ModelsDocumentation[];
   page?: number;
@@ -4918,10 +4971,21 @@ export interface ServicesPublicDiseaseTreeNode {
   sort_order?: number;
 }
 
+export interface ServicesPublicDocumentKind {
+  name?: string;
+  publish_as_uploaded?: boolean;
+  slug?: string;
+}
+
 export interface ServicesPublicGuideline {
   categories?: ServicesPublicGuidelineCategory[];
   country?: string;
   description?: string;
+  /**
+   * DocumentKind tells readers how to present the guideline. Kinds published
+   * as uploaded (for example forms) are shown as their original file.
+   */
+  document_kind?: ServicesPublicDocumentKind;
   healthcare_level?: string;
   id?: string;
   intended_population?: string;
@@ -5491,6 +5555,7 @@ export interface ServicesUpdateGuidelineInput {
   category_ids?: string[];
   country?: string;
   description?: string;
+  document_kind_id?: string;
   healthcare_level?: string;
   intended_population?: string;
   language?: string;

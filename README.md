@@ -6,6 +6,9 @@ offline-first Flutter application. The monorepo ships development and production
 Docker Compose stacks, generated API contracts, mobile release automation, and
 Firebase-backed push notifications and Remote Config.
 
+
+ <!-- MINIO_PUBLIC_PORT=9010 MINIO_CONSOLE_PUBLIC_PORT=9011 make up -->
+
 ## Repository map
 
 | Directory | Purpose | Stack |
