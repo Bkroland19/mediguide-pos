@@ -46,7 +46,27 @@ type SourceUploadPartResponse struct {
 // @Success 200 {object} SourceUploadCapabilitiesResponse
 // @Router /api/v2/guideline-versions/{id}/upload-capabilities [get]
 func (h GuidelineHandler) UploadCapabilities(c *gin.Context) {
-	httpx.OK(c, gin.H{"direct_uploads": h.DirectUploads, "max_size_bytes": h.MaxUploadMB << 20, "part_size": 8 << 20})
+	direct := h.DirectUploads
+	if direct {
+		// Kinds published as uploaded (forms) accept Word files and skip extraction,
+		// which only the standard upload supports.
+		version, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			httpx.Error(c, 400, "invalid version")
+			return
+		}
+		asUploaded, err := h.Service.VersionPublishesAsUploaded(version)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			httpx.Error(c, 404, "guideline version not found")
+			return
+		}
+		if err != nil {
+			httpx.Error(c, 500, "failed to load guideline version")
+			return
+		}
+		direct = !asUploaded
+	}
+	httpx.OK(c, gin.H{"direct_uploads": direct, "max_size_bytes": h.MaxUploadMB << 20, "part_size": 8 << 20})
 }
 
 // SourceUploadJob godoc

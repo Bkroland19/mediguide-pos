@@ -12,6 +12,11 @@ from app.core.storage import ObjectStorage
 from app.document_processing.pdf_extractor import extract_pdf
 from app.document_processing.markdown_extractor import extract_markdown
 from app.document_processing.chunker import chunk_blocks, chunk_sections
+from app.document_processing.original_text import (
+    chunk_page_texts,
+    extract_docx_text,
+    extract_pdf_page_texts,
+)
 from app.document_processing.types import ExtractedAsset
 from app.embeddings.factory import get_embedding_provider
 from app.repositories.guideline_repo import (
@@ -32,6 +37,11 @@ class IngestionCanceled(Exception):
 
 class IngestionSuperseded(Exception):
     pass
+
+
+# Documents published as uploaded (for example forms) only get their original
+# file's text indexed for search and RAG.
+ORIGINAL_TEXT_INDEX_JOB = "original_text_index"
 
 
 class IngestionService:
@@ -122,6 +132,9 @@ class IngestionService:
         if not version:
             raise ValueError(f"Guideline version not found: {version_id}")
         payload = self._job_payload(job)
+        if job.get("job_type") == ORIGINAL_TEXT_INDEX_JOB:
+            self._index_original_text(job, version, payload, stage)
+            return
         source_format = str(payload.get("source_format") or "").strip().lower()
         if not source_format:
             source_format = "markdown" if job.get("job_type") == "markdown_ingestion" else "pdf"
@@ -417,6 +430,57 @@ class IngestionService:
                 assets=len(extracted.assets),
                 source_format=source_format,
             )
+
+    def _index_original_text(self, job: dict, version: dict, payload: dict, stage) -> None:
+        """Index the text of a published-as-uploaded file without creating editable content."""
+        job_id = str(job["id"])
+        version_id = str(job["version_id"])
+        source_format = str(payload.get("source_format") or "pdf").strip().lower()
+        if source_format not in {"pdf", "docx"}:
+            raise ValueError(f"Unsupported original file format: {source_format}")
+        source_key = str(payload.get("file_key") or version.get("original_file_key") or "").strip()
+        if not source_key:
+            raise ValueError("Guideline version has no original file")
+        if str(version.get("original_file_key") or "").strip() != source_key:
+            raise IngestionSuperseded()
+
+        with tempfile.TemporaryDirectory(prefix="mediguide-original-") as tmp:
+            source_path = Path(tmp) / f"source.{source_format}"
+            stage("downloading", 5)
+            self.storage.download_file(source_key, source_path)
+            stage("extracting", 25)
+            if source_format == "pdf":
+                pages = extract_pdf_page_texts(source_path)
+            else:
+                pages = [(None, extract_docx_text(source_path))]
+
+        stage("chunking", 55)
+        chunks = chunk_page_texts(
+            pages,
+            title=str(version.get("document_title") or ""),
+            chunk_size=self.settings.chunk_size,
+            overlap=self.settings.chunk_overlap,
+        )
+        texts = [chunk.content for chunk in chunks]
+        embeddings: list[list[float]] = []
+        batch_size = max(1, self.settings.embedding_request_batch_size)
+        for start in range(0, len(texts), batch_size):
+            stage("embeddings", min(84, 65 + int((start / max(1, len(texts))) * 19)))
+            embeddings.extend(self.embedder.embed(texts[start : start + batch_size]))
+
+        stage("saving", 90)
+        # The repository re-checks the original under a row lock before writing.
+        self.guidelines.replace_original_text_chunks(
+            version=version, source_key=source_key, chunks=chunks, embeddings=embeddings
+        )
+        log.info(
+            "original_text_indexed",
+            job_id=job_id,
+            version_id=version_id,
+            source_format=source_format,
+            pages=len(pages),
+            chunks=len(chunks),
+        )
 
     @staticmethod
     def _job_payload(job: dict) -> dict:

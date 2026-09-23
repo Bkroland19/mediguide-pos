@@ -5732,6 +5732,189 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/document-kinds": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Kinds are shared by guideline and outbreak documents. Readers see active kinds only; each kind reports how many live documents of each type use it.",
+                "tags": [
+                    "document-kinds"
+                ],
+                "summary": "List document kinds",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Name, slug, or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status (editors only)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDocumentKindsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "document-kinds"
+                ],
+                "summary": "Create a document kind",
+                "parameters": [
+                    {
+                        "description": "Document kind",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DocumentKindInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocumentKindEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/document-kinds/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "document-kinds"
+                ],
+                "summary": "Get a document kind",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document kind UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocumentKindEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "document-kinds"
+                ],
+                "summary": "Archive an unused document kind",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document kind UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The slug cannot be changed after creation.",
+                "tags": [
+                    "document-kinds"
+                ],
+                "summary": "Update a document kind",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document kind UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Document kind changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DocumentKindInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocumentKindEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/documentation": {
             "get": {
                 "security": [
@@ -11263,6 +11446,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Documents whose kind publishes as uploaded (for example forms) accept a PDF or Word (.docx) file, stored unchanged and indexed for search only.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -11284,7 +11468,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "PDF or Markdown file",
+                        "description": "PDF or Markdown file; PDF or .docx for as-uploaded kinds",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -11708,6 +11892,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Assigned category UUID",
                         "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document kind UUID",
+                        "name": "document_kind_id",
                         "in": "query"
                     },
                     {
@@ -19097,6 +19287,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DocumentKindEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DocumentKind"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.DocumentationEnvelope": {
             "type": "object",
             "properties": {
@@ -20265,6 +20466,17 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/services.PageResult-models_Disease"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedDocumentKindsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_DocumentKind"
                 },
                 "success": {
                     "type": "boolean"
@@ -22625,6 +22837,45 @@ const docTemplate = `{
                 }
             }
         },
+        "models.DocumentKind": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "guideline_document_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "outbreak_document_count": {
+                    "type": "integer"
+                },
+                "publish_as_uploaded": {
+                    "description": "PublishAsUploaded kinds (for example Form) keep the uploaded file as the\npublished document: no extraction into editable Markdown or blocks.",
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Documentation": {
             "type": "object",
             "properties": {
@@ -23516,6 +23767,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "document_kind": {
+                    "$ref": "#/definitions/models.DocumentKind"
+                },
+                "document_kind_id": {
                     "type": "string"
                 },
                 "healthcare_level": {
@@ -26245,6 +26502,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "document_kind_id": {
+                    "description": "DocumentKindID defaults to the first active kind by sort order.",
+                    "type": "string"
+                },
                 "healthcare_level": {
                     "type": "string"
                 },
@@ -26490,6 +26751,30 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DocumentKindInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "publish_as_uploaded": {
+                    "description": "PublishAsUploaded keeps uploaded files as the published document instead\nof extracting them into editable content.",
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -30355,6 +30640,29 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_DocumentKind": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DocumentKind"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_Documentation": {
             "type": "object",
             "properties": {
@@ -31449,6 +31757,20 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PublicDocumentKind": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "publish_as_uploaded": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
         "services.PublicGuideline": {
             "type": "object",
             "properties": {
@@ -31463,6 +31785,14 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "document_kind": {
+                    "description": "DocumentKind tells readers how to present the guideline. Kinds published\nas uploaded (for example forms) are shown as their original file.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/services.PublicDocumentKind"
+                        }
+                    ]
                 },
                 "healthcare_level": {
                     "type": "string"
@@ -33058,6 +33388,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "document_kind_id": {
                     "type": "string"
                 },
                 "healthcare_level": {

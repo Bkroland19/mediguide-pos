@@ -53,6 +53,13 @@ func (s GuidelineService) BeginSourceUpload(ctx context.Context, versionID, user
 	if err = validateVersionAllowsIngestion(&version); err != nil {
 		return nil, err
 	}
+	asUploaded, err := versionPublishesAsUploaded(s.DB.WithContext(ctx), versionID)
+	if err != nil {
+		return nil, err
+	}
+	if asUploaded {
+		return nil, fmt.Errorf("%w: this document kind is published as uploaded; use the standard upload", ErrUploadConflict)
+	}
 	store, ok := s.Store.(storage.MultipartStore)
 	if !ok {
 		return nil, ErrUploadConflict

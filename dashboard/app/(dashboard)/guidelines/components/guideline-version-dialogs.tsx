@@ -18,7 +18,9 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  AS_UPLOADED_SOURCE_ACCEPT,
   CreateGuidelineVersionInput,
+  GUIDELINE_SOURCE_ACCEPT,
   GuidelineDocumentRecord,
   GuidelineVersionRecord,
   IngestionJobRecord,
@@ -118,12 +120,15 @@ export function CreateVersionDialog({
 
 export function UploadVersionDialog({
   version,
+  asUploaded = false,
   open,
   submitting,
   onOpenChange,
   onSubmit,
 }: {
   version: GuidelineVersionRecord | null
+  /** Forms and other kinds published exactly as uploaded take PDF or Word files. */
+  asUploaded?: boolean
   open: boolean
   submitting: boolean
   onOpenChange: (open: boolean) => void
@@ -141,20 +146,22 @@ export function UploadVersionDialog({
     <Dialog open={open} onOpenChange={(value) => { if (!submitting) onOpenChange(value) }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload Guideline Source</DialogTitle>
+          <DialogTitle>{asUploaded ? "Upload Form File" : "Upload Guideline Source"}</DialogTitle>
           <DialogDescription>
-            Upload PDF or UTF-8 Markdown for version {version?.version || ""}. The backend will extract structured content and rebuild the AI index.
+            {asUploaded
+              ? `Upload a PDF or Word (.docx) file for version ${version?.version || ""}. It is kept exactly as uploaded; its text is only indexed for search.`
+              : `Upload PDF or UTF-8 Markdown for version ${version?.version || ""}. The backend will extract structured content and rebuild the AI index.`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label>PDF or Markdown File</Label>
+          <Label>{asUploaded ? "PDF or Word File" : "PDF or Markdown File"}</Label>
           <FileUpload
             value={file || undefined}
             onValueChange={(next) => { if (!submitting) setFile(next) }}
-            accept="application/pdf,text/markdown,.pdf,.md,.markdown"
+            accept={asUploaded ? AS_UPLOADED_SOURCE_ACCEPT : GUIDELINE_SOURCE_ACCEPT}
             maxSize={100}
-            placeholder="Choose guideline PDF or Markdown file"
+            placeholder={asUploaded ? "Choose form PDF or Word file" : "Choose guideline PDF or Markdown file"}
           />
         </div>
 
