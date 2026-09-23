@@ -1123,7 +1123,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Title, summary, or disease type",
+                        "description": "Title, summary, or geographic area",
                         "name": "search",
                         "in": "query"
                     },
@@ -1135,7 +1135,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Exact disease type",
+                        "description": "Exact disease ID",
                         "name": "disease",
                         "in": "query"
                     },
@@ -1620,6 +1620,88 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/support/tickets": {
+            "post": {
+                "description": "Unauthenticated visitors must supply requester_name and requester_email so support staff can follow up. Guest tickets cannot be listed or replied to from the public API.",
+                "tags": [
+                    "support"
+                ],
+                "summary": "Create a support ticket without signing in",
+                "parameters": [
+                    {
+                        "description": "Ticket",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.SupportTicketCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SupportTicketEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/consultants/tree": {
+            "get": {
+                "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-v1"
+                ],
+                "summary": "Get consultants tree",
+                "parameters": [
+                    {
+                        "maximum": 2,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Tree level",
+                        "name": "level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "JSON encoded filters",
+                        "name": "filters",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional JSON context",
+                        "name": "context",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LegacyTreeResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -13820,7 +13902,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Disease name",
+                        "description": "Disease ID",
                         "name": "disease",
                         "in": "query"
                     },
@@ -14698,6 +14780,38 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/metrics": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Update an outbreak's metrics regardless of its lifecycle status",
+                "parameters": [
+                    {
+                        "description": "Outbreak metrics",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakMetricsInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
                         }
                     }
                 }
@@ -24420,7 +24534,7 @@ const docTemplate = `{
                 "data_as_of": {
                     "type": "string"
                 },
-                "disease_type": {
+                "disease_id": {
                     "type": "string"
                 },
                 "district_id": {
@@ -24652,6 +24766,12 @@ const docTemplate = `{
                 "priority": {
                     "type": "string"
                 },
+                "requester_email": {
+                    "type": "string"
+                },
+                "requester_name": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
@@ -24665,9 +24785,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "description": "UserID is nil for tickets submitted by unauthenticated visitors; those\ncarry the requester's contact details instead.",
                     "type": "string"
                 },
                 "user_name": {
+                    "description": "UserName and UserEmail resolve to the owner account when present and\notherwise to the guest requester details.",
                     "type": "string"
                 }
             }
@@ -29269,7 +29391,10 @@ const docTemplate = `{
                 "data_as_of": {
                     "type": "string"
                 },
-                "disease_type": {
+                "disease_id": {
+                    "type": "string"
+                },
+                "disease_name": {
                     "type": "string"
                 },
                 "district_id": {
@@ -29601,7 +29726,7 @@ const docTemplate = `{
                 "data_as_of": {
                     "type": "string"
                 },
-                "disease_type": {
+                "disease_id": {
                     "type": "string"
                 },
                 "district_id": {
@@ -29680,6 +29805,23 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "string"
+                }
+            }
+        },
+        "services.OutbreakMetricsInput": {
+            "type": "object",
+            "required": [
+                "metrics"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
                 }
             }
         },
@@ -31569,7 +31711,10 @@ const docTemplate = `{
                 "data_as_of": {
                     "type": "string"
                 },
-                "disease_type": {
+                "disease_id": {
+                    "type": "string"
+                },
+                "disease_name": {
                     "type": "string"
                 },
                 "district_id": {
@@ -32521,6 +32666,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "priority": {
+                    "type": "string"
+                },
+                "requester_email": {
+                    "type": "string"
+                },
+                "requester_name": {
+                    "description": "RequesterName and RequesterEmail identify unauthenticated submitters.\nThey are ignored for tickets created by a signed-in user.",
                     "type": "string"
                 },
                 "subject": {

@@ -4265,7 +4265,7 @@ definitions:
         type: string
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
         type: string
       district_id:
         type: string
@@ -4418,6 +4418,10 @@ definitions:
         type: string
       priority:
         type: string
+      requester_email:
+        type: string
+      requester_name:
+        type: string
       status:
         type: string
       subject:
@@ -4427,8 +4431,14 @@ definitions:
       user_email:
         type: string
       user_id:
+        description: |-
+          UserID is nil for tickets submitted by unauthenticated visitors; those
+          carry the requester's contact details instead.
         type: string
       user_name:
+        description: |-
+          UserName and UserEmail resolve to the owner account when present and
+          otherwise to the guest requester details.
         type: string
     type: object
   models.SupportTicketReply:
@@ -7461,7 +7471,9 @@ definitions:
         type: string
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
+        type: string
+      disease_name:
         type: string
       district_id:
         type: string
@@ -7681,7 +7693,7 @@ definitions:
     properties:
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
         type: string
       district_id:
         type: string
@@ -7734,6 +7746,17 @@ definitions:
         type: string
       value:
         type: string
+    type: object
+  services.OutbreakMetricsInput:
+    properties:
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+    required:
+    - metrics
     type: object
   services.OutbreakNotificationCampaignInput:
     properties:
@@ -8975,7 +8998,9 @@ definitions:
     properties:
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
+        type: string
+      disease_name:
         type: string
       district_id:
         type: string
@@ -9602,6 +9627,13 @@ definitions:
       description:
         type: string
       priority:
+        type: string
+      requester_email:
+        type: string
+      requester_name:
+        description: |-
+          RequesterName and RequesterEmail identify unauthenticated submitters.
+          They are ignored for tickets created by a signed-in user.
         type: string
       subject:
         type: string
@@ -10645,7 +10677,7 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: Title, summary, or disease type
+      - description: Title, summary, or geographic area
         in: query
         name: search
         type: string
@@ -10653,7 +10685,7 @@ paths:
         in: query
         name: status
         type: string
-      - description: Exact disease type
+      - description: Exact disease ID
         in: query
         name: disease
         type: string
@@ -10977,6 +11009,63 @@ paths:
       summary: Open the managed PDF for a published situation report
       tags:
       - public-outbreaks
+  /api/public/support/tickets:
+    post:
+      description: Unauthenticated visitors must supply requester_name and requester_email
+        so support staff can follow up. Guest tickets cannot be listed or replied
+        to from the public API.
+      parameters:
+      - description: Ticket
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SupportTicketCreate'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.SupportTicketEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create a support ticket without signing in
+      tags:
+      - support
+  /api/v1/consultants/tree:
+    get:
+      description: Legacy v1 endpoint that groups consultants by region, city, then
+        specialty.
+      parameters:
+      - description: Tree level
+        in: query
+        maximum: 2
+        minimum: 0
+        name: level
+        type: integer
+      - description: JSON encoded filters
+        in: query
+        name: filters
+        type: string
+      - description: Optional JSON context
+        in: query
+        name: context
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LegacyTreeResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get consultants tree
+      tags:
+      - legacy-v1
   /api/v1/health-facilities/tree:
     get:
       description: Legacy v1 endpoint that groups facilities by region, district,
@@ -18629,7 +18718,7 @@ paths:
         in: query
         name: status
         type: string
-      - description: Disease name
+      - description: Disease ID
         in: query
         name: disease
         type: string
@@ -19175,6 +19264,25 @@ paths:
       summary: Submit, approve, publish, or withdraw an outbreak document
       tags:
       - outbreak-document-administration
+  /api/v2/outbreaks/{id}/metrics:
+    patch:
+      parameters:
+      - description: Outbreak metrics
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakMetricsInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an outbreak's metrics regardless of its lifecycle status
+      tags:
+      - outbreak-administration
   /api/v2/outbreaks/{id}/notification-campaign:
     post:
       description: Creates a draft only; normal campaign review, approval and scheduling

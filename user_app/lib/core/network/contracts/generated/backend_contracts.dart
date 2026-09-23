@@ -8421,7 +8421,7 @@ final class ModelsOutbreak {
 
   String? get dataAsOf => value['data_as_of']?.toString();
 
-  String? get diseaseType => value['disease_type']?.toString();
+  String? get diseaseId => value['disease_id']?.toString();
 
   String? get districtId => value['district_id']?.toString();
 
@@ -8631,6 +8631,10 @@ final class ModelsSupportTicket {
   String? get id => value['id']?.toString();
 
   String? get priority => value['priority']?.toString();
+
+  String? get requesterEmail => value['requester_email']?.toString();
+
+  String? get requesterName => value['requester_name']?.toString();
 
   String? get status => value['status']?.toString();
 
@@ -13636,7 +13640,9 @@ final class ServicesOutbreakAdminDTO {
 
   String? get dataAsOf => value['data_as_of']?.toString();
 
-  String? get diseaseType => value['disease_type']?.toString();
+  String? get diseaseId => value['disease_id']?.toString();
+
+  String? get diseaseName => value['disease_name']?.toString();
 
   String? get districtId => value['district_id']?.toString();
 
@@ -13915,7 +13921,7 @@ final class ServicesOutbreakInput {
 
   String? get dataAsOf => value['data_as_of']?.toString();
 
-  String? get diseaseType => value['disease_type']?.toString();
+  String? get diseaseId => value['disease_id']?.toString();
 
   String? get districtId => value['district_id']?.toString();
 
@@ -13982,6 +13988,30 @@ final class ServicesOutbreakMetric {
   String? get unit => value['unit']?.toString();
 
   String? get valueField => value['value']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesOutbreakMetricsInput {
+  ServicesOutbreakMetricsInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakMetricsInput.fromJson(Map<String, dynamic> json) =>
+      ServicesOutbreakMetricsInput(json);
+
+  static const schemaName = 'services.OutbreakMetricsInput';
+  final Map<String, dynamic> value;
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  List<ServicesOutbreakMetric> get metrics {
+    final raw = value['metrics'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesOutbreakMetric.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -16221,7 +16251,9 @@ final class ServicesPublicOutbreak {
 
   String? get dataAsOf => value['data_as_of']?.toString();
 
-  String? get diseaseType => value['disease_type']?.toString();
+  String? get diseaseId => value['disease_id']?.toString();
+
+  String? get diseaseName => value['disease_name']?.toString();
 
   String? get districtId => value['district_id']?.toString();
 
@@ -17221,6 +17253,10 @@ final class ServicesSupportTicketCreate {
   String? get description => value['description']?.toString();
 
   String? get priority => value['priority']?.toString();
+
+  String? get requesterEmail => value['requester_email']?.toString();
+
+  String? get requesterName => value['requester_name']?.toString();
 
   String? get subject => value['subject']?.toString();
 

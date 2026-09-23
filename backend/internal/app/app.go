@@ -242,6 +242,7 @@ func New(cfg config.Config) (*App, error) {
 			rateLimiter.Concurrency("public-ai-chat-ip", 1, time.Minute, middleware.IPIdentity),
 			rateLimiter.Concurrency("public-ai-chat-global", 10, 2*time.Minute, middleware.StaticIdentity("global")),
 			ragH.AskPublishedGuideline)
+		public.POST("/support/tickets", rateLimiter.Limit(middleware.Policy("public-support-ticket-create", 5, time.Hour, 1), middleware.IPIdentity), supportH.CreateGuestTicket)
 		outbreakReadLimit := rateLimiter.Limit(middleware.Policy("public-outbreaks", 90, time.Minute, 15), middleware.IPIdentity)
 		public.GET("/outbreaks", outbreakReadLimit, outbreakH.List)
 		public.GET("/outbreaks/:id", outbreakReadLimit, outbreakH.Get)
@@ -299,11 +300,13 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/outbreaks", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CreateOutbreak)
 		protected.GET("/outbreaks/:id", middleware.RequirePermission("outbreak.read"), outbreakAdminH.GetOutbreak)
 		protected.PATCH("/outbreaks/:id", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateOutbreak)
+		protected.PATCH("/outbreaks/:id/metrics", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateMetrics)
 		protected.DELETE("/outbreaks/:id", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteOutbreak)
 		protected.POST("/outbreaks/:id/submit", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.TransitionOutbreak("submit"))
 		protected.POST("/outbreaks/:id/approve", middleware.RequirePermission("outbreak.review"), outbreakAdminH.TransitionOutbreak("approve"))
 		protected.POST("/outbreaks/:id/publish", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionOutbreak("publish"))
 		protected.POST("/outbreaks/:id/withdraw", middleware.RequirePermission("outbreak.withdraw"), outbreakAdminH.TransitionOutbreak("withdraw"))
+		protected.POST("/outbreaks/:id/update-status", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionOutbreak("update_status"))
 		protected.POST("/outbreaks/:id/correct", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CorrectOutbreak)
 		protected.GET("/outbreaks/:id/audit", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListAudit("outbreak"))
 		protected.POST("/outbreaks/:id/review-comments", middleware.RequirePermission("outbreak.review"), outbreakAdminH.AddReviewComment("outbreak"))

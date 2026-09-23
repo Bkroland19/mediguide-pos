@@ -2582,7 +2582,7 @@ export interface ModelsOutbreak {
   author_id?: string;
   created_at?: string;
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -2664,11 +2664,21 @@ export interface ModelsSupportTicket {
   description?: string;
   id?: string;
   priority?: string;
+  requester_email?: string;
+  requester_name?: string;
   status?: string;
   subject?: string;
   updated_at?: string;
   user_email?: string;
+  /**
+   * UserID is nil for tickets submitted by unauthenticated visitors; those
+   * carry the requester's contact details instead.
+   */
   user_id?: string;
+  /**
+   * UserName and UserEmail resolve to the owner account when present and
+   * otherwise to the guest requester details.
+   */
   user_name?: string;
 }
 
@@ -4310,7 +4320,8 @@ export interface ServicesOutbreakAdminDTO {
   author_id?: string;
   created_at?: string;
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
+  disease_name?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -4426,7 +4437,7 @@ export interface ServicesOutbreakDocumentSearchPreview {
 
 export interface ServicesOutbreakInput {
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -4453,6 +4464,11 @@ export interface ServicesOutbreakMetric {
   source_reference?: string;
   unit?: string;
   value?: string;
+}
+
+export interface ServicesOutbreakMetricsInput {
+  lock_version?: number;
+  metrics: ServicesOutbreakMetric[];
 }
 
 export interface ServicesOutbreakNotificationCampaignInput {
@@ -5128,7 +5144,8 @@ export interface ServicesPublicHubOutbreak {
 
 export interface ServicesPublicOutbreak {
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
+  disease_name?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -5458,6 +5475,12 @@ export interface ServicesSupportTicketCreate {
   category?: string;
   description?: string;
   priority?: string;
+  requester_email?: string;
+  /**
+   * RequesterName and RequesterEmail identify unauthenticated submitters.
+   * They are ignored for tickets created by a signed-in user.
+   */
+  requester_name?: string;
   subject?: string;
 }
 
