@@ -11514,6 +11514,307 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/upload-capabilities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Discover guideline source upload capabilities",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadCapabilitiesResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/upload-jobs/{jobId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Read source ingestion status and timing metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadJobResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/uploads": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "List the current editor's recent source uploads",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Begin a resumable source upload owned by the current editor",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Source identity",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.BeginGuidelineUpload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/uploads/{session}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Recover source upload parts and processing job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Upload session ID",
+                        "name": "session",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Cancel an unattached source upload",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Upload session ID",
+                        "name": "session",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/uploads/{session}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Verify source bytes and idempotently queue ingestion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Upload session ID",
+                        "name": "session",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadJobResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/uploads/{session}/parts/{part}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-uploads"
+                ],
+                "summary": "Sign one bounded source upload part",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Upload session ID",
+                        "name": "session",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "One-based part number",
+                        "name": "part",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SourceUploadPartResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/validate-publication": {
             "post": {
                 "security": [
@@ -19499,6 +19800,9 @@ const docTemplate = `{
                 "job_type": {
                     "type": "string"
                 },
+                "metrics": {
+                    "type": "object"
+                },
                 "payload_json": {
                     "type": "string"
                 },
@@ -21694,6 +21998,71 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.SourceUploadCapabilities": {
+            "type": "object",
+            "properties": {
+                "direct_uploads": {
+                    "type": "boolean"
+                },
+                "max_size_bytes": {
+                    "type": "integer"
+                },
+                "part_size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.SourceUploadCapabilitiesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.SourceUploadCapabilities"
+                }
+            }
+        },
+        "handlers.SourceUploadJobResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.IngestionJob"
+                }
+            }
+        },
+        "handlers.SourceUploadListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineUpload"
+                    }
+                }
+            }
+        },
+        "handlers.SourceUploadPartResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.SourceUploadPartURL"
+                }
+            }
+        },
+        "handlers.SourceUploadPartURL": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.SourceUploadResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.GuidelineUploadState"
+                }
+            }
+        },
         "handlers.SupportReplyEnvelope": {
             "type": "object",
             "properties": {
@@ -23819,6 +24188,44 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineUpload": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "part_size": {
+                    "type": "integer"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineVersion": {
             "type": "object",
             "properties": {
@@ -24029,6 +24436,9 @@ const docTemplate = `{
                 },
                 "job_type": {
                     "type": "string"
+                },
+                "metrics": {
+                    "type": "object"
                 },
                 "payload_json": {
                     "type": "string"
@@ -24980,6 +25390,20 @@ const docTemplate = `{
                 },
                 "reviewer_id": {
                     "type": "string"
+                }
+            }
+        },
+        "services.BeginGuidelineUpload": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },
@@ -28142,6 +28566,56 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineUploadState": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job": {
+                    "$ref": "#/definitions/models.IngestionJob"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "object_complete": {
+                    "type": "boolean"
+                },
+                "part_size": {
+                    "type": "integer"
+                },
+                "parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/storage.UploadPart"
+                    }
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
                     "type": "string"
                 }
             }
@@ -33170,6 +33644,20 @@ const docTemplate = `{
                 },
                 "verified": {
                     "type": "boolean"
+                }
+            }
+        },
+        "storage.UploadPart": {
+            "type": "object",
+            "properties": {
+                "etag": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
                 }
             }
         }

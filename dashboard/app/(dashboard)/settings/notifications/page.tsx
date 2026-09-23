@@ -19,8 +19,8 @@ import { emptyNotificationAction, NotificationActionFields } from "@/components/
 import { hasBackendPermission } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
-import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { firebaseService, type FirebaseStatus } from "@/services/firebase.service"
+import { outbreaksService, situationReportsService } from "@/services/outbreaks.service"
 import { notificationsService, type NotificationAction, type NotificationAudienceDefinition, type NotificationAudienceEstimate, type NotificationCampaignDto, type NotificationCampaignInput, type NotificationDeliveryAnalytics, type NotificationDeliveryDto, type NotificationOutboxJobDto, type NotificationPreferenceAggregates, type NotificationPriority, type NotificationTemplateDto, type NotificationTemplateInput, type NotificationTemplateVersionDto, type NotificationType } from "@/services/notifications.service"
 
 type FirebaseState = "configured" | "disabled" | "unavailable"
@@ -68,6 +68,8 @@ export default function NotificationAdministrationPage() {
   const [editingTemplateId, setEditingTemplateId] = React.useState<string | null>(null)
   const [templateHistory, setTemplateHistory] = React.useState<{ name: string; versions: NotificationTemplateVersionDto[] } | null>(null)
   const [templatePreview, setTemplatePreview] = React.useState<{ name: string; title: string; body: string; action: NotificationAction } | null>(null)
+  const [templateTest, setTemplateTest] = React.useState<{ name: string; title: string; body: string; action: NotificationAction } | null>(null)
+  const [testSending, setTestSending] = React.useState(false)
   const [campaignOpen, setCampaignOpen] = React.useState(false)
   const [editingCampaignId, setEditingCampaignId] = React.useState<string | null>(null)
   const [templateForm, setTemplateForm] = React.useState({ name: "", templateKey: "", channel: "in-app" as NotificationTemplateInput["channel"], title: "", body: "", category: "Content Updates", locale: "en", schema: "{}" })
@@ -205,22 +207,37 @@ export default function NotificationAdministrationPage() {
   }
 
   async function previewTemplate(template: NotificationTemplateDto) {
-    const variables = Object.fromEntries(Object.entries(template.version.variable_schema).map(([key, rule]) => [key, rule.sample_value ?? (rule.type === "number" ? 1 : rule.type === "boolean" ? true : key)]))
-    try { const preview = await notificationsService.previewTemplateVersion(template.version.id, variables); setTemplatePreview({ name: template.name, ...preview }) }
+    try { const preview = await notificationsService.previewTemplateVersion(template.version.id, await templateSampleVariables(template)); setTemplatePreview({ name: template.name, ...preview }) }
     catch (error) { showToast.error("Template preview", error instanceof Error ? error.message : "Unable to render preview") }
   }
 
   async function testTemplate(template: NotificationTemplateDto) {
-    const variables = Object.fromEntries(Object.entries(template.version.variable_schema).map(([key, rule]) => [key, rule.sample_value ?? (rule.type === "number" ? 1 : rule.type === "boolean" ? true : key)]))
     try {
-      const preview = await notificationsService.previewTemplateVersion(template.version.id, variables)
-      const query = new URLSearchParams({ title: preview.title, body: preview.body, action: JSON.stringify(preview.action) })
-      window.location.assign(withDashboardBasePath(`/settings/firebase?${query}`))
+      const preview = await notificationsService.previewTemplateVersion(template.version.id, await templateSampleVariables(template))
+      setTemplateTest({ name: template.name, ...preview })
     } catch (error) { showToast.error("Template test", error instanceof Error ? error.message : "Unable to validate template") }
   }
 
+  async function sendTemplateTest(dryRun: boolean) {
+    if (!templateTest) return
+    setTestSending(true)
+    try {
+      const result = await firebaseService.sendTestPush({ current_user: true, title: templateTest.title, body: templateTest.body, action: templateTest.action, dry_run: dryRun })
+      if (result.attempted === 0) showToast.warning("No devices to test", "Your account has no active device. Sign in to the mobile app with notifications enabled, then try again.")
+      else showToast.success(dryRun ? "Push validation completed" : "Test push sent", dryRun
+        ? `${result.validated} accepted by validation and ${result.failed} rejected across ${result.attempted} devices. No push was sent.`
+        : `${result.accepted} accepted by FCM and ${result.failed} rejected across ${result.attempted} devices. Device delivery is not confirmed.`)
+      if (!dryRun && result.attempted > 0) setTemplateTest(null)
+    } catch (error) { showToast.error("Template test", error instanceof Error ? error.message : "Push test failed") }
+    finally { setTestSending(false) }
+  }
+
+  const selectedTemplateVariables = Object.entries(templates.find((item) => item.version.id === campaignForm.templateVersionId)?.version.variable_schema ?? {})
+
   async function saveCampaign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const invalidIds = invalidAudienceIdFields(campaignForm)
+    if (invalidIds.length) { showToast.error("Campaign", `${invalidIds.join(", ")} must contain UUIDs only. Clear them to skip.`); return }
     try {
       setUpdatingId("campaign-create")
       const audience = campaignAudience(campaignForm)
@@ -349,7 +366,25 @@ export default function NotificationAdministrationPage() {
         </TabsContent>
         <TabsContent value="campaigns">
           <Card>
-            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Campaign workflow</CardTitle><CardDescription>Draft, review, approve and schedule against an immutable dispatch snapshot.</CardDescription></div>{canManageCampaigns ? <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}><DialogTrigger asChild><Button disabled={templates.every((item) => item.status !== "published")}><Plus className="mr-2 h-4 w-4" />New campaign</Button></DialogTrigger><DialogContent className="sm:max-w-[620px]"><DialogHeader><DialogTitle>New campaign draft</DialogTitle><DialogDescription>Recipients are resolved in the delivery phase. This step freezes rendered content and audience intent.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={saveCampaign}><Field label="Name"><Input required value={campaignForm.name} onChange={(e) => setCampaignForm((v) => ({ ...v, name: e.target.value }))} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Published template"><Select required value={campaignForm.templateVersionId} onValueChange={(templateVersionId) => setCampaignForm((v) => ({ ...v, templateVersionId }))}><SelectTrigger><SelectValue placeholder="Choose template" /></SelectTrigger><SelectContent>{templates.filter((item) => item.status === "published").map((item) => <SelectItem key={item.version.id} value={item.version.id}>{item.name} · v{item.current_version}</SelectItem>)}</SelectContent></Select></Field><Field label="Priority"><Select value={campaignForm.priority} onValueChange={(priority: NotificationPriority) => setCampaignForm((v) => ({ ...v, priority }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["low", "normal", "high", "urgent"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></Field></div><Field label="Template variables (JSON)"><Textarea className="font-mono" rows={5} value={campaignForm.variables} onChange={(e) => setCampaignForm((v) => ({ ...v, variables: e.target.value }))} /></Field><Field label="Expiry (optional)"><Input type="datetime-local" value={campaignForm.expiresAt} onChange={(e) => setCampaignForm((v) => ({ ...v, expiresAt: e.target.value }))} /></Field><AudienceFields form={campaignForm} estimate={audienceEstimate} estimating={updatingId === "audience-estimate"} onEstimate={() => void estimateCampaignAudience()} onChange={(patch) => { setCampaignForm((value) => ({ ...value, ...patch })); setAudienceEstimate(null) }} /><Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Urgent, emergency, and broad campaigns require independent approval. Audience estimates return counts only; recipient identities are never exposed here.</AlertDescription></Alert><DialogFooter><Button type="button" variant="outline" onClick={() => setCampaignOpen(false)}>Cancel</Button><Button type="submit" disabled={updatingId !== null || !campaignForm.templateVersionId}>{updatingId === "campaign-create" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Create draft</Button></DialogFooter></form></DialogContent></Dialog> : null}</CardHeader>
+            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Campaign workflow</CardTitle><CardDescription>Draft, review, approve and schedule against an immutable dispatch snapshot.</CardDescription></div>{canManageCampaigns ? <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}><DialogTrigger asChild><Button disabled={templates.every((item) => item.status !== "published")}><Plus className="mr-2 h-4 w-4" />New campaign</Button></DialogTrigger><DialogContent className="flex max-h-[92vh] flex-col gap-0 p-0 sm:max-w-4xl">
+              <DialogHeader className="border-b px-6 py-5"><DialogTitle className="text-xl">{editingCampaignId ? "Edit campaign draft" : "New campaign draft"}</DialogTitle><DialogDescription>Content and audience are frozen when the campaign is approved. Nothing is sent until it is approved and scheduled.</DialogDescription></DialogHeader>
+              <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveCampaign}>
+                <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                  <FormSection title="Message" description="Choose a published template and fill in its variables.">
+                    <FormField label="Campaign name" htmlFor="campaign-name"><Input id="campaign-name" required value={campaignForm.name} onChange={(e) => setCampaignForm((v) => ({ ...v, name: e.target.value }))} /></FormField>
+                    <div className="grid gap-4 md:grid-cols-[1fr_200px]">
+                      <FormField label="Published template" htmlFor="campaign-template"><Select required value={campaignForm.templateVersionId} onValueChange={(templateVersionId) => setCampaignForm((v) => ({ ...v, templateVersionId }))}><SelectTrigger id="campaign-template" className="w-full"><SelectValue placeholder="Choose template" /></SelectTrigger><SelectContent>{templates.filter((item) => item.status === "published").map((item) => <SelectItem key={item.version.id} value={item.version.id}>{item.name} · v{item.current_version} · {item.version.channel}</SelectItem>)}{campaignForm.templateVersionId && !templates.some((item) => item.status === "published" && item.version.id === campaignForm.templateVersionId) ? <SelectItem value={campaignForm.templateVersionId}>Template version saved on this campaign</SelectItem> : null}</SelectContent></Select></FormField>
+                      <FormField label="Priority" htmlFor="campaign-priority"><Select value={campaignForm.priority} onValueChange={(priority: NotificationPriority) => setCampaignForm((v) => ({ ...v, priority }))}><SelectTrigger id="campaign-priority" className="w-full capitalize"><SelectValue /></SelectTrigger><SelectContent>{["low", "normal", "high", "urgent"].map((value) => <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>)}</SelectContent></Select></FormField>
+                    </div>
+                    <FormField label="Template variables (JSON)" htmlFor="campaign-variables" hint={selectedTemplateVariables.length ? <>This template uses: {selectedTemplateVariables.map(([key, rule], index) => <React.Fragment key={key}>{index ? ", " : ""}<code className="rounded bg-muted px-1">{key}</code>{rule.required ? "" : " (optional)"}</React.Fragment>)}</> : "This template has no variables; leave as {}."}><Textarea id="campaign-variables" className="min-h-28 font-mono text-sm" rows={6} value={campaignForm.variables} onChange={(e) => setCampaignForm((v) => ({ ...v, variables: e.target.value }))} /></FormField>
+                    <FormField label="Expiry" optional htmlFor="campaign-expiry" hint="After this time, undelivered messages are dropped."><Input id="campaign-expiry" className="md:max-w-xs" type="datetime-local" value={campaignForm.expiresAt} onChange={(e) => setCampaignForm((v) => ({ ...v, expiresAt: e.target.value }))} /></FormField>
+                  </FormSection>
+                  <AudienceFields form={campaignForm} estimate={audienceEstimate} estimating={updatingId === "audience-estimate"} onEstimate={() => void estimateCampaignAudience()} onChange={(patch) => { setCampaignForm((value) => ({ ...value, ...patch })); setAudienceEstimate(null) }} />
+                  <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Urgent, emergency and broad campaigns need approval from a second person. Audience estimates show counts only; recipient identities are never exposed here.</AlertDescription></Alert>
+                </div>
+                <DialogFooter className="border-t px-6 py-4"><Button type="button" variant="outline" onClick={() => setCampaignOpen(false)}>Cancel</Button><Button type="submit" disabled={updatingId !== null || !campaignForm.templateVersionId}>{updatingId === "campaign-create" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingCampaignId ? "Save draft" : "Create draft"}</Button></DialogFooter>
+              </form>
+            </DialogContent></Dialog> : null}</CardHeader>
             <CardContent className="space-y-3">
               {campaigns.length === 0 ? <Empty message="No campaigns found" /> : campaigns.map((campaign) => (
                 <div key={campaign.id} className="flex flex-col gap-3 rounded-lg border p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="font-medium">{campaign.name}</p><p className="text-sm text-muted-foreground">{campaign.type} · {campaign.requested_channels.join(", ")} · {campaign.timezone} · lock {campaign.lock_version}</p><p className="mt-1 line-clamp-1 text-sm">{campaign.rendered_title}</p><div className="mt-2 grid gap-2 text-xs sm:grid-cols-2"><div className="rounded border p-2"><strong>Android preview</strong><p>{campaign.rendered_title}</p><p className="text-muted-foreground">{campaign.rendered_body}</p></div><div className="rounded border p-2"><strong>iOS preview</strong><p>{campaign.rendered_title}</p><p className="text-muted-foreground">{campaign.rendered_body}</p></div></div></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{campaign.status}</Badge>{campaign.status === "draft" && canManageCampaigns ? <Button size="sm" variant="outline" onClick={() => editCampaign(campaign)}>Edit</Button> : null}{campaign.status === "draft" && canManageCampaigns ? <Button size="sm" variant="outline" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "submit")}>Submit</Button> : null}{campaign.status === "pending_review" && canApproveCampaigns ? <><Button size="sm" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "approve")}>Approve</Button><Button size="sm" variant="outline" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "reject")}>Reject</Button></> : null}{campaign.status === "approved" && canManageCampaigns ? <Button size="sm" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "schedule")}>Send now</Button> : null}{["scheduled", "queued"].includes(campaign.status) && canManageCampaigns ? <Button size="sm" variant="outline" onClick={() => void transitionCampaign(campaign, "pause")}>Pause</Button> : null}{campaign.status === "paused" && canManageCampaigns ? <Button size="sm" variant="outline" onClick={() => void transitionCampaign(campaign, "resume")}>Resume</Button> : null}{["draft", "pending_review", "approved", "scheduled", "queued", "paused"].includes(campaign.status) && canManageCampaigns ? <Button size="sm" variant="destructive" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "cancel")}>Cancel</Button> : null}{["completed", "partially_failed", "failed", "cancelled"].includes(campaign.status) && canManageCampaigns ? <Button size="sm" variant="outline" onClick={() => { if (window.confirm("Archive this campaign?")) void notificationsService.deleteCampaign(campaign.id).then(load) }}>Archive</Button> : null}</div></div>
@@ -368,6 +403,7 @@ export default function NotificationAdministrationPage() {
         </TabsContent>
       </Tabs>
       <Dialog open={templateHistory !== null} onOpenChange={(open) => { if (!open) setTemplateHistory(null) }}><DialogContent><DialogHeader><DialogTitle>{templateHistory?.name} version history</DialogTitle><DialogDescription>Published versions are immutable and campaigns retain their selected version.</DialogDescription></DialogHeader><div className="space-y-2">{templateHistory?.versions.map((version) => <div key={version.id} className="flex items-center justify-between rounded border p-3"><span>Version {version.version} · {version.channel}</span><Badge variant="outline">{version.status}</Badge></div>)}</div></DialogContent></Dialog>
+      <Dialog open={templateTest !== null} onOpenChange={(open) => { if (!open && !testSending) setTemplateTest(null) }}><DialogContent><DialogHeader><DialogTitle>Test {templateTest?.name}</DialogTitle><DialogDescription>Sends this rendered push to your own registered devices. To test another recipient, use the <Link href="/settings/firebase" className="underline">Firebase settings</Link> page.</DialogDescription></DialogHeader><div className="space-y-3 rounded border p-4"><h3 className="font-semibold">{templateTest?.title || "(no channel title)"}</h3><p className="whitespace-pre-wrap text-sm">{templateTest?.body}</p><Badge variant="outline">Action: {templateTest?.action.type}</Badge></div><DialogFooter><Button variant="outline" disabled={testSending} onClick={() => void sendTemplateTest(true)}>Validate only</Button><Button disabled={testSending} onClick={() => void sendTemplateTest(false)}>{testSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Send to me</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={templatePreview !== null} onOpenChange={(open) => { if (!open) setTemplatePreview(null) }}><DialogContent><DialogHeader><DialogTitle>{templatePreview?.name} preview</DialogTitle><DialogDescription>Rendered with the declared sample variables.</DialogDescription></DialogHeader><div className="space-y-3 rounded border p-4"><h3 className="font-semibold">{templatePreview?.title || "(no channel title)"}</h3><p className="whitespace-pre-wrap text-sm">{templatePreview?.body}</p><Badge variant="outline">Action: {templatePreview?.action.type}</Badge></div></DialogContent></Dialog>
     </div>
   )
@@ -381,6 +417,32 @@ function Empty({ message }: { message: string }) { return <div className="py-10 
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div> }
 
+const audienceIdFields: Array<[keyof CampaignAudienceForm, string]> = [
+  ["userIds", "User IDs"], ["roleIds", "Role IDs"], ["regionIds", "Region IDs"],
+  ["districtIds", "District IDs"], ["facilityIds", "Facility IDs"], ["facilityLevelIds", "Facility level IDs"],
+]
+const audienceTextFields: Array<[keyof CampaignAudienceForm, string, string]> = [
+  ["countries", "Countries", "e.g. Uganda"], ["professionalCategories", "Professional categories", "e.g. Nurse, Doctor"],
+  ["languages", "Languages", "e.g. en, sw"], ["applicationVersions", "App versions", "e.g. 2.0.24"],
+]
+const preferenceCategoryOptions = [
+  ["clinical_content_updates", "Clinical content updates"], ["outbreak_alerts", "Outbreak alerts"], ["emergency_alerts", "Emergency alerts"],
+  ["reminders", "Reminders"], ["system_notices", "System notices"], ["product_announcements", "Product announcements"],
+] as const
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Labels of ID filters containing entries that are not UUIDs; the API
+// rejects the whole audience otherwise with a generic error.
+function invalidAudienceIdFields(form: CampaignAudienceForm): string[] {
+  if (form.allEligible) return []
+  return audienceIdFields.filter(([key]) => (csvValues(String(form[key])) || []).some((value) => !uuidPattern.test(value))).map(([, label]) => label)
+}
+
+function toggleCsv(value: string, item: string): string {
+  const values = csvValues(value) || []
+  return (values.includes(item) ? values.filter((entry) => entry !== item) : [...values, item]).join(", ")
+}
+
 function AudienceFields({ form, estimate, estimating, onChange, onEstimate }: {
   form: CampaignAudienceForm
   estimate: NotificationAudienceEstimate | null
@@ -388,22 +450,71 @@ function AudienceFields({ form, estimate, estimating, onChange, onEstimate }: {
   onChange: (value: Partial<CampaignAudienceForm>) => void
   onEstimate: () => void
 }) {
-  const fields: Array<[keyof CampaignAudienceForm, string, string]> = [
-    ["userIds", "User IDs", "UUIDs"], ["roleIds", "Role IDs", "UUIDs"], ["countries", "Countries", "Uganda"],
-    ["regionIds", "Region IDs", "UUIDs"], ["districtIds", "District IDs", "UUIDs"], ["facilityIds", "Facility IDs", "UUIDs"],
-    ["facilityLevelIds", "Facility level IDs", "UUIDs"], ["professionalCategories", "Professional categories", "Nurse, Doctor"],
-    ["languages", "Languages", "en, sw"], ["platforms", "Platforms", "android, ios"],
-    ["applicationVersions", "App versions", "2.0.24"], ["preferenceCategories", "Preference categories", "clinical_content_updates"],
-  ]
-  return <div className="space-y-3 rounded-lg border p-4">
-    <div><p className="mb-2 text-sm font-medium">Delivery channels</p><div className="flex flex-wrap gap-3">{(["in-app", "push"] as const).map((channel) => <label key={channel} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.channels.includes(channel)} onChange={(event) => { const next = event.target.checked ? [...form.channels, channel] : form.channels.filter((item) => item !== channel); if (next.length) onChange({ channels: next }) }} />{channel}</label>)}<span className="text-xs text-muted-foreground">Email and SMS are unsupported.</span></div></div>
-    <div className="flex items-center justify-between gap-4">
-      <div><p className="text-sm font-medium">Audience</p><p className="text-xs text-muted-foreground">Filters are combined with AND and resolved on the server.</p></div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.allEligible} onChange={(event) => onChange({ allEligible: event.target.checked })} />All eligible</label>
-    </div>
-    {!form.allEligible ? <div className="grid gap-3 sm:grid-cols-2">{fields.map(([key, label, placeholder]) => <Field key={key} label={label}><Input value={String(form[key])} placeholder={placeholder} onChange={(event) => onChange({ [key]: event.target.value })} /></Field>)}</div> : null}
-    <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="outline" disabled={estimating} onClick={onEstimate}>{estimating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Estimate audience</Button>{estimate ? <p className="text-sm"><strong>{estimate.eligible_users}</strong> eligible users · <strong>{estimate.active_devices}</strong> active devices</p> : null}</div>
-  </div>
+  const invalidIds = invalidAudienceIdFields(form)
+  const hasIdFilters = audienceIdFields.some(([key]) => String(form[key]).trim() !== "")
+  const hasFilters = hasIdFilters || [...audienceTextFields.map(([key]) => key), "platforms", "preferenceCategories"].some((key) => String(form[key as keyof CampaignAudienceForm]).trim() !== "")
+  const chip = (active: boolean) => `rounded-full border px-3 py-1.5 text-sm transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`
+  return <>
+    <FormSection title="Delivery channels" description="Pick at least one. Email and SMS are not supported yet.">
+      <div className="grid gap-3 sm:grid-cols-2">{([["in-app", "In-app", "Appears in the app's notification inbox"], ["push", "Push", "Sent to users' phones through Firebase"]] as const).map(([channel, label, description]) => {
+        const checked = form.channels.includes(channel)
+        return <label key={channel} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${checked ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}><input type="checkbox" className="mt-0.5 h-4 w-4" checked={checked} onChange={(event) => { const next = event.target.checked ? [...form.channels, channel] : form.channels.filter((item) => item !== channel); if (next.length) onChange({ channels: next }) }} /><span><span className="block font-medium">{label}</span><span className="block text-sm text-muted-foreground">{description}</span></span></label>
+      })}</div>
+    </FormSection>
+    <FormSection title="Audience" description="Send to everyone, or narrow it down. Filters combine with AND; blank filters are ignored.">
+      <div className="grid gap-3 sm:grid-cols-2" role="radiogroup">{([[true, "All eligible users", "Every active user who has not opted out"], [false, "Filter users", "Only users matching the filters below"]] as const).map(([value, label, description]) => (
+        <button key={label} type="button" role="radio" aria-checked={form.allEligible === value} onClick={() => onChange({ allEligible: value })} className={`rounded-lg border p-4 text-left transition-colors ${form.allEligible === value ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}><span className="block font-medium">{label}</span><span className="block text-sm text-muted-foreground">{description}</span></button>
+      ))}</div>
+      {!form.allEligible ? <div className="space-y-5">
+        {!hasFilters ? <p className="text-sm text-amber-600 dark:text-amber-400">Add at least one filter, or choose All eligible users.</p> : null}
+        <div className="grid gap-4 md:grid-cols-2">{audienceTextFields.map(([key, label, placeholder]) => <FormField key={key} label={label} optional htmlFor={`audience-${key}`} hint="Separate multiple values with commas."><Input id={`audience-${key}`} value={String(form[key])} placeholder={placeholder} onChange={(event) => onChange({ [key]: event.target.value })} /></FormField>)}</div>
+        <FormField label="Platforms" optional hint="Leave both off to include every platform."><div className="flex flex-wrap gap-2">{(["android", "ios"] as const).map((platform) => { const active = (csvValues(form.platforms) || []).includes(platform); return <button key={platform} type="button" aria-pressed={active} className={chip(active)} onClick={() => onChange({ platforms: toggleCsv(form.platforms, platform) })}>{platform === "ios" ? "iOS" : "Android"}</button> })}</div></FormField>
+        <FormField label="Preference categories" optional hint="Excludes users who turned the selected categories off."><div className="flex flex-wrap gap-2">{preferenceCategoryOptions.map(([value, label]) => { const active = (csvValues(form.preferenceCategories) || []).includes(value); return <button key={value} type="button" aria-pressed={active} className={chip(active)} onClick={() => onChange({ preferenceCategories: toggleCsv(form.preferenceCategories, value) })}>{label}</button> })}</div></FormField>
+        <details className="group rounded-lg border" open={hasIdFilters || undefined}>
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium">ID filters <span className="font-normal text-muted-foreground">(optional, advanced)</span></summary>
+          <div className="space-y-3 border-t p-4">
+            <p className="text-sm text-muted-foreground">Only needed to target specific records. Paste UUIDs separated by commas, or leave blank.</p>
+            <div className="grid gap-4 md:grid-cols-2">{audienceIdFields.map(([key, label]) => { const invalid = invalidIds.includes(label); return <FormField key={key} label={label} optional htmlFor={`audience-${key}`} error={invalid ? "Each entry must be a UUID." : undefined}><Input id={`audience-${key}`} aria-invalid={invalid} className="font-mono text-sm" value={String(form[key])} placeholder="Leave blank to skip" onChange={(event) => onChange({ [key]: event.target.value })} /></FormField> })}</div>
+          </div>
+        </details>
+      </div> : null}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/40 p-4">
+        <Button type="button" variant="outline" disabled={estimating || invalidIds.length > 0 || (!form.allEligible && !hasFilters)} onClick={onEstimate}>{estimating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Estimate audience</Button>
+        {estimate ? estimate.eligible_users === 0
+          ? <p className="text-sm font-medium text-destructive">No users match this audience. Approval will fail until you change the filters.</p>
+          : <p className="text-sm"><strong>{estimate.eligible_users}</strong> eligible users · <strong>{estimate.active_devices}</strong> active devices</p>
+          : <p className="text-sm text-muted-foreground">Check how many users match before saving.</p>}
+      </div>
+    </FormSection>
+  </>
+}
+
+function FormSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return <section className="space-y-4 rounded-lg border p-5"><div className="space-y-1"><h3 className="text-base font-semibold">{title}</h3>{description ? <p className="text-sm text-muted-foreground">{description}</p> : null}</div>{children}</section>
+}
+
+function FormField({ label, htmlFor, optional = false, hint, error, children }: { label: string; htmlFor?: string; optional?: boolean; hint?: React.ReactNode; error?: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label htmlFor={htmlFor}>{label}{optional ? <span className="ml-1 font-normal text-muted-foreground">(optional)</span> : null}</Label>{children}{error ? <p className="text-xs text-destructive">{error}</p> : hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}</div>
+}
+
+// Resource actions must reference a real record: the preview rejects non-UUID
+// IDs and the test push rejects IDs that do not exist.
+const sampleResourceLookups: Partial<Record<NotificationAction["type"], { label: string; find: () => Promise<string | undefined> }>> = {
+  guideline: { label: "published guideline", find: async () => (await outbreaksService.listPublishedGuidelines()).items[0]?.id },
+  outbreak: { label: "published outbreak", find: async () => (await outbreaksService.list({ per_page: 50 })).items.find((item) => item.published_at && !item.withdrawn_at)?.id },
+  situation_report: { label: "published situation report", find: async () => (await situationReportsService.list({ status: "published", per_page: 50 })).items.find((item) => !item.withdrawn_at)?.id },
+}
+
+async function templateSampleVariables(template: NotificationTemplateDto): Promise<Record<string, unknown>> {
+  const variables: Record<string, unknown> = Object.fromEntries(Object.entries(template.version.variable_schema).map(([key, rule]) => [key, rule.sample_value ?? (rule.type === "number" ? 1 : rule.type === "boolean" ? true : key)]))
+  const action = template.version.action_template
+  const resourceVariable = action.resource_id?.match(/^\{\{\s*(\w+)\s*\}\}$/)?.[1]
+  const lookup = sampleResourceLookups[action.type]
+  if (!resourceVariable || !lookup || template.version.variable_schema[resourceVariable]?.sample_value !== undefined) return variables
+  const id = await lookup.find()
+  if (!id) throw new Error(`Publish a ${lookup.label} first; this template's tap action needs a real record to open.`)
+  variables[resourceVariable] = id
+  return variables
 }
 
 function csvValues(value: string): string[] | undefined {

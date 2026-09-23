@@ -124,12 +124,11 @@ export default function GuidelinesPage() {
     }
   }
 
-  async function uploadSource(file: File) {
+  async function uploadSource(file: File, options?: import("@/services/guideline-upload.service").UploadOptions) {
     if (!uploadVersion) return
     setSubmitting(true)
     try {
-      await GuidelineDocumentsService.uploadVersionSource(uploadVersion.id, file)
-      setUploadVersion(null)
+      const job = await GuidelineDocumentsService.uploadVersionSource(uploadVersion.id, file, options)
       await refresh()
       const asUploaded = isPublishedAsUploaded(documents.find((document) => document.id === uploadVersion.document_id))
       showToast.success(
@@ -138,8 +137,9 @@ export default function GuidelinesPage() {
           ? "The file is kept exactly as uploaded. Its text is being indexed for search."
           : "Document extraction and indexing have been queued."
       )
+      return job
     } catch (error) {
-      showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
+      throw error
     } finally {
       setSubmitting(false)
     }
