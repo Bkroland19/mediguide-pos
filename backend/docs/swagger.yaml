@@ -11033,39 +11033,6 @@ paths:
       summary: Create a support ticket without signing in
       tags:
       - support
-  /api/v1/consultants/tree:
-    get:
-      description: Legacy v1 endpoint that groups consultants by region, city, then
-        specialty.
-      parameters:
-      - description: Tree level
-        in: query
-        maximum: 2
-        minimum: 0
-        name: level
-        type: integer
-      - description: JSON encoded filters
-        in: query
-        name: filters
-        type: string
-      - description: Optional JSON context
-        in: query
-        name: context
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyTreeResult'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get consultants tree
-      tags:
-      - legacy-v1
   /api/v1/health-facilities/tree:
     get:
       description: Legacy v1 endpoint that groups facilities by region, district,

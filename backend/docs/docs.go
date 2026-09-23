@@ -1661,54 +1661,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/consultants/tree": {
-            "get": {
-                "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Get consultants tree",
-                "parameters": [
-                    {
-                        "maximum": 2,
-                        "minimum": 0,
-                        "type": "integer",
-                        "description": "Tree level",
-                        "name": "level",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "JSON encoded filters",
-                        "name": "filters",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Optional JSON context",
-                        "name": "context",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyTreeResult"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/health-facilities/tree": {
             "get": {
                 "description": "Legacy v1 endpoint that groups facilities by region, district, then facility level.",
