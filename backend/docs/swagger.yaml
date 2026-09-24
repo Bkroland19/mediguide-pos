@@ -1003,8 +1003,6 @@ definitions:
         type: string
       calculators:
         type: integer
-      consultants:
-        type: integer
       drugs:
         type: integer
       faqs:
@@ -4267,7 +4265,7 @@ definitions:
         type: string
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
         type: string
       district_id:
         type: string
@@ -4950,175 +4948,6 @@ definitions:
         type: string
       title:
         type: string
-    type: object
-  services.ConsultantInput:
-    properties:
-      address:
-        type: string
-      alternative_phone:
-        type: string
-      availability:
-        type: object
-      avatar:
-        type: object
-      certifications:
-        type: string
-      city:
-        type: string
-      consultation_types:
-        items:
-          type: string
-        type: array
-      country:
-        type: string
-      department:
-        type: string
-      email:
-        type: string
-      is_verified:
-        type: boolean
-      license_number:
-        type: string
-      name:
-        type: string
-      notes:
-        type: string
-      organization:
-        type: string
-      phone:
-        type: string
-      postal_code:
-        type: string
-      preferred_language:
-        type: string
-      profile_picture:
-        type: object
-      qualifications:
-        items:
-          type: string
-        type: array
-      rating:
-        type: number
-      region:
-        type: string
-      specialty:
-        type: string
-      status:
-        type: string
-      timezone:
-        type: string
-      total_consultations:
-        type: integer
-      user_id:
-        type: string
-      years_of_experience:
-        type: number
-    type: object
-  services.ConsultantItem:
-    properties:
-      item:
-        $ref: '#/definitions/services.ConsultantView'
-    type: object
-  services.ConsultantPage:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/services.ConsultantView'
-        type: array
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  services.ConsultantUserView:
-    properties:
-      avatar:
-        type: string
-      email:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-      verified:
-        type: boolean
-    type: object
-  services.ConsultantView:
-    properties:
-      address:
-        type: string
-      alternative_phone:
-        type: string
-      availability:
-        type: object
-      avatar:
-        type: object
-      certifications:
-        type: string
-      city:
-        type: string
-      consultation_types:
-        items:
-          type: string
-        type: array
-      country:
-        type: string
-      created_at:
-        type: string
-      department:
-        type: string
-      email:
-        type: string
-      id:
-        type: string
-      is_verified:
-        type: boolean
-      license_number:
-        type: string
-      name:
-        type: string
-      notes:
-        type: string
-      organization:
-        type: string
-      phone:
-        type: string
-      postal_code:
-        type: string
-      preferred_language:
-        type: string
-      profile_picture:
-        type: object
-      qualifications:
-        items:
-          type: string
-        type: array
-      rating:
-        type: number
-      region:
-        type: string
-      specialty:
-        type: string
-      status:
-        type: string
-      timezone:
-        type: string
-      total_consultations:
-        type: integer
-      updated_at:
-        type: string
-      usage_count:
-        type: integer
-      user:
-        $ref: '#/definitions/services.ConsultantUserView'
-      user_id:
-        type: string
-      years_of_experience:
-        type: number
     type: object
   services.ContentDiseaseInput:
     properties:
@@ -7642,7 +7471,9 @@ definitions:
         type: string
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
+        type: string
+      disease_name:
         type: string
       district_id:
         type: string
@@ -7862,7 +7693,7 @@ definitions:
     properties:
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
         type: string
       district_id:
         type: string
@@ -7915,6 +7746,17 @@ definitions:
         type: string
       value:
         type: string
+    type: object
+  services.OutbreakMetricsInput:
+    properties:
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+    required:
+    - metrics
     type: object
   services.OutbreakNotificationCampaignInput:
     properties:
@@ -9156,7 +8998,9 @@ definitions:
     properties:
       data_as_of:
         type: string
-      disease_type:
+      disease_id:
+        type: string
+      disease_name:
         type: string
       district_id:
         type: string
@@ -10115,7 +9959,7 @@ info:
     name: Proprietary
   termsOfService: https://mediguide.local/terms
   title: MediGuide Backend API
-  version: 2.1.5
+  version: 2.1.6
 paths:
   /api/public/assistant/ask:
     post:
@@ -10833,7 +10677,7 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: Title, summary, or disease type
+      - description: Title, summary, or geographic area
         in: query
         name: search
         type: string
@@ -10841,7 +10685,7 @@ paths:
         in: query
         name: status
         type: string
-      - description: Exact disease type
+      - description: Exact disease ID
         in: query
         name: disease
         type: string
@@ -11189,39 +11033,6 @@ paths:
       summary: Create a support ticket without signing in
       tags:
       - support
-  /api/v1/consultants/tree:
-    get:
-      description: Legacy v1 endpoint that groups consultants by region, city, then
-        specialty.
-      parameters:
-      - description: Tree level
-        in: query
-        maximum: 2
-        minimum: 0
-        name: level
-        type: integer
-      - description: JSON encoded filters
-        in: query
-        name: filters
-        type: string
-      - description: Optional JSON context
-        in: query
-        name: context
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyTreeResult'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get consultants tree
-      tags:
-      - legacy-v1
   /api/v1/health-facilities/tree:
     get:
       description: Legacy v1 endpoint that groups facilities by region, district,
@@ -12530,210 +12341,6 @@ paths:
       summary: Ask the guideline assistant
       tags:
       - chat
-  /api/v2/consultants:
-    get:
-      parameters:
-      - description: Page
-        in: query
-        name: page
-        type: integer
-      - description: Items per page
-        in: query
-        name: per_page
-        type: integer
-      - description: Name, email, specialty, organization, city, or country
-        in: query
-        name: search
-        type: string
-      - description: Status
-        in: query
-        name: status
-        type: string
-      - description: Specialty
-        in: query
-        name: specialty
-        type: string
-      - description: Qualification
-        in: query
-        name: qualification
-        type: string
-      - description: Preferred language
-        in: query
-        name: language
-        type: string
-      - description: Region
-        in: query
-        name: region
-        type: string
-      - description: City
-        in: query
-        name: city
-        type: string
-      - description: Consultation type
-        in: query
-        name: consultation_type
-        type: string
-      - description: Verification state
-        in: query
-        name: verified
-        type: boolean
-      - description: name, specialty, rating, total_consultations, usage_count, created_at,
-          or updated_at
-        in: query
-        name: sort
-        type: string
-      - description: asc or desc
-        in: query
-        name: order
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/services.ConsultantPage'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: List consultants
-      tags:
-      - consultants
-    post:
-      parameters:
-      - description: Consultant
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/services.ConsultantInput'
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/services.ConsultantItem'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create a consultant
-      tags:
-      - consultants
-  /api/v2/consultants/{id}:
-    delete:
-      parameters:
-      - description: Consultant UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Soft-delete a consultant
-      tags:
-      - consultants
-    get:
-      parameters:
-      - description: Consultant UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/services.ConsultantItem'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get a consultant
-      tags:
-      - consultants
-    patch:
-      parameters:
-      - description: Consultant UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Consultant changes
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/services.ConsultantInput'
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/services.ConsultantItem'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update a consultant
-      tags:
-      - consultants
   /api/v2/content-disease-assignments:
     get:
       parameters:
@@ -19078,7 +18685,7 @@ paths:
         in: query
         name: status
         type: string
-      - description: Disease name
+      - description: Disease ID
         in: query
         name: disease
         type: string
@@ -19624,6 +19231,25 @@ paths:
       summary: Submit, approve, publish, or withdraw an outbreak document
       tags:
       - outbreak-document-administration
+  /api/v2/outbreaks/{id}/metrics:
+    patch:
+      parameters:
+      - description: Outbreak metrics
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakMetricsInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an outbreak's metrics regardless of its lifecycle status
+      tags:
+      - outbreak-administration
   /api/v2/outbreaks/{id}/notification-campaign:
     post:
       description: Creates a draft only; normal campaign review, approval and scheduling
@@ -21401,25 +21027,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Record idempotent AI usage
-      tags:
-      - progress-usage
-  /api/v2/usage/consultants:
-    post:
-      parameters:
-      - description: Usage event
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/services.UsageEventInput'
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.UsageEventEnvelope'
-      security:
-      - BearerAuth: []
-      summary: Record idempotent consultant usage
       tags:
       - progress-usage
   /api/v2/usage/guidelines:

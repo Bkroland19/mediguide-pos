@@ -619,7 +619,6 @@ export interface HandlersLegacyStatsResult {
   abbreviations?: number;
   cached_at?: string;
   calculators?: number;
-  consultants?: number;
   drugs?: number;
   faqs?: number;
   health_facilities?: number;
@@ -2583,7 +2582,7 @@ export interface ModelsOutbreak {
   author_id?: string;
   created_at?: string;
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -2949,93 +2948,6 @@ export interface ServicesCitation {
   source_name?: string;
   source_version?: string;
   title?: string;
-}
-
-export interface ServicesConsultantInput {
-  address?: string;
-  alternative_phone?: string;
-  availability?: object;
-  avatar?: object;
-  certifications?: string;
-  city?: string;
-  consultation_types?: string[];
-  country?: string;
-  department?: string;
-  email?: string;
-  is_verified?: boolean;
-  license_number?: string;
-  name?: string;
-  notes?: string;
-  organization?: string;
-  phone?: string;
-  postal_code?: string;
-  preferred_language?: string;
-  profile_picture?: object;
-  qualifications?: string[];
-  rating?: number;
-  region?: string;
-  specialty?: string;
-  status?: string;
-  timezone?: string;
-  total_consultations?: number;
-  user_id?: string;
-  years_of_experience?: number;
-}
-
-export interface ServicesConsultantItem {
-  item?: ServicesConsultantView;
-}
-
-export interface ServicesConsultantPage {
-  items?: ServicesConsultantView[];
-  page?: number;
-  per_page?: number;
-  total_items?: number;
-  total_pages?: number;
-}
-
-export interface ServicesConsultantUserView {
-  avatar?: string;
-  email?: string;
-  id?: string;
-  name?: string;
-  verified?: boolean;
-}
-
-export interface ServicesConsultantView {
-  address?: string;
-  alternative_phone?: string;
-  availability?: object;
-  avatar?: object;
-  certifications?: string;
-  city?: string;
-  consultation_types?: string[];
-  country?: string;
-  created_at?: string;
-  department?: string;
-  email?: string;
-  id?: string;
-  is_verified?: boolean;
-  license_number?: string;
-  name?: string;
-  notes?: string;
-  organization?: string;
-  phone?: string;
-  postal_code?: string;
-  preferred_language?: string;
-  profile_picture?: object;
-  qualifications?: string[];
-  rating?: number;
-  region?: string;
-  specialty?: string;
-  status?: string;
-  timezone?: string;
-  total_consultations?: number;
-  updated_at?: string;
-  usage_count?: number;
-  user?: ServicesConsultantUserView;
-  user_id?: string;
-  years_of_experience?: number;
 }
 
 export interface ServicesContentDiseaseInput {
@@ -4408,7 +4320,8 @@ export interface ServicesOutbreakAdminDTO {
   author_id?: string;
   created_at?: string;
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
+  disease_name?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -4524,7 +4437,7 @@ export interface ServicesOutbreakDocumentSearchPreview {
 
 export interface ServicesOutbreakInput {
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
@@ -4551,6 +4464,11 @@ export interface ServicesOutbreakMetric {
   source_reference?: string;
   unit?: string;
   value?: string;
+}
+
+export interface ServicesOutbreakMetricsInput {
+  lock_version?: number;
+  metrics: ServicesOutbreakMetric[];
 }
 
 export interface ServicesOutbreakNotificationCampaignInput {
@@ -5226,7 +5144,8 @@ export interface ServicesPublicHubOutbreak {
 
 export interface ServicesPublicOutbreak {
   data_as_of?: string;
-  disease_type?: string;
+  disease_id?: string;
+  disease_name?: string;
   district_id?: string;
   effective_at?: string;
   geographic_area?: string;
